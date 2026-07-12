@@ -1,0 +1,150 @@
+export type UserRole = 'user' | 'admin';
+export type Gender = 'female' | 'male';
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type ProductCategory = 'skincare' | 'haircare' | 'fragrance' | 'bodycare' | 'makeup' | 'combo';
+
+export interface Profile {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  gender: Gender | null;
+  country: string | null;
+  city: string | null;
+  phone: string | null;
+  address: string | null;
+  onboarding_completed: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Region {
+  id: string;
+  country: string;
+  city: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  compare_at_price: number | null;
+  category: ProductCategory;
+  gender: Gender;
+  image_url: string | null;
+  images: string[];
+  ingredients: string | null;
+  benefits: string[];
+  stock_quantity: number;
+  is_active: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+  regions?: Region[];
+}
+
+export interface Combo {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  compare_at_price: number | null;
+  gender: Gender;
+  image_url: string | null;
+  is_active: boolean;
+  is_ai_generated: boolean;
+  dermatologist_verified: boolean;
+  created_at: string;
+  updated_at: string;
+  products?: Product[];
+}
+
+export interface Order {
+  id: string;
+  user_id: string;
+  status: OrderStatus;
+  total_amount: number;
+  payment_method: string;
+  shipping_address: string;
+  shipping_city: string;
+  shipping_country: string;
+  phone: string;
+  tracking_number: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  items?: OrderItem[];
+  tracking?: OrderTracking[];
+  profile?: Profile;
+}
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string | null;
+  combo_id: string | null;
+  name: string;
+  price: number;
+  quantity: number;
+  created_at: string;
+}
+
+export interface OrderTracking {
+  id: string;
+  order_id: string;
+  status: OrderStatus;
+  message: string | null;
+  created_at: string;
+}
+
+export interface SurveyResponse {
+  id: string;
+  user_id: string;
+  skin_type: string | null;
+  hair_type: string | null;
+  skin_concerns: string[];
+  hair_concerns: string[];
+  allergies: string[];
+  age_range: string | null;
+  lifestyle: string[];
+  additional_notes: string | null;
+  created_at: string;
+}
+
+export interface PersonalizedCombo {
+  id: string;
+  user_id: string;
+  survey_id: string | null;
+  combo_id: string | null;
+  ai_recommendation: AIRecommendation | null;
+  dermatologist_verified: boolean;
+  dermatologist_name: string;
+  created_at: string;
+  combo?: Combo;
+}
+
+export interface AIRecommendation {
+  summary: string;
+  products: {
+    product_id: string;
+    name: string;
+    reason: string;
+  }[];
+  routine: {
+    morning: string[];
+    evening: string[];
+  };
+  tips: string[];
+}
+
+export interface CartItem {
+  id: string;
+  type: 'product' | 'combo';
+  name: string;
+  price: number;
+  quantity: number;
+  image_url: string | null;
+}

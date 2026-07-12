@@ -1,65 +1,169 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import Link from 'next/link';
+import { motion } from 'framer-motion';
+import { ArrowRight, Sparkles, Heart, Shield } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
+
+const features = [
+  {
+    icon: Sparkles,
+    title: 'Personalized For You',
+    description: 'AI-powered beauty recommendations tailored to your unique skin and hair profile.',
+  },
+  {
+    icon: Shield,
+    title: 'Dermatologist Verified',
+    description: 'Every personalized combo is certified and verified by our expert dermatologist.',
+  },
+  {
+    icon: Heart,
+    title: 'Made With Love',
+    description: 'Premium ingredients crafted with care for the modern woman.',
+  },
+];
+
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      {/* Hero Section */}
+      <section className="relative min-h-[90vh] flex items-center gradient-pink overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-20 left-10 w-32 h-32 border border-layali-black rounded-full" />
+          <div className="absolute bottom-20 right-10 w-48 h-48 border border-layali-black rounded-full" />
+          <div className="absolute top-1/2 left-1/4 w-2 h-2 bg-layali-black rounded-full animate-float" />
+          <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-layali-black rounded-full animate-float" style={{ animationDelay: '1s' }} />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <p className="text-sm tracking-[0.3em] text-layali-black/60 mb-4 uppercase">
+                Welcome to
+              </p>
+              <h1 className="font-serif text-6xl lg:text-8xl font-bold tracking-widest text-layali-black mb-4">
+                LAYALI
+              </h1>
+              <p className="font-script text-4xl lg:text-5xl text-layali-black/80 mb-2">
+                beauty redefined
+              </p>
+              <p className="text-layali-black/70 text-lg max-w-md mb-8 leading-relaxed">
+                Discover premium beauty products curated just for you.
+                From skincare to fragrances, experience luxury that celebrates your unique beauty.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <Link href="/auth/signup">
+                  <Button size="lg">
+                    Get Started <ArrowRight className="w-5 h-5" />
+                  </Button>
+                </Link>
+                <Link href="/shop">
+                  <Button variant="outline" size="lg">
+                    Shop Now
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+              className="relative hidden lg:block"
+            >
+              <div className="aspect-square max-w-lg mx-auto relative">
+                <div className="absolute inset-0 bg-layali-black rounded-3xl transform rotate-3" />
+                <div className="absolute inset-0 bg-layali-pink rounded-3xl transform -rotate-3 flex items-center justify-center">
+                  <div className="text-center p-8">
+                    <span className="font-serif text-5xl font-bold tracking-widest text-layali-black">LAYALI</span>
+                    <p className="font-script text-3xl text-layali-black/70 mt-4">thank you</p>
+                    <p className="text-xs tracking-[0.2em] text-layali-black/50 mt-2">
+                      FOR CHOOSING US
+                    </p>
+                    <div className="flex justify-center gap-2 mt-6">
+                      <Heart className="w-4 h-4 text-layali-black fill-layali-black" />
+                      <Heart className="w-3 h-3 text-layali-black fill-layali-black" />
+                      <Heart className="w-4 h-4 text-layali-black fill-layali-black" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn className="text-center mb-16">
+            <h2 className="font-serif text-4xl font-bold text-layali-black mb-4">Why Layali?</h2>
+            <p className="text-layali-black/60 max-w-2xl mx-auto">
+              We believe beauty is personal. That&apos;s why every experience with Layali is tailored to you.
+            </p>
+          </FadeIn>
+
+          <StaggerContainer className="grid md:grid-cols-3 gap-8">
+            {features.map((feature) => (
+              <StaggerItem key={feature.title}>
+                <div className="text-center p-8 rounded-2xl bg-layali-cream border border-layali-pink/20 card-hover">
+                  <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-layali-pink-light flex items-center justify-center">
+                    <feature.icon className="w-7 h-7 text-layali-black" />
+                  </div>
+                  <h3 className="font-serif text-xl font-bold text-layali-black mb-3">{feature.title}</h3>
+                  <p className="text-layali-black/60 text-sm leading-relaxed">{feature.description}</p>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 gradient-dark text-white">
+        <div className="max-w-4xl mx-auto px-4 text-center">
+          <FadeIn>
+            <p className="font-script text-4xl text-layali-pink-light mb-4">your beauty journey</p>
+            <h2 className="font-serif text-4xl lg:text-5xl font-bold mb-6">
+              Start with a Personalized Survey
+            </h2>
+            <p className="text-white/70 mb-8 max-w-2xl mx-auto leading-relaxed">
+              Take our fun beauty quiz and receive a custom combo curated by AI,
+              verified by our dermatologist — just for you.
+            </p>
+            <Link href="/auth/signup">
+              <Button variant="gold" size="lg">
+                Take the Survey <Sparkles className="w-5 h-5" />
+              </Button>
+            </Link>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Categories Preview */}
+      <section className="py-20 bg-layali-cream">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn className="text-center mb-12">
+            <h2 className="font-serif text-4xl font-bold text-layali-black mb-4">Shop by Category</h2>
+          </FadeIn>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {['Skincare', 'Haircare', 'Fragrance', 'Body Care'].map((cat, i) => (
+              <FadeIn key={cat} delay={i * 0.1}>
+                <Link href={`/shop?category=${cat.toLowerCase().replace(' ', '')}`}>
+                  <div className="aspect-square rounded-2xl bg-layali-pink-light/50 border border-layali-pink/30 flex items-center justify-center card-hover">
+                    <span className="font-serif text-lg font-bold text-layali-black">{cat}</span>
+                  </div>
+                </Link>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

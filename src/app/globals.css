@@ -1,26 +1,135 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --layali-pink: #E8B4B8;
+  --layali-pink-light: #F5D0D4;
+  --layali-pink-dark: #D4959A;
+  --layali-blush: #FADADD;
+  --layali-cream: #FFF8F5;
+  --layali-black: #1A1A1A;
+  --layali-black-soft: #2D2D2D;
+  --layali-gold: #C9A962;
+  --layali-gold-light: #D4AF37;
+  --background: var(--layali-cream);
+  --foreground: var(--layali-black);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-layali-pink: var(--layali-pink);
+  --color-layali-pink-light: var(--layali-pink-light);
+  --color-layali-pink-dark: var(--layali-pink-dark);
+  --color-layali-blush: var(--layali-blush);
+  --color-layali-cream: var(--layali-cream);
+  --color-layali-black: var(--layali-black);
+  --color-layali-black-soft: var(--layali-black-soft);
+  --color-layali-gold: var(--layali-gold);
+  --color-layali-gold-light: var(--layali-gold-light);
+  --font-serif: var(--font-playfair);
+  --font-sans: var(--font-poppins);
+  --font-script: var(--font-great-vibes);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-poppins), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--layali-pink);
+  color: var(--layali-black);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.gradient-pink {
+  background: linear-gradient(135deg, var(--layali-pink-light) 0%, var(--layali-blush) 50%, var(--layali-cream) 100%);
+}
+
+.gradient-dark {
+  background: linear-gradient(135deg, var(--layali-black) 0%, var(--layali-black-soft) 100%);
+}
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, var(--layali-gold) 0%, var(--layali-gold-light) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(232, 180, 184, 0.3);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--layali-cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--layali-pink);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--layali-pink-dark);
 }
