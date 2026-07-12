@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Heart, Share2, Mail } from 'lucide-react';
+import { CONTACT_EMAIL } from '@/lib/constants';
 
 export function Footer() {
   const pathname = usePathname();
@@ -30,6 +31,7 @@ export function Footer() {
               <li><Link href="/shop" className="hover:text-layali-pink transition-colors">Shop</Link></li>
               <li><Link href="/combos" className="hover:text-layali-pink transition-colors">Combos</Link></li>
               <li><Link href="/about" className="hover:text-layali-pink transition-colors">About Us</Link></li>
+              <li><Link href="/customer-care" className="hover:text-layali-pink transition-colors">Customer Care</Link></li>
               <li><Link href="/account" className="hover:text-layali-pink transition-colors">My Account</Link></li>
             </ul>
           </div>
@@ -40,10 +42,13 @@ export function Footer() {
               <a href="#" className="p-2 rounded-full bg-white/10 hover:bg-layali-pink/30 transition-colors">
                 <Share2 className="w-5 h-5" />
               </a>
-              <a href="mailto:hello@layali.com" className="p-2 rounded-full bg-white/10 hover:bg-layali-pink/30 transition-colors">
+              <a href={`mailto:${CONTACT_EMAIL}`} className="p-2 rounded-full bg-white/10 hover:bg-layali-pink/30 transition-colors" title={CONTACT_EMAIL}>
                 <Mail className="w-5 h-5" />
               </a>
             </div>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm text-white/50 mt-3 hover:text-layali-pink transition-colors block">
+              {CONTACT_EMAIL}
+            </a>
             <p className="text-sm text-white/50 mt-4 flex items-center gap-1">
               Made with <Heart className="w-3 h-3 text-layali-pink fill-layali-pink" /> for you
             </p>

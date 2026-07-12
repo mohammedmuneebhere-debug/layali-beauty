@@ -1,3 +1,5 @@
+export const CONTACT_EMAIL = 'layalibeautystore@gmail.com';
+
 export const COUNTRIES = [
   { value: 'Saudi Arabia', label: 'Saudi Arabia' },
   { value: 'UAE', label: 'United Arab Emirates' },

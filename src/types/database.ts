@@ -148,3 +148,37 @@ export interface CartItem {
   quantity: number;
   image_url: string | null;
 }
+
+export interface CustomerReview {
+  id: string;
+  user_id: string;
+  rating: number;
+  title: string;
+  content: string;
+  is_approved: boolean;
+  created_at: string;
+  profile?: Pick<Profile, 'full_name' | 'city' | 'country'>;
+}
+
+export type SupportStatus = 'open' | 'closed';
+
+export interface SupportConversation {
+  id: string;
+  user_id: string;
+  subject: string;
+  status: SupportStatus;
+  last_message_at: string;
+  created_at: string;
+  profile?: Pick<Profile, 'full_name' | 'email' | 'city' | 'country'>;
+  messages?: SupportMessage[];
+}
+
+export interface SupportMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  sender_role: UserRole;
+  message: string;
+  created_at: string;
+  profile?: Pick<Profile, 'full_name'>;
+}

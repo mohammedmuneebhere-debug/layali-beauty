@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, Package, ShoppingCart, Layers, MapPin, LogOut, Menu, X,
+  LayoutDashboard, Package, ShoppingCart, Layers, MapPin, LogOut, Menu, Headphones,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/admin/products', label: 'Products', icon: Package },
   { href: '/admin/combos', label: 'Combos', icon: Layers },
   { href: '/admin/regions', label: 'Regions', icon: MapPin },
+  { href: '/admin/support', label: 'Customer Care', icon: Headphones },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
