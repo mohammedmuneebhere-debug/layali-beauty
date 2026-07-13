@@ -45,10 +45,15 @@ export default function SignUpPage() {
 
     const supabase = createClient();
 
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (typeof window !== 'undefined' ? window.location.origin : '');
+
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
       options: {
+        emailRedirectTo: `${siteUrl}/auth/signin`,
         data: {
           full_name: data.full_name,
           role: 'user',
