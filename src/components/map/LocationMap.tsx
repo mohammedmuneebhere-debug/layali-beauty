@@ -16,6 +16,8 @@ interface LocationMapProps {
   longitude: number;
   editable?: boolean;
   height?: string;
+  /** Increment to force the map to re-center (e.g. after live location) */
+  centerKey?: number;
   onLocationChange?: (lat: number, lng: number) => void;
 }
 

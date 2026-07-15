@@ -11,6 +11,7 @@ import { LocationMap } from '@/components/map/LocationMap';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
+import { reverseGeocode } from '@/lib/geocode';
 import type { Address } from '@/types/database';
 
 export default function CheckoutPage() {
@@ -80,6 +81,56 @@ export default function CheckoutPage() {
   }, [items, orderPlaced, router]);
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || null;
+
+  const updateSelectedPin = async (lat: number, lng: number) => {
+    if (!selectedAddressId) return;
+
+    setAddresses((prev) =>
+      prev.map((a) =>
+        a.id === selectedAddressId ? { ...a, latitude: lat, longitude: lng } : a
+      )
+    );
+
+    const supabase = createClient();
+    let addressLine: string | undefined;
+    let city: string | undefined;
+    let country: string | undefined;
+
+    try {
+      const geo = await reverseGeocode(lat, lng);
+      addressLine = geo.address_line || undefined;
+      city = geo.city || undefined;
+      country = geo.country || undefined;
+
+      setAddresses((prev) =>
+        prev.map((a) =>
+          a.id === selectedAddressId
+            ? {
+                ...a,
+                latitude: lat,
+                longitude: lng,
+                address_line: addressLine || a.address_line,
+                city: city || a.city,
+                country: country || a.country,
+              }
+            : a
+        )
+      );
+    } catch {
+      // keep pin coords even if reverse geocode fails
+    }
+
+    await supabase
+      .from('addresses')
+      .update({
+        latitude: lat,
+        longitude: lng,
+        ...(addressLine ? { address_line: addressLine } : {}),
+        ...(city ? { city } : {}),
+        ...(country ? { country } : {}),
+      })
+      .eq('id', selectedAddressId);
+  };
 
   const saveAddress = async (values: AddressFormValues) => {
     if (!userId) return;
@@ -266,6 +317,21 @@ export default function CheckoutPage() {
 
             {!showNewAddress && selectedAddress && (
               <>
+                {selectedAddress.latitude != null && selectedAddress.longitude != null && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-layali-black">Adjust delivery pin</p>
+                    <p className="text-xs text-layali-black/50">
+                      Drag the pin or tap the map to set the exact drop-off point
+                    </p>
+                    <LocationMap
+                      latitude={Number(selectedAddress.latitude)}
+                      longitude={Number(selectedAddress.longitude)}
+                      editable
+                      height="240px"
+                      onLocationChange={updateSelectedPin}
+                    />
+                  </div>
+                )}
                 <Input
                   label="Order Notes (optional)"
                   value={notes}
@@ -305,19 +371,15 @@ export default function CheckoutPage() {
               <span className="text-sm text-layali-black/70">Cash on Delivery</span>
             </div>
             {selectedAddress && (
-              <div className="mt-4 text-sm text-layali-black/60 space-y-3">
-                <div>
-                  <p className="font-medium text-layali-black">Delivering to</p>
-                  <p>{selectedAddress.receiver_name} · {selectedAddress.receiver_phone}</p>
-                  <p className="mt-1">{selectedAddress.address_line}</p>
-                </div>
+              <div className="mt-4 text-sm text-layali-black/60">
+                <p className="font-medium text-layali-black">Delivering to</p>
+                <p>{selectedAddress.receiver_name} · {selectedAddress.receiver_phone}</p>
+                <p className="mt-1">{selectedAddress.address_line}</p>
                 {selectedAddress.latitude != null && selectedAddress.longitude != null && (
-                  <LocationMap
-                    latitude={Number(selectedAddress.latitude)}
-                    longitude={Number(selectedAddress.longitude)}
-                    editable={false}
-                    height="180px"
-                  />
+                  <p className="text-xs mt-2 flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    Pin: {Number(selectedAddress.latitude).toFixed(5)}, {Number(selectedAddress.longitude).toFixed(5)}
+                  </p>
                 )}
               </div>
             )}

@@ -55,34 +55,48 @@ export function AddressForm({
     address_line: initial?.address_line || '',
     city: initial?.city || defaultCity,
     country: initial?.country || defaultCountry,
-    latitude: initial?.latitude ?? null,
-    longitude: initial?.longitude ?? null,
+    latitude: initial?.latitude ?? DEFAULT_MAP_CENTER.lat,
+    longitude: initial?.longitude ?? DEFAULT_MAP_CENTER.lng,
     is_default: initial?.is_default ?? false,
   });
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
-  const [mapReady, setMapReady] = useState(
-    initial?.latitude != null && initial?.longitude != null
-  );
+  const [updatingFromPin, setUpdatingFromPin] = useState(false);
+  const [centerKey, setCenterKey] = useState(0);
 
   const update = <K extends keyof AddressFormValues>(key: K, value: AddressFormValues[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
-  const applyCoordinates = async (latitude: number, longitude: number, fillAddress = true) => {
+  const applyCoordinates = async (
+    latitude: number,
+    longitude: number,
+    options?: { fillAddress?: boolean; recenter?: boolean }
+  ) => {
+    const fillAddress = options?.fillAddress ?? true;
+    const recenter = options?.recenter ?? false;
+
     update('latitude', latitude);
     update('longitude', longitude);
-    setMapReady(true);
+    if (recenter) setCenterKey((k) => k + 1);
 
     if (!fillAddress) return;
 
+    setUpdatingFromPin(true);
     try {
       const geo = await reverseGeocode(latitude, longitude);
-      if (geo.address_line) update('address_line', geo.address_line);
-      if (geo.city) update('city', geo.city);
-      if (geo.country) update('country', geo.country);
+      setForm((prev) => ({
+        ...prev,
+        latitude,
+        longitude,
+        address_line: geo.address_line || prev.address_line,
+        city: geo.city || prev.city,
+        country: geo.country || prev.country,
+      }));
     } catch {
-      // Pin is still saved even if reverse geocode fails
+      // Keep the pin even if reverse lookup fails
+    } finally {
+      setUpdatingFromPin(false);
     }
   };
 
@@ -97,28 +111,18 @@ export function AddressForm({
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        await applyCoordinates(position.coords.latitude, position.coords.longitude, true);
+        await applyCoordinates(position.coords.latitude, position.coords.longitude, {
+          fillAddress: true,
+          recenter: true,
+        });
         setLocating(false);
       },
       () => {
-        setError('Could not get your location. Please allow location access or pin on the map.');
-        setMapReady(true);
-        if (form.latitude == null || form.longitude == null) {
-          update('latitude', DEFAULT_MAP_CENTER.lat);
-          update('longitude', DEFAULT_MAP_CENTER.lng);
-        }
+        setError('Could not get your location. Drag the pin on the map instead.');
         setLocating(false);
       },
       { enableHighAccuracy: true, timeout: 15000 }
     );
-  };
-
-  const openMapToPin = () => {
-    setMapReady(true);
-    if (form.latitude == null || form.longitude == null) {
-      update('latitude', DEFAULT_MAP_CENTER.lat);
-      update('longitude', DEFAULT_MAP_CENTER.lng);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -142,8 +146,7 @@ export function AddressForm({
       return;
     }
     if (form.latitude == null || form.longitude == null) {
-      setError('Please pin your delivery location on the map.');
-      setMapReady(true);
+      setError('Please place the delivery pin on the map.');
       return;
     }
 
@@ -200,29 +203,46 @@ export function AddressForm({
         />
       )}
 
-      <div>
-        <div className="flex items-center justify-between mb-1.5 gap-2 flex-wrap">
-          <label className="block text-sm font-medium text-layali-black">Delivery Address</label>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={openMapToPin}
-              className="text-xs text-layali-black/60 font-medium hover:underline inline-flex items-center gap-1"
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              Pin on map
-            </button>
-            <button
-              type="button"
-              onClick={useLiveLocation}
-              disabled={locating}
-              className="text-xs text-layali-pink-dark font-medium hover:underline inline-flex items-center gap-1"
-            >
-              <Navigation className="w-3.5 h-3.5" />
-              {locating ? 'Detecting...' : 'Use live location'}
-            </button>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div>
+            <p className="text-sm font-medium text-layali-black">Pin delivery location</p>
+            <p className="text-xs text-layali-black/50">
+              Drag the pin or tap anywhere on the map to move it
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={useLiveLocation}
+            disabled={locating}
+            className="text-xs text-layali-pink-dark font-medium hover:underline inline-flex items-center gap-1"
+          >
+            <Navigation className="w-3.5 h-3.5" />
+            {locating ? 'Detecting...' : 'Use my live location'}
+          </button>
         </div>
+
+        <LocationMap
+          latitude={mapLat}
+          longitude={mapLng}
+          editable
+          height="300px"
+          centerKey={centerKey}
+          onLocationChange={(lat, lng) => {
+            applyCoordinates(lat, lng, { fillAddress: true, recenter: false });
+          }}
+        />
+
+        <p className="text-xs text-layali-black/50 flex items-center gap-1">
+          <MapPin className="w-3 h-3" />
+          {updatingFromPin
+            ? 'Updating address from pin...'
+            : `Pinned: ${mapLat.toFixed(5)}, ${mapLng.toFixed(5)}`}
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-layali-black mb-1.5">Delivery Address</label>
         <textarea
           value={form.address_line}
           onChange={(e) => update('address_line', e.target.value)}
@@ -231,31 +251,10 @@ export function AddressForm({
           placeholder="Street, building, landmark..."
           className="w-full px-4 py-3 rounded-xl border border-layali-pink/30 bg-white/80 focus:outline-none focus:ring-2 focus:ring-layali-pink"
         />
+        <p className="text-xs text-layali-black/40 mt-1">
+          Auto-filled when you move the pin — you can still edit it manually
+        </p>
       </div>
-
-      {mapReady && (
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-layali-black">Pin your exact location</p>
-          <p className="text-xs text-layali-black/50">
-            Drag the pin or tap the map to set the delivery point.
-          </p>
-          <LocationMap
-            latitude={mapLat}
-            longitude={mapLng}
-            editable
-            height="280px"
-            onLocationChange={(lat, lng) => {
-              applyCoordinates(lat, lng, true);
-            }}
-          />
-          {form.latitude != null && form.longitude != null && (
-            <p className="text-xs text-layali-black/50 flex items-center gap-1">
-              <MapPin className="w-3 h-3" />
-              Pinned: {form.latitude.toFixed(5)}, {form.longitude.toFixed(5)}
-            </p>
-          )}
-        </div>
-      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
