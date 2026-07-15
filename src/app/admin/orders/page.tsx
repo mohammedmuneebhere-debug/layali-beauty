@@ -114,7 +114,8 @@ export default function AdminOrdersPage() {
 
             <div className="space-y-3 mb-6 text-sm">
               <p><span className="text-gray-500">Customer:</span> {selectedOrder.profile?.full_name}</p>
-              <p><span className="text-gray-500">Phone:</span> {selectedOrder.phone}</p>
+              <p><span className="text-gray-500">Receiver:</span> {selectedOrder.receiver_name || '—'}</p>
+              <p><span className="text-gray-500">Receiver phone:</span> {selectedOrder.receiver_phone || selectedOrder.phone}</p>
               <p><span className="text-gray-500">Address:</span> {selectedOrder.shipping_address}</p>
               <p><span className="text-gray-500">City:</span> {selectedOrder.shipping_city}, {selectedOrder.shipping_country}</p>
               <p><span className="text-gray-500">Payment:</span> COD</p>

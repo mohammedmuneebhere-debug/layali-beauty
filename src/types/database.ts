@@ -62,6 +62,25 @@ export interface Combo {
   products?: Product[];
 }
 
+export type AddressLabel = 'home' | 'work' | 'other';
+
+export interface Address {
+  id: string;
+  user_id: string;
+  label: AddressLabel;
+  custom_label: string | null;
+  receiver_name: string;
+  receiver_phone: string;
+  address_line: string;
+  city: string | null;
+  country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Order {
   id: string;
   user_id: string;
@@ -72,6 +91,9 @@ export interface Order {
   shipping_city: string;
   shipping_country: string;
   phone: string;
+  address_id?: string | null;
+  receiver_name?: string | null;
+  receiver_phone?: string | null;
   tracking_number: string | null;
   notes: string | null;
   created_at: string;

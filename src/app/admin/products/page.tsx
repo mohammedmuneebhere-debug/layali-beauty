@@ -8,7 +8,7 @@ import { saveProductRegions, getProductRegionIds } from '@/lib/products';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { ImageUpload } from '@/components/admin/ImageUpload';
+import { MultiImageUpload } from '@/components/admin/MultiImageUpload';
 import { formatPrice } from '@/lib/utils';
 import { PRODUCT_CATEGORIES } from '@/lib/constants';
 import type { Product, Region } from '@/types/database';
@@ -17,6 +17,11 @@ type ProductRow = Product & {
   product_regions?: { region_id: string; regions: Region | null }[];
 };
 
+function productImages(product: Product): string[] {
+  if (product.images?.length) return product.images;
+  return product.image_url ? [product.image_url] : [];
+}
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<ProductRow[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
@@ -24,7 +29,7 @@ export default function AdminProductsPage() {
   const [regionError, setRegionError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   const { register, handleSubmit, reset, setValue } = useForm();
@@ -56,7 +61,7 @@ export default function AdminProductsPage() {
     setEditing(null);
     setSelectedRegionIds([]);
     setRegionError('');
-    setImageUrl(null);
+    setImages([]);
     reset();
     setShowForm(true);
   };
@@ -70,7 +75,7 @@ export default function AdminProductsPage() {
     setValue('category', product.category);
     setValue('gender', product.gender);
     setValue('stock_quantity', product.stock_quantity);
-    setImageUrl(product.image_url);
+    setImages(productImages(product));
     setValue('is_active', product.is_active ? 'true' : 'false');
     setValue('is_featured', product.is_featured ? 'true' : 'false');
 
@@ -97,7 +102,8 @@ export default function AdminProductsPage() {
       category: data.category as string,
       gender: data.gender as string,
       stock_quantity: Number(data.stock_quantity) || 0,
-      image_url: imageUrl,
+      image_url: images[0] || null,
+      images,
       is_active: data.is_active === 'true' || data.is_active === true,
       is_featured: data.is_featured === 'true' || data.is_featured === true,
     };
@@ -126,7 +132,7 @@ export default function AdminProductsPage() {
     setShowForm(false);
     setEditing(null);
     setSelectedRegionIds([]);
-    setImageUrl(null);
+    setImages([]);
     reset();
     loadData();
     setLoading(false);
@@ -188,11 +194,11 @@ export default function AdminProductsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Stock" type="number" {...register('stock_quantity')} />
               </div>
-              <ImageUpload
-                value={imageUrl}
-                onChange={setImageUrl}
+              <MultiImageUpload
+                value={images}
+                onChange={setImages}
                 folder="products"
-                label="Product Photo"
+                label="Product Photos"
               />
               <div className="grid grid-cols-2 gap-4">
                 <Select label="Active" options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} {...register('is_active')} />
@@ -268,12 +274,17 @@ export default function AdminProductsPage() {
                 <tr key={product.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-layali-pink-light/30 flex items-center justify-center">
-                        {product.image_url ? (
-                          <img src={product.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                      <div className="w-10 h-10 rounded-lg bg-layali-pink-light/30 flex items-center justify-center overflow-hidden">
+                        {productImages(product)[0] ? (
+                          <img src={productImages(product)[0]} alt="" className="w-full h-full object-cover" />
                         ) : '✦'}
                       </div>
-                      <span className="text-sm font-medium">{product.name}</span>
+                      <div>
+                        <span className="text-sm font-medium block">{product.name}</span>
+                        {productImages(product).length > 1 && (
+                          <span className="text-xs text-gray-400">{productImages(product).length} photos</span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td className="p-4 text-sm capitalize">{product.category}</td>

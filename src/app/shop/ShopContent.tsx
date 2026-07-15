@@ -66,14 +66,17 @@ export default function ShopContent() {
   }, [category]);
 
   const handleAddToCart = (product: Product) => {
+    const image = product.images?.[0] || product.image_url;
     addItem({
       id: product.id,
       type: 'product',
       name: product.name,
       price: Number(product.price),
-      image_url: product.image_url,
+      image_url: image,
     });
   };
+
+  const productCover = (product: Product) => product.images?.[0] || product.image_url;
 
   return (
     <div className="min-h-screen bg-layali-cream py-12">
@@ -129,7 +132,7 @@ export default function ShopContent() {
             {products.map((product) => (
               <StaggerItem key={product.id}>
                 <Card hover>
-                  <CardImage src={product.image_url} alt={product.name} />
+                  <CardImage src={productCover(product)} alt={product.name} />
                   <CardContent>
                     <p className="text-xs text-layali-pink-dark uppercase tracking-wide mb-1">
                       {product.category}

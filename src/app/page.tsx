@@ -57,14 +57,9 @@ export default function HomePage() {
                 From skincare to fragrances, experience luxury that celebrates your unique beauty.
               </p>
               <div className="flex flex-wrap gap-4">
-                <Link href="/auth/signup">
-                  <Button size="lg">
-                    Get Started <ArrowRight className="w-5 h-5" />
-                  </Button>
-                </Link>
                 <Link href="/shop">
-                  <Button variant="outline" size="lg">
-                    Shop Now
+                  <Button size="lg">
+                    Shop Now <ArrowRight className="w-5 h-5" />
                   </Button>
                 </Link>
               </div>

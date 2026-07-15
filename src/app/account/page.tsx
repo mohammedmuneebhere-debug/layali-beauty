@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { User, Package, LogOut, Sparkles } from 'lucide-react';
+import { User, Package, LogOut, Sparkles, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { FadeIn } from '@/components/ui/FadeIn';
@@ -92,6 +92,16 @@ export default function AccountPage() {
                 <div>
                   <p className="font-medium text-layali-black">My Orders</p>
                   <p className="text-sm text-layali-black/50">Track and view your orders</p>
+                </div>
+              </div>
+            </Link>
+
+            <Link href="/account/addresses">
+              <div className="bg-white rounded-2xl p-4 border border-layali-pink/20 flex items-center gap-4 card-hover">
+                <MapPin className="w-6 h-6 text-layali-pink-dark" />
+                <div>
+                  <p className="font-medium text-layali-black">Saved Addresses</p>
+                  <p className="text-sm text-layali-black/50">Home, work & other delivery locations</p>
                 </div>
               </div>
             </Link>
