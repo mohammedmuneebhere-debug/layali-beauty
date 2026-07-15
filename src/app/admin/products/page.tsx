@@ -70,6 +70,8 @@ export default function AdminProductsPage() {
     setEditing(product);
     setValue('name', product.name);
     setValue('description', product.description || '');
+    setValue('ingredients', product.ingredients || '');
+    setValue('benefits', (product.benefits || []).join(', '));
     setValue('price', product.price);
     setValue('compare_at_price', product.compare_at_price || '');
     setValue('category', product.category);
@@ -97,6 +99,11 @@ export default function AdminProductsPage() {
     const payload = {
       name: data.name as string,
       description: data.description as string,
+      ingredients: (data.ingredients as string) || null,
+      benefits: String(data.benefits || '')
+        .split(',')
+        .map((b) => b.trim())
+        .filter(Boolean),
       price: Number(data.price),
       compare_at_price: data.compare_at_price ? Number(data.compare_at_price) : null,
       category: data.category as string,
@@ -181,8 +188,17 @@ export default function AdminProductsPage() {
               <Input label="Name" {...register('name', { required: true })} />
               <div>
                 <label className="block text-sm font-medium mb-1.5">Description</label>
-                <textarea {...register('description')} className="w-full px-4 py-3 rounded-xl border border-layali-pink/30" rows={3} />
+                <textarea {...register('description')} className="w-full px-4 py-3 rounded-xl border border-layali-pink/30" rows={4} placeholder="Tell customers about this product..." />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Ingredients</label>
+                <textarea {...register('ingredients')} className="w-full px-4 py-3 rounded-xl border border-layali-pink/30" rows={2} placeholder="Key ingredients..." />
+              </div>
+              <Input
+                label="Benefits (comma separated)"
+                placeholder="hydrating, brightening, anti-aging"
+                {...register('benefits')}
+              />
               <div className="grid grid-cols-2 gap-4">
                 <Input label="Price (SAR)" type="number" step="0.01" {...register('price', { required: true })} />
                 <Input label="Compare Price" type="number" step="0.01" {...register('compare_at_price')} />

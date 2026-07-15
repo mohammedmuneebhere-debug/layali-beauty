@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ShoppingBag, Filter } from 'lucide-react';
 import { Card, CardImage, CardContent } from '@/components/ui/Card';
@@ -65,7 +66,9 @@ export default function ShopContent() {
     load();
   }, [category]);
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
     const image = product.images?.[0] || product.image_url;
     addItem({
       id: product.id,
@@ -131,32 +134,41 @@ export default function ShopContent() {
           <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map((product) => (
               <StaggerItem key={product.id}>
-                <Card hover>
-                  <CardImage src={productCover(product)} alt={product.name} />
-                  <CardContent>
-                    <p className="text-xs text-layali-pink-dark uppercase tracking-wide mb-1">
-                      {product.category}
-                    </p>
-                    <h3 className="font-medium text-layali-black mb-1 line-clamp-1">{product.name}</h3>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-bold text-layali-black">{formatPrice(Number(product.price))}</span>
-                        {product.compare_at_price && (
-                          <span className="text-sm text-layali-black/40 line-through ml-2">
-                            {formatPrice(Number(product.compare_at_price))}
-                          </span>
-                        )}
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => handleAddToCart(product)}
-                      >
-                        <ShoppingBag className="w-4 h-4" />
-                      </Button>
+                <Link href={`/shop/${product.id}`} className="block h-full">
+                  <Card hover>
+                    <div className="relative">
+                      <CardImage src={productCover(product)} alt={product.name} />
+                      {(product.images?.length || 0) > 1 && (
+                        <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-black/50 text-white text-[10px]">
+                          {product.images.length} photos
+                        </span>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
+                    <CardContent>
+                      <p className="text-xs text-layali-pink-dark uppercase tracking-wide mb-1">
+                        {product.category}
+                      </p>
+                      <h3 className="font-medium text-layali-black mb-1 line-clamp-1">{product.name}</h3>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-bold text-layali-black">{formatPrice(Number(product.price))}</span>
+                          {product.compare_at_price && (
+                            <span className="text-sm text-layali-black/40 line-through ml-2">
+                              {formatPrice(Number(product.compare_at_price))}
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={(e) => handleAddToCart(e, product)}
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               </StaggerItem>
             ))}
           </StaggerContainer>

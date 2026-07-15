@@ -1,14 +1,22 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Eye, Truck } from 'lucide-react';
+import { Eye, Truck, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { ORDER_STATUS_LABELS } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
+import { LocationMap } from '@/components/map/LocationMap';
 import type { Order, OrderStatus } from '@/types/database';
 
 const STATUS_FLOW: OrderStatus[] = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
+
+function orderCoordinates(order: Order) {
+  const lat = order.latitude ?? order.address?.latitude;
+  const lng = order.longitude ?? order.address?.longitude;
+  if (lat == null || lng == null) return null;
+  return { lat: Number(lat), lng: Number(lng) };
+}
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -21,7 +29,7 @@ export default function AdminOrdersPage() {
     const supabase = createClient();
     const { data } = await supabase
       .from('orders')
-      .select('*, profile:profiles(full_name, email, phone), items:order_items(*), tracking:order_tracking(*)')
+      .select('*, profile:profiles(full_name, email, phone), items:order_items(*), tracking:order_tracking(*), address:addresses(latitude, longitude, address_line)')
       .order('created_at', { ascending: false });
     setOrders((data as Order[]) || []);
     setLoading(false);
@@ -120,6 +128,42 @@ export default function AdminOrdersPage() {
               <p><span className="text-gray-500">City:</span> {selectedOrder.shipping_city}, {selectedOrder.shipping_country}</p>
               <p><span className="text-gray-500">Payment:</span> COD</p>
             </div>
+
+            {(() => {
+              const coords = orderCoordinates(selectedOrder);
+              if (!coords) {
+                return (
+                  <div className="mb-6 p-3 rounded-xl bg-gray-50 text-xs text-gray-500 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    No map pin saved for this order
+                  </div>
+                );
+              }
+              return (
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4" /> Delivery Pin
+                  </h4>
+                  <LocationMap
+                    latitude={coords.lat}
+                    longitude={coords.lng}
+                    editable={false}
+                    height="220px"
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    {coords.lat.toFixed(5)}, {coords.lng.toFixed(5)}
+                  </p>
+                  <a
+                    href={`https://www.google.com/maps?q=${coords.lat},${coords.lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs text-layali-pink-dark hover:underline mt-1 inline-block"
+                  >
+                    Open in Google Maps
+                  </a>
+                </div>
+              );
+            })()}
 
             <h4 className="font-medium text-gray-900 mb-2">Items</h4>
             <div className="space-y-2 mb-6">

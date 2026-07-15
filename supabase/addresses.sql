@@ -25,7 +25,9 @@ CREATE INDEX addresses_user_id_idx ON addresses(user_id);
 ALTER TABLE orders
   ADD COLUMN IF NOT EXISTS address_id UUID REFERENCES addresses(id) ON DELETE SET NULL,
   ADD COLUMN IF NOT EXISTS receiver_name TEXT,
-  ADD COLUMN IF NOT EXISTS receiver_phone TEXT;
+  ADD COLUMN IF NOT EXISTS receiver_phone TEXT,
+  ADD COLUMN IF NOT EXISTS latitude DECIMAL(10, 7),
+  ADD COLUMN IF NOT EXISTS longitude DECIMAL(10, 7);
 
 ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
 

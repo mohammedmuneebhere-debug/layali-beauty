@@ -7,6 +7,7 @@ import { CheckCircle, Package, Plus, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { AddressForm, addressDisplayLabel, type AddressFormValues } from '@/components/address/AddressForm';
+import { LocationMap } from '@/components/map/LocationMap';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
@@ -134,6 +135,8 @@ export default function CheckoutPage() {
         address_id: selectedAddress.id,
         receiver_name: selectedAddress.receiver_name,
         receiver_phone: selectedAddress.receiver_phone,
+        latitude: selectedAddress.latitude,
+        longitude: selectedAddress.longitude,
         notes: notes || null,
         status: 'pending',
       })
@@ -302,10 +305,20 @@ export default function CheckoutPage() {
               <span className="text-sm text-layali-black/70">Cash on Delivery</span>
             </div>
             {selectedAddress && (
-              <div className="mt-4 text-sm text-layali-black/60">
-                <p className="font-medium text-layali-black">Delivering to</p>
-                <p>{selectedAddress.receiver_name} · {selectedAddress.receiver_phone}</p>
-                <p className="mt-1">{selectedAddress.address_line}</p>
+              <div className="mt-4 text-sm text-layali-black/60 space-y-3">
+                <div>
+                  <p className="font-medium text-layali-black">Delivering to</p>
+                  <p>{selectedAddress.receiver_name} · {selectedAddress.receiver_phone}</p>
+                  <p className="mt-1">{selectedAddress.address_line}</p>
+                </div>
+                {selectedAddress.latitude != null && selectedAddress.longitude != null && (
+                  <LocationMap
+                    latitude={Number(selectedAddress.latitude)}
+                    longitude={Number(selectedAddress.longitude)}
+                    editable={false}
+                    height="180px"
+                  />
+                )}
               </div>
             )}
           </div>

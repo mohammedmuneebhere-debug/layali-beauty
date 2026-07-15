@@ -7,6 +7,7 @@ import { ArrowLeft, Plus, Trash2, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AddressForm, addressDisplayLabel, type AddressFormValues } from '@/components/address/AddressForm';
+import { LocationMap } from '@/components/map/LocationMap';
 import { FadeIn } from '@/components/ui/FadeIn';
 import type { Address } from '@/types/database';
 
@@ -168,6 +169,16 @@ export default function AddressesPage() {
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
+                  {address.latitude != null && address.longitude != null && (
+                    <div className="mt-3">
+                      <LocationMap
+                        latitude={Number(address.latitude)}
+                        longitude={Number(address.longitude)}
+                        editable={false}
+                        height="160px"
+                      />
+                    </div>
+                  )}
                   {!address.is_default && (
                     <button
                       onClick={() => setDefault(address.id)}

@@ -94,6 +94,8 @@ export interface Order {
   address_id?: string | null;
   receiver_name?: string | null;
   receiver_phone?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   tracking_number: string | null;
   notes: string | null;
   created_at: string;
@@ -101,6 +103,7 @@ export interface Order {
   items?: OrderItem[];
   tracking?: OrderTracking[];
   profile?: Profile;
+  address?: Address | null;
 }
 
 export interface OrderItem {
