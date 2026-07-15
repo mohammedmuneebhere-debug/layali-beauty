@@ -2,18 +2,37 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { useCartStore } from '@/store/cart';
+import { createClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/utils';
 
 export default function CartPage() {
+  const router = useRouter();
   const { items, updateQuantity, removeItem, total, itemCount } = useCartStore();
   const [mounted, setMounted] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  const proceedToCheckout = async () => {
+    setCheckingAuth(true);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.push('/auth/signin?redirect=/checkout');
+      setCheckingAuth(false);
+      return;
+    }
+
+    router.push('/checkout');
+    setCheckingAuth(false);
+  };
 
   if (!mounted) return null;
 
@@ -94,12 +113,13 @@ export default function CartPage() {
             <span className="text-layali-black/60">Subtotal</span>
             <span className="font-bold text-xl text-layali-black">{formatPrice(total())}</span>
           </div>
-          <p className="text-sm text-layali-black/50 mb-6">Payment: Cash on Delivery (COD)</p>
-          <Link href="/checkout">
-            <Button className="w-full" size="lg">
-              Proceed to Checkout <ArrowRight className="w-5 h-5" />
-            </Button>
-          </Link>
+          <p className="text-sm text-layali-black/50 mb-2">Payment: Cash on Delivery (COD)</p>
+          <p className="text-xs text-layali-black/40 mb-6">
+            You can shop as a guest. Sign in is required to place your order.
+          </p>
+          <Button className="w-full" size="lg" loading={checkingAuth} onClick={proceedToCheckout}>
+            Proceed to Checkout <ArrowRight className="w-5 h-5" />
+          </Button>
         </div>
       </div>
     </div>

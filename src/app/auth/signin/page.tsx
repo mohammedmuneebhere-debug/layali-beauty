@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,8 +18,10 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect') || '';
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -54,6 +56,8 @@ export default function SignInPage() {
         router.push('/admin');
       } else if (!profile?.onboarding_completed) {
         router.push('/survey');
+      } else if (redirectTo.startsWith('/')) {
+        router.push(redirectTo);
       } else {
         router.push('/shop');
       }
@@ -78,6 +82,12 @@ export default function SignInPage() {
 
         <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-layali-pink/20">
           <h2 className="font-serif text-2xl font-bold text-layali-black mb-6 text-center">Sign In</h2>
+
+          {redirectTo === '/checkout' && (
+            <div className="mb-4 p-3 rounded-xl bg-layali-pink-light/40 text-layali-black text-sm text-center">
+              Sign in to complete your order
+            </div>
+          )}
 
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>
@@ -107,5 +117,13 @@ export default function SignInPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen gradient-pink" />}>
+      <SignInForm />
+    </Suspense>
   );
 }

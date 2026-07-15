@@ -8,7 +8,7 @@ import { Card, CardImage, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { createClient } from '@/lib/supabase/client';
-import { getProductsForRegion } from '@/lib/products';
+import { getProductsForRegion, getPublicProducts } from '@/lib/products';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import { PRODUCT_CATEGORIES } from '@/lib/constants';
@@ -19,19 +19,22 @@ export default function ShopContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState(searchParams.get('category') || '');
+  const [isGuest, setIsGuest] = useState(false);
   const [userRegion, setUserRegion] = useState<{ gender: string; city: string; country: string } | null>(null);
   const addItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
     async function load() {
+      setLoading(true);
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
 
-      let gender = 'female';
+      let gender = '';
       let city = '';
       let country = '';
 
       if (user) {
+        setIsGuest(false);
         const { data: profile } = await supabase
           .from('profiles')
           .select('gender, city, country')
@@ -39,27 +42,44 @@ export default function ShopContent() {
           .single();
 
         if (profile) {
-          gender = profile.gender || 'female';
+          gender = profile.gender || '';
           city = profile.city || '';
           country = profile.country || '';
-          setUserRegion({ gender, city, country });
+          if (gender && city && country) {
+            setUserRegion({ gender, city, country });
+          }
         }
-      }
 
-      if (!city || !country) {
-        setProducts([]);
+        // Logged-in users with region: show outlet-specific stock
+        if (gender && city && country) {
+          const regional = await getProductsForRegion(supabase, {
+            gender,
+            country,
+            city,
+            category: category || undefined,
+          });
+          setProducts(regional);
+          setLoading(false);
+          return;
+        }
+
+        // Logged in but missing profile region — still show full catalog filtered by gender if known
+        const fallback = await getPublicProducts(supabase, {
+          category: category || undefined,
+          gender: gender || undefined,
+        });
+        setProducts(fallback);
         setLoading(false);
         return;
       }
 
-      const data = await getProductsForRegion(supabase, {
-        gender,
-        country,
-        city,
+      // Guests: show all active products
+      setIsGuest(true);
+      setUserRegion(null);
+      const publicProducts = await getPublicProducts(supabase, {
         category: category || undefined,
       });
-
-      setProducts(data);
+      setProducts(publicProducts);
       setLoading(false);
     }
 
@@ -86,10 +106,20 @@ export default function ShopContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn className="mb-8">
           <h1 className="font-serif text-4xl font-bold text-layali-black mb-2">Shop</h1>
-          {userRegion && (
+          {userRegion ? (
             <p className="text-layali-black/60">
               Showing products for {userRegion.gender === 'female' ? 'women' : 'men'} in {userRegion.city}, {userRegion.country}
             </p>
+          ) : isGuest ? (
+            <p className="text-layali-black/60">
+              Browse our collection —{' '}
+              <Link href="/auth/signin?redirect=/checkout" className="text-layali-pink-dark hover:underline">
+                sign in
+              </Link>{' '}
+              when you&apos;re ready to checkout
+            </p>
+          ) : (
+            <p className="text-layali-black/60">Browse our beauty collection</p>
           )}
         </FadeIn>
 
@@ -127,7 +157,7 @@ export default function ShopContent() {
             <p className="text-layali-black/60">
               {userRegion
                 ? `No products available at our ${userRegion.city} outlet yet.`
-                : 'Sign in and set your region to see available products.'}
+                : 'No products available yet.'}
             </p>
           </div>
         ) : (

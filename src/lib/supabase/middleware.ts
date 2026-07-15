@@ -87,8 +87,10 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    const redirect = request.nextUrl.searchParams.get('redirect');
     const url = request.nextUrl.clone();
-    url.pathname = '/shop';
+    url.pathname = redirect?.startsWith('/') ? redirect : '/shop';
+    url.search = '';
     return NextResponse.redirect(url);
   }
 

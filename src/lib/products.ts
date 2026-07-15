@@ -53,6 +53,36 @@ export async function getProductsForRegion(
   return (data || []).map(({ product_regions: _, ...product }) => product as Product);
 }
 
+/** Catalog for guests (and fallback) — all active products, optional category/gender */
+export async function getPublicProducts(
+  supabase: SupabaseClient,
+  options?: {
+    category?: string;
+    gender?: string;
+  }
+): Promise<Product[]> {
+  let query = supabase
+    .from('products')
+    .select('*')
+    .eq('is_active', true)
+    .order('created_at', { ascending: false });
+
+  if (options?.category) {
+    query = query.eq('category', options.category);
+  }
+  if (options?.gender) {
+    query = query.eq('gender', options.gender);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error('Failed to load products:', error.message);
+    return [];
+  }
+
+  return (data || []) as Product[];
+}
+
 export async function saveProductRegions(
   supabase: SupabaseClient,
   productId: string,

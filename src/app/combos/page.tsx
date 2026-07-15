@@ -20,23 +20,25 @@ export default function CombosPage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
 
-      let gender = 'female';
+      let query = supabase
+        .from('combos')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      // Logged-in users see combos for their gender; guests see all
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('gender')
           .eq('id', user.id)
           .single();
-        if (profile?.gender) gender = profile.gender;
+        if (profile?.gender) {
+          query = query.eq('gender', profile.gender);
+        }
       }
 
-      const { data } = await supabase
-        .from('combos')
-        .select('*')
-        .eq('is_active', true)
-        .eq('gender', gender)
-        .order('created_at', { ascending: false });
-
+      const { data } = await query;
       setCombos(data || []);
       setLoading(false);
     }
