@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -17,10 +18,12 @@ export default function CartPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const { items, updateQuantity, removeItem, total, itemCount } = useCartStore();
-  const [mounted, setMounted] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const subtotal = total();
   const grandTotal = subtotal + DELIVERY_FEE;

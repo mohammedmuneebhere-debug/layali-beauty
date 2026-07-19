@@ -48,7 +48,11 @@ export default function AdminProductsPage() {
     setRegions(regionsRes.data || []);
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      loadData();
+    });
+  }, []);
 
   const toggleRegion = (regionId: string) => {
     setRegionError('');

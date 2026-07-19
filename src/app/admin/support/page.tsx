@@ -61,18 +61,21 @@ export default function AdminSupportPage() {
   useEffect(() => {
     if (!selected?.id) return;
 
-    loadMessages(selected.id);
+    const conversationId = selected.id;
+    void Promise.resolve().then(() => {
+      loadMessages(conversationId);
+    });
 
     const supabase = createClient();
     const channel = supabase
-      .channel(`admin-support-${selected.id}`)
+      .channel(`admin-support-${conversationId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'support_messages',
-          filter: `conversation_id=eq.${selected.id}`,
+          filter: `conversation_id=eq.${conversationId}`,
         },
         async (payload) => {
           const newMsg = payload.new as SupportMessage;

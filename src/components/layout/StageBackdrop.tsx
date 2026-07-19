@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,13 +20,13 @@ const HIDDEN_PREFIXES = ['/admin', '/auth/admin'];
 export function StageBackdrop() {
   const pathname = usePathname();
   const [index, setIndex] = useState(0);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   const hidden = HIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (hidden) return;

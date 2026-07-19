@@ -18,7 +18,6 @@ import { BannerCarousel } from '@/components/banners/BannerCarousel';
 import { PromoOffersGrid } from '@/components/banners/PromoOffersGrid';
 import {
   SHOP_HERO_BANNERS,
-  OFFERS_PROMO_GRID,
   BRAND_PROMO_GRID,
 } from '@/lib/banners';
 
@@ -139,13 +138,6 @@ export default function ShopContent() {
             slides={SHOP_HERO_BANNERS}
             className="border border-layali-pink/20"
           />
-        </FadeIn>
-
-        <FadeIn className="mb-10">
-          <p className="text-xs tracking-[0.22em] uppercase text-layali-pink mb-3">
-            Limited offers
-          </p>
-          <PromoOffersGrid items={OFFERS_PROMO_GRID} />
         </FadeIn>
 
         <div className="flex flex-wrap gap-2 mb-10">

@@ -32,7 +32,11 @@ export default function AdminCombosPage() {
     setProducts(productsRes.data || []);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      load();
+    });
+  }, []);
 
   const toggleProduct = (id: string) => {
     setSelectedProducts((prev) =>

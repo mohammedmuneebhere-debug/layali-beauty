@@ -50,7 +50,13 @@ export async function getProductsForRegion(
     return [];
   }
 
-  return (data || []).map(({ product_regions: _, ...product }) => product as Product);
+  return (data || []).map((row) => {
+    const { product_regions: _ignored, ...product } = row as Product & {
+      product_regions?: unknown;
+    };
+    void _ignored;
+    return product as Product;
+  });
 }
 
 /** Catalog for guests (and fallback) — all active products, optional category/gender */

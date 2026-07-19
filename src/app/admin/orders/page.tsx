@@ -35,7 +35,11 @@ export default function AdminOrdersPage() {
     setLoading(false);
   };
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      loadOrders();
+    });
+  }, []);
 
   const updateStatus = async (orderId: string, status: OrderStatus) => {
     const supabase = createClient();

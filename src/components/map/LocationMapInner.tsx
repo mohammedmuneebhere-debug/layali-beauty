@@ -65,12 +65,9 @@ function DraggablePin({
 }) {
   const [position, setPosition] = useState<[number, number]>([latitude, longitude]);
 
-  useEffect(() => {
-    setPosition([latitude, longitude]);
-  }, [latitude, longitude]);
-
   return (
     <Marker
+      key={`${latitude.toFixed(5)}-${longitude.toFixed(5)}`}
       position={position}
       icon={pinIcon}
       draggable={editable}
@@ -134,6 +131,7 @@ export default function LocationMapInner({
           onPick={(lat, lng) => onLocationChange?.(lat, lng)}
         />
         <DraggablePin
+          key={`${latitude.toFixed(5)}-${longitude.toFixed(5)}`}
           latitude={latitude}
           longitude={longitude}
           editable={editable}

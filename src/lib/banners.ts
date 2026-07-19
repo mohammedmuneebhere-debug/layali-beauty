@@ -16,18 +16,8 @@ export const BANNER_SIZES: Record<string, { w: number; h: number }> = {
   '/banners/loreal-beauty-works.png': { w: 2400, h: 793 },
   '/banners/loreal-science.png': { w: 2400, h: 476 },
   '/banners/loreal-worth-it.png': { w: 2400, h: 495 },
-  '/banners/offers-grid-ar.png': { w: 2400, h: 3657 },
   '/banners/sheglam-fun-makeup.png': { w: 2400, h: 698 },
   '/banners/torriden-hydration.png': { w: 2400, h: 246 },
-  // Split offer tiles (native aspect preserved)
-  '/banners/offers/wide-1.png': { w: 2011, h: 524 },
-  '/banners/offers/sq-1a.png': { w: 1600, h: 1892 },
-  '/banners/offers/sq-1b.png': { w: 1600, h: 1604 },
-  '/banners/offers/sq-2a.png': { w: 1600, h: 1606 },
-  '/banners/offers/sq-2b.png': { w: 1600, h: 1606 },
-  '/banners/offers/wide-2.png': { w: 3140, h: 1054 },
-  '/banners/offers/sq-3a.png': { w: 1600, h: 1606 },
-  '/banners/offers/sq-3b.png': { w: 1600, h: 1606 },
 };
 
 /** Landing — K-beauty / skincare rituals (best brand fit) */
@@ -124,65 +114,7 @@ export const SHOP_PROMO_STRIP: BannerSlide[] = [
   },
 ];
 
-export const SHOP_OFFERS_BANNER: BannerSlide = {
-  src: '/banners/offers-grid-ar.png',
-  alt: 'Limited-time beauty offers and deals',
-  href: '/shop',
-};
-
-/** Marketplace offers grid — wide / 2 / 2 / wide / 2 (no crop) */
-export const OFFERS_PROMO_GRID = [
-  {
-    src: '/banners/offers/wide-1.png',
-    alt: 'Rimmel London — up to 50% off',
-    href: '/shop?category=makeup',
-    span: 'full' as const,
-  },
-  {
-    src: '/banners/offers/sq-1a.png',
-    alt: 'Medicube — up to 50% off',
-    href: '/shop?category=skincare',
-    span: 'half' as const,
-  },
-  {
-    src: '/banners/offers/sq-1b.png',
-    alt: 'ViveLab — up to 50% off',
-    href: '/shop?category=skincare',
-    span: 'half' as const,
-  },
-  {
-    src: '/banners/offers/sq-2a.png',
-    alt: 'Sunscreen essentials',
-    href: '/shop?category=skincare',
-    span: 'half' as const,
-  },
-  {
-    src: '/banners/offers/sq-2b.png',
-    alt: 'Tan essentials',
-    href: '/shop?category=bodycare',
-    span: 'half' as const,
-  },
-  {
-    src: '/banners/offers/wide-2.png',
-    alt: 'Buy 1 Get 1 Free on selected products',
-    href: '/shop',
-    span: 'full' as const,
-  },
-  {
-    src: '/banners/offers/sq-3a.png',
-    alt: 'Topface — up to 45% off',
-    href: '/shop?category=makeup',
-    span: 'half' as const,
-  },
-  {
-    src: '/banners/offers/sq-3b.png',
-    alt: 'Calla Makeup — up to 70% off',
-    href: '/shop?category=makeup',
-    span: 'half' as const,
-  },
-];
-
-/** Same grid format with Layali brand banners */
+/** Brand promo grid — wide / 2 / 2 / wide / 2 (no crop) */
 export const BRAND_PROMO_GRID = [
   {
     src: '/banners/kbeauty-glow-confidence.png',

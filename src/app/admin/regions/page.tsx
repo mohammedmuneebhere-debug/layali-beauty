@@ -20,7 +20,11 @@ export default function AdminRegionsPage() {
     setRegions(data || []);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void Promise.resolve().then(() => {
+      load();
+    });
+  }, []);
 
   const addRegion = async () => {
     if (!country || !city) return;

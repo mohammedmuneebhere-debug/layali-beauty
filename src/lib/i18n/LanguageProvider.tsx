@@ -13,6 +13,17 @@ import { translations, type Locale, type TranslationTree } from './translations'
 
 const STORAGE_KEY = 'layali-locale';
 
+function readStoredLocale(): Locale {
+  if (typeof window === 'undefined') return 'en';
+  try {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved === 'en' || saved === 'ar') return saved;
+  } catch {
+    // ignore
+  }
+  return 'en';
+}
+
 type LanguageContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
@@ -23,27 +34,21 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('en');
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY) as Locale | null;
-    if (saved === 'en' || saved === 'ar') {
-      setLocaleState(saved);
-    }
-    setReady(true);
-  }, []);
+  const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
 
   const setLocale = useCallback((next: Locale) => {
     setLocaleState(next);
-    window.localStorage.setItem(STORAGE_KEY, next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
     document.documentElement.lang = locale;
     document.documentElement.dir = locale === 'ar' ? 'rtl' : 'ltr';
-  }, [locale, ready]);
+  }, [locale]);
 
   const value = useMemo<LanguageContextValue>(
     () => ({
