@@ -12,12 +12,13 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { createClient } from '@/lib/supabase/client';
 import { COUNTRIES, CITIES } from '@/lib/constants';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 
 const schema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  gender: z.enum(['female', 'male'], { message: 'Please select your gender' }),
   country: z.string().min(1, 'Please select your country'),
   city: z.string().min(1, 'Please select your city'),
   phone: z.string().min(8, 'Please enter a valid phone number'),
@@ -28,6 +29,7 @@ type Step = 'details' | 'otp';
 
 export default function SignUpPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [step, setStep] = useState<Step>('details');
   const [pendingData, setPendingData] = useState<FormData | null>(null);
   const [otp, setOtp] = useState('');
@@ -40,6 +42,23 @@ export default function SignUpPage() {
   });
 
   const country = watch('country');
+
+  const upsertProfile = async (
+    userId: string,
+    data: FormData
+  ) => {
+    const supabase = createClient();
+    await supabase.from('profiles').upsert({
+      id: userId,
+      email: data.email,
+      full_name: data.full_name,
+      gender: 'female',
+      country: data.country,
+      city: data.city,
+      phone: data.phone,
+      role: 'user',
+    });
+  };
 
   const onSubmitDetails = async (data: FormData) => {
     setLoading(true);
@@ -54,7 +73,7 @@ export default function SignUpPage() {
         data: {
           full_name: data.full_name,
           role: 'user',
-          gender: data.gender,
+          gender: 'female',
           country: data.country,
           city: data.city,
           phone: data.phone,
@@ -74,24 +93,13 @@ export default function SignUpPage() {
       return;
     }
 
-    // Email confirmation disabled — session already active
     if (authData.session) {
-      await supabase.from('profiles').upsert({
-        id: authData.user.id,
-        email: data.email,
-        full_name: data.full_name,
-        gender: data.gender,
-        country: data.country,
-        city: data.city,
-        phone: data.phone,
-        role: 'user',
-      });
+      await upsertProfile(authData.user.id, data);
       router.push('/survey');
       setLoading(false);
       return;
     }
 
-    // Confirmation required — show OTP step
     setPendingData(data);
     setStep('otp');
     setLoading(false);
@@ -111,7 +119,6 @@ export default function SignUpPage() {
     setError('');
     const supabase = createClient();
 
-    // Prefer signup type; fall back to email for newer Supabase OTP templates
     let verifyError = (
       await supabase.auth.verifyOtp({
         email: pendingData.email,
@@ -138,16 +145,7 @@ export default function SignUpPage() {
 
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
-      await supabase.from('profiles').upsert({
-        id: user.id,
-        email: pendingData.email,
-        full_name: pendingData.full_name,
-        gender: pendingData.gender,
-        country: pendingData.country,
-        city: pendingData.city,
-        phone: pendingData.phone,
-        role: 'user',
-      });
+      await upsertProfile(user.id, pendingData);
     }
 
     router.push('/survey');
@@ -175,57 +173,51 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen gradient-pink flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen bg-transparent flex items-center justify-center py-12 px-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
+          <div className="flex justify-end mb-4">
+            <LanguageSwitcher />
+          </div>
           <Link href="/">
-            <h1 className="font-serif text-4xl font-bold tracking-widest text-layali-black">LAYALI</h1>
+            <h1 className="font-serif text-4xl font-bold tracking-widest text-white">LAYALI</h1>
           </Link>
-          <p className="font-script text-2xl text-layali-black/70 mt-2">
-            {step === 'otp' ? 'verify email' : 'join us'}
+          <p className="font-script text-2xl text-white/70 mt-2">
+            {step === 'otp' ? t.signup.verify : t.signup.join}
           </p>
         </div>
 
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-layali-pink/20">
+        <div className="glass-panel rounded-3xl p-8 shadow-xl border border-layali-pink/20">
           {step === 'details' ? (
             <>
-              <h2 className="font-serif text-2xl font-bold text-layali-black mb-6 text-center">Create Account</h2>
+              <h2 className="font-serif text-2xl font-bold text-white mb-6 text-center">
+                {t.signup.create}
+              </h2>
 
               {error && (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>
+                <div className="mb-4 p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm">{error}</div>
               )}
 
               {Object.keys(errors).length > 0 && (
-                <div className="mb-4 p-3 rounded-xl bg-amber-50 text-amber-700 text-sm">
-                  Please fill in all required fields correctly.
+                <div className="mb-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-200 text-sm">
+                  {t.signup.fillRequired}
                 </div>
               )}
 
               <form onSubmit={handleSubmit(onSubmitDetails, () => setError(''))} className="space-y-4">
-                <Input label="Full Name" {...register('full_name')} error={errors.full_name?.message} />
-                <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
-                <Input label="Password" type="password" {...register('password')} error={errors.password?.message} />
-                <Input label="Phone" type="tel" {...register('phone')} error={errors.phone?.message} />
+                <Input label={t.signup.fullName} {...register('full_name')} error={errors.full_name?.message} />
+                <Input label={t.signup.email} type="email" {...register('email')} error={errors.email?.message} />
+                <Input label={t.signup.password} type="password" {...register('password')} error={errors.password?.message} />
+                <Input label={t.signup.phone} type="tel" {...register('phone')} error={errors.phone?.message} />
 
                 <Select
-                  label="Gender"
-                  options={[
-                    { value: 'female', label: 'Female' },
-                    { value: 'male', label: 'Male' },
-                  ]}
-                  placeholder="Select gender"
-                  {...register('gender')}
-                  error={errors.gender?.message}
-                />
-
-                <Select
-                  label="Country"
+                  label={t.signup.country}
                   options={COUNTRIES}
-                  placeholder="Select country"
+                  placeholder={t.signup.selectCountry}
                   {...register('country', {
                     onChange: (e) => {
                       setSelectedCountry(e.target.value);
@@ -236,24 +228,26 @@ export default function SignUpPage() {
                 />
 
                 <Select
-                  label="City"
+                  label={t.signup.city}
                   options={CITIES[country || selectedCountry] || []}
-                  placeholder="Select city"
+                  placeholder={t.signup.selectCity}
                   {...register('city')}
                   error={errors.city?.message}
                   disabled={!country && !selectedCountry}
                 />
 
                 <Button type="submit" className="w-full" loading={loading}>
-                  Continue
+                  {t.signup.continue}
                 </Button>
               </form>
             </>
           ) : (
             <>
-              <h2 className="font-serif text-2xl font-bold text-layali-black mb-2 text-center">Enter OTP</h2>
-              <p className="text-sm text-layali-black/60 text-center mb-6">
-                We sent a 6-digit code to <strong>{pendingData?.email}</strong>
+              <h2 className="font-serif text-2xl font-bold text-white mb-2 text-center">
+                {t.signup.otpTitle}
+              </h2>
+              <p className="text-sm text-white/60 text-center mb-6">
+                {t.signup.otpBody} <strong>{pendingData?.email}</strong>
               </p>
 
               {error && (
@@ -262,7 +256,7 @@ export default function SignUpPage() {
 
               <form onSubmit={verifyOtp} className="space-y-4">
                 <Input
-                  label="Verification Code"
+                  label={t.signup.code}
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   placeholder="000000"
@@ -273,7 +267,7 @@ export default function SignUpPage() {
                 />
 
                 <Button type="submit" className="w-full" loading={loading}>
-                  Verify & Continue
+                  {t.signup.verifyContinue}
                 </Button>
               </form>
 
@@ -282,9 +276,9 @@ export default function SignUpPage() {
                   type="button"
                   onClick={resendOtp}
                   disabled={loading}
-                  className="text-layali-pink-dark font-medium hover:underline"
+                  className="text-layali-pink font-medium hover:underline"
                 >
-                  Resend code
+                  {t.signup.resend}
                 </button>
                 <button
                   type="button"
@@ -293,19 +287,19 @@ export default function SignUpPage() {
                     setOtp('');
                     setError('');
                   }}
-                  className="text-layali-black/50 hover:text-layali-black"
+                  className="text-white/50 hover:text-white"
                 >
-                  Back to details
+                  {t.signup.back}
                 </button>
               </div>
             </>
           )}
 
           {step === 'details' && (
-            <p className="text-center text-sm text-layali-black/60 mt-6">
-              Already have an account?{' '}
-              <Link href="/auth/signin" className="text-layali-pink-dark font-medium hover:underline">
-                Sign In
+            <p className="text-center text-sm text-white/60 mt-6">
+              {t.signup.haveAccount}{' '}
+              <Link href="/auth/signin" className="text-layali-pink font-medium hover:underline">
+                {t.signup.signIn}
               </Link>
             </p>
           )}

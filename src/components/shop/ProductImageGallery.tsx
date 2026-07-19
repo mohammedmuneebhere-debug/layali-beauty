@@ -46,8 +46,8 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
 
   if (photos.length === 0) {
     return (
-      <div className="aspect-square rounded-3xl bg-layali-pink-light/30 flex items-center justify-center border border-layali-pink/20">
-        <span className="text-6xl text-layali-pink">✦</span>
+      <div className="aspect-square rounded-3xl bg-layali-surface flex items-center justify-center border border-white/10">
+        <span className="text-6xl text-layali-pink/50">✦</span>
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
   return (
     <>
       <div className="space-y-3">
-        <div className="relative aspect-square rounded-3xl overflow-hidden bg-layali-pink-light/20 border border-layali-pink/20 group">
+        <div className="relative aspect-square rounded-3xl overflow-hidden bg-layali-surface border border-white/10 group marble-rim">
           <button
             type="button"
             onClick={() => setLightboxOpen(true)}
@@ -72,7 +72,7 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
           <button
             type="button"
             onClick={() => setLightboxOpen(true)}
-            className="absolute top-3 right-3 z-20 p-2 rounded-full bg-white/90 text-layali-black shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/60 text-white border border-white/15 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur"
             aria-label="Open fullscreen"
           >
             <Expand className="w-4 h-4" />
@@ -86,7 +86,7 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
                   e.stopPropagation();
                   goPrev();
                 }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/90 text-layali-black shadow-md hover:bg-white"
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/60 text-white border border-white/15 shadow-md hover:border-layali-pink/50 backdrop-blur"
                 aria-label="Previous image"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -97,7 +97,7 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
                   e.stopPropagation();
                   goNext();
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-white/90 text-layali-black shadow-md hover:bg-white"
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/60 text-white border border-white/15 shadow-md hover:border-layali-pink/50 backdrop-blur"
                 aria-label="Next image"
               >
                 <ChevronRight className="w-5 h-5" />

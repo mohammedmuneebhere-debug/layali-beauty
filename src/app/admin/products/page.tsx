@@ -185,7 +185,7 @@ export default function AdminProductsPage() {
               <button onClick={() => setShowForm(false)}><X className="w-5 h-5" /></button>
             </div>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <Input label="Name" {...register('name', { required: true })} />
+              <Input tone="light" label="Name" {...register('name', { required: true })} />
               <div>
                 <label className="block text-sm font-medium mb-1.5">Description</label>
                 <textarea {...register('description')} className="w-full px-4 py-3 rounded-xl border border-layali-pink/30" rows={4} placeholder="Tell customers about this product..." />
@@ -195,20 +195,21 @@ export default function AdminProductsPage() {
                 <textarea {...register('ingredients')} className="w-full px-4 py-3 rounded-xl border border-layali-pink/30" rows={2} placeholder="Key ingredients..." />
               </div>
               <Input
+                tone="light"
                 label="Benefits (comma separated)"
                 placeholder="hydrating, brightening, anti-aging"
                 {...register('benefits')}
               />
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Price (SAR)" type="number" step="0.01" {...register('price', { required: true })} />
-                <Input label="Compare Price" type="number" step="0.01" {...register('compare_at_price')} />
+                <Input tone="light" label="Price (SAR)" type="number" step="0.01" {...register('price', { required: true })} />
+                <Input tone="light" label="Compare Price" type="number" step="0.01" {...register('compare_at_price')} />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Select label="Category" options={PRODUCT_CATEGORIES} {...register('category', { required: true })} />
-                <Select label="Gender" options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]} {...register('gender', { required: true })} />
+                <Select tone="light" label="Category" options={PRODUCT_CATEGORIES} {...register('category', { required: true })} />
+                <Select tone="light" label="Gender" options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]} {...register('gender', { required: true })} />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Stock" type="number" {...register('stock_quantity')} />
+                <Input tone="light" label="Stock" type="number" {...register('stock_quantity')} />
               </div>
               <MultiImageUpload
                 value={images}
@@ -217,8 +218,8 @@ export default function AdminProductsPage() {
                 label="Product Photos"
               />
               <div className="grid grid-cols-2 gap-4">
-                <Select label="Active" options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} {...register('is_active')} />
-                <Select label="Featured" options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} {...register('is_featured')} />
+                <Select tone="light" label="Active" options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} {...register('is_active')} />
+                <Select tone="light" label="Featured" options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} {...register('is_featured')} />
               </div>
 
               <div>

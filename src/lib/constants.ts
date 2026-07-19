@@ -1,5 +1,8 @@
 export const CONTACT_EMAIL = 'layalibeautystore@gmail.com';
 
+/** Fixed delivery charge (SAR) per order — regardless of item count */
+export const DELIVERY_FEE = 20;
+
 export const COUNTRIES = [
   { value: 'Saudi Arabia', label: 'Saudi Arabia' },
   { value: 'UAE', label: 'United Arab Emirates' },

@@ -206,8 +206,8 @@ export function AddressForm({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
-            <p className="text-sm font-medium text-layali-black">Pin delivery location</p>
-            <p className="text-xs text-layali-black/50">
+            <p className="text-sm font-medium text-white">Pin delivery location</p>
+            <p className="text-xs text-white/50">
               Drag the pin or tap anywhere on the map to move it
             </p>
           </div>
@@ -215,7 +215,7 @@ export function AddressForm({
             type="button"
             onClick={useLiveLocation}
             disabled={locating}
-            className="text-xs text-layali-pink-dark font-medium hover:underline inline-flex items-center gap-1"
+            className="text-xs text-layali-pink font-medium hover:underline inline-flex items-center gap-1"
           >
             <Navigation className="w-3.5 h-3.5" />
             {locating ? 'Detecting...' : 'Use my live location'}
@@ -233,7 +233,7 @@ export function AddressForm({
           }}
         />
 
-        <p className="text-xs text-layali-black/50 flex items-center gap-1">
+        <p className="text-xs text-white/50 flex items-center gap-1">
           <MapPin className="w-3 h-3" />
           {updatingFromPin
             ? 'Updating address from pin...'
@@ -242,7 +242,7 @@ export function AddressForm({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-layali-black mb-1.5">Delivery Address</label>
+        <label className="block text-sm font-medium text-white mb-1.5">Delivery Address</label>
         <textarea
           value={form.address_line}
           onChange={(e) => update('address_line', e.target.value)}
@@ -251,7 +251,7 @@ export function AddressForm({
           placeholder="Street, building, landmark..."
           className="w-full px-4 py-3 rounded-xl border border-layali-pink/30 bg-white/80 focus:outline-none focus:ring-2 focus:ring-layali-pink"
         />
-        <p className="text-xs text-layali-black/40 mt-1">
+        <p className="text-xs text-white/40 mt-1">
           Auto-filled when you move the pin — you can still edit it manually
         </p>
       </div>
@@ -271,7 +271,7 @@ export function AddressForm({
         />
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-layali-black cursor-pointer">
+      <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
         <input
           type="checkbox"
           checked={form.is_default}

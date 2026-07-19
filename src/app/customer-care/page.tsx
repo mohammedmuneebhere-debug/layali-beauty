@@ -187,15 +187,15 @@ function CustomerCareContent() {
   };
 
   return (
-    <div className="min-h-screen bg-layali-cream py-12">
+    <div className="min-h-screen bg-transparent pt-24 pb-12">
       <div className="max-w-4xl mx-auto px-4">
         <FadeIn className="text-center mb-10">
-          <Headphones className="w-10 h-10 mx-auto text-layali-pink-dark mb-4" />
-          <h1 className="font-serif text-4xl font-bold text-layali-black mb-2">Customer Care</h1>
-          <p className="text-layali-black/60">We&apos;re here for you — share a review or chat with our team</p>
+          <Headphones className="w-10 h-10 mx-auto text-layali-pink mb-4" />
+          <h1 className="font-serif text-4xl font-medium text-white mb-2">Customer Care</h1>
+          <p className="text-white/50">We&apos;re here for you — share a review or chat with our team</p>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
-            className="inline-flex items-center gap-2 mt-4 text-sm text-layali-pink-dark hover:underline"
+            className="inline-flex items-center gap-2 mt-4 text-sm text-layali-pink hover:text-layali-pink-light transition-colors"
           >
             <Mail className="w-4 h-4" />
             {CONTACT_EMAIL}
@@ -207,8 +207,10 @@ function CustomerCareContent() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                tab === t ? 'bg-layali-black text-white' : 'bg-white text-layali-black hover:bg-layali-pink-light'
+              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 border ${
+                tab === t
+                  ? 'bg-layali-pink-glow text-white border-layali-pink-glow shadow-[0_0_16px_rgba(212,46,124,0.35)]'
+                  : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
               }`}
             >
               {t === 'reviews' ? <Star className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
@@ -219,11 +221,11 @@ function CustomerCareContent() {
 
         {tab === 'reviews' && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-            <div className="bg-white rounded-2xl p-6 border border-layali-pink/20">
-              <h2 className="font-serif text-xl font-bold text-layali-black mb-4">Write a Review</h2>
+            <div className="glass-panel rounded-2xl p-6">
+              <h2 className="font-serif text-xl font-bold text-white mb-4">Write a Review</h2>
               {!userId ? (
-                <p className="text-sm text-layali-black/60 mb-4">
-                  <Link href="/auth/signin?redirect=/customer-care" className="text-layali-pink-dark font-medium hover:underline">
+                <p className="text-sm text-white/50 mb-4">
+                  <Link href="/auth/signin?redirect=/customer-care" className="text-layali-pink font-medium hover:underline">
                     Sign in
                   </Link>{' '}
                   to share your experience with Layali.
@@ -275,17 +277,17 @@ function CustomerCareContent() {
             </div>
 
             <div className="space-y-4">
-              <h2 className="font-serif text-xl font-bold text-layali-black">What Our Customers Say</h2>
+              <h2 className="font-serif text-xl font-bold text-white">What Our Customers Say</h2>
               {reviews.length === 0 ? (
-                <p className="text-layali-black/50 text-center py-8">No reviews yet. Be the first to share!</p>
+                <p className="text-white/50 text-center py-8">No reviews yet. Be the first to share!</p>
               ) : (
                 reviews.map((review) => (
-                  <div key={review.id} className="bg-white rounded-2xl p-6 border border-layali-pink/20">
+                  <div key={review.id} className="glass-panel rounded-2xl p-6">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <p className="font-medium text-layali-black">{review.profile?.full_name || 'Layali Customer'}</p>
+                        <p className="font-medium text-white">{review.profile?.full_name || 'Layali Customer'}</p>
                         {review.profile?.city && (
-                          <p className="text-xs text-layali-black/50">{review.profile.city}, {review.profile.country}</p>
+                          <p className="text-xs text-white/50">{review.profile.city}, {review.profile.country}</p>
                         )}
                       </div>
                       <div className="flex gap-0.5">
@@ -299,9 +301,9 @@ function CustomerCareContent() {
                         ))}
                       </div>
                     </div>
-                    <h3 className="font-medium text-layali-black mb-1">{review.title}</h3>
-                    <p className="text-sm text-layali-black/70 leading-relaxed">{review.content}</p>
-                    <p className="text-xs text-layali-black/40 mt-3">{formatDate(review.created_at)}</p>
+                    <h3 className="font-medium text-white mb-1">{review.title}</h3>
+                    <p className="text-sm text-white/70 leading-relaxed">{review.content}</p>
+                    <p className="text-xs text-white/40 mt-3">{formatDate(review.created_at)}</p>
                   </div>
                 ))
               )}
@@ -311,22 +313,22 @@ function CustomerCareContent() {
 
         {tab === 'contact' && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="bg-white rounded-2xl border border-layali-pink/20 overflow-hidden flex flex-col h-[500px]">
-              <div className="p-4 border-b border-layali-pink/20 bg-layali-pink-light/30">
-                <h2 className="font-serif text-lg font-bold text-layali-black">Chat with Layali Support</h2>
-                <p className="text-xs text-layali-black/60">Our team typically replies within a few hours</p>
+            <div className="bg-layali-surface rounded-2xl border border-layali-pink/20 overflow-hidden flex flex-col h-[500px]">
+              <div className="p-4 border-b border-layali-pink/20 bg-layali-pink-glow/15">
+                <h2 className="font-serif text-lg font-bold text-white">Chat with Layali Support</h2>
+                <p className="text-xs text-white/50">Our team typically replies within a few hours</p>
               </div>
 
               {!userId ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
                   <MessageCircle className="w-12 h-12 text-layali-pink mb-4" />
-                  <p className="text-layali-black/60 mb-4">Sign in to start a conversation with our support team.</p>
+                  <p className="text-white/50 mb-4">Sign in to start a conversation with our support team.</p>
                   <Link href="/auth/signin?redirect=/customer-care?tab=contact">
                     <Button>Sign In to Chat</Button>
                   </Link>
-                  <p className="text-sm text-layali-black/50 mt-6">
+                  <p className="text-sm text-white/50 mt-6">
                     Or email us at{' '}
-                    <a href={`mailto:${CONTACT_EMAIL}`} className="text-layali-pink-dark hover:underline">
+                    <a href={`mailto:${CONTACT_EMAIL}`} className="text-layali-pink hover:underline">
                       {CONTACT_EMAIL}
                     </a>
                   </p>
@@ -335,7 +337,7 @@ function CustomerCareContent() {
                 <>
                   <div className="flex-1 overflow-y-auto p-4 space-y-3">
                     {messages.length === 0 && (
-                      <p className="text-center text-sm text-layali-black/50 py-8">
+                      <p className="text-center text-sm text-white/50 py-8">
                         Send a message to start chatting with our team ✦
                       </p>
                     )}
@@ -348,14 +350,14 @@ function CustomerCareContent() {
                           className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${
                             msg.sender_role === 'user'
                               ? 'bg-layali-black text-white rounded-br-sm'
-                              : 'bg-layali-pink-light text-layali-black rounded-bl-sm'
+                              : 'bg-layali-pink-glow/25 text-white rounded-bl-sm'
                           }`}
                         >
                           {msg.sender_role === 'admin' && (
                             <p className="text-xs font-medium opacity-70 mb-0.5">Layali Support</p>
                           )}
                           <p className="text-sm">{msg.message}</p>
-                          <p className={`text-[10px] mt-1 ${msg.sender_role === 'user' ? 'text-white/50' : 'text-layali-black/40'}`}>
+                          <p className={`text-[10px] mt-1 ${msg.sender_role === 'user' ? 'text-white/50' : 'text-white/40'}`}>
                             {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
@@ -387,7 +389,7 @@ function CustomerCareContent() {
 
 export default function CustomerCarePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-layali-cream flex items-center justify-center">Loading...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-layali-surface flex items-center justify-center">Loading...</div>}>
       <CustomerCareContent />
     </Suspense>
   );

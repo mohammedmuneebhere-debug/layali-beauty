@@ -18,27 +18,14 @@ export default function CombosPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
 
-      let query = supabase
+      const { data } = await supabase
         .from('combos')
         .select('*')
         .eq('is_active', true)
+        .eq('gender', 'female')
         .order('created_at', { ascending: false });
 
-      // Logged-in users see combos for their gender; guests see all
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('gender')
-          .eq('id', user.id)
-          .single();
-        if (profile?.gender) {
-          query = query.eq('gender', profile.gender);
-        }
-      }
-
-      const { data } = await query;
       setCombos(data || []);
       setLoading(false);
     }
@@ -46,24 +33,27 @@ export default function CombosPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-layali-cream py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <FadeIn className="mb-8 text-center">
-          <Sparkles className="w-8 h-8 mx-auto text-layali-gold mb-4" />
-          <h1 className="font-serif text-4xl font-bold text-layali-black mb-2">Curated Combos</h1>
-          <p className="text-layali-black/60 max-w-xl mx-auto">
-            Beautifully bundled products at special prices — including AI-personalized combos verified by our dermatologist.
+    <div className="relative min-h-screen bg-transparent pt-24 pb-16 overflow-hidden">
+      <div className="glow-orb w-[500px] h-[500px] top-0 left-1/2 -translate-x-1/2 opacity-35 pointer-events-none" />
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <FadeIn className="mb-12 text-center">
+          <Sparkles className="w-8 h-8 mx-auto text-layali-pink mb-4" />
+          <h1 className="font-serif text-4xl font-bold text-white mb-2">Curated Combos</h1>
+          <p className="text-white/60 max-w-xl mx-auto">
+            Beautifully bundled products at special prices — including AI-personalized combos
+            verified by our dermatologist.
           </p>
         </FadeIn>
 
         {loading ? (
           <div className="grid md:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-64 bg-layali-pink-light/30 rounded-2xl animate-pulse" />
+              <div key={i} className="h-80 bg-layali-surface rounded-2xl animate-pulse border border-white/5" />
             ))}
           </div>
         ) : combos.length === 0 ? (
-          <p className="text-center text-layali-black/60 py-20">No combos available yet.</p>
+          <p className="text-center text-white/45 py-20">No combos available yet.</p>
         ) : (
           <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {combos.map((combo) => (
@@ -71,39 +61,43 @@ export default function CombosPage() {
                 <Card hover>
                   <CardImage src={combo.image_url} alt={combo.name} />
                   <CardContent>
-                    <div className="flex gap-2 mb-2">
+                    <div className="flex flex-wrap gap-2 mb-2">
                       {combo.is_ai_generated && (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-layali-pink/15 text-layali-pink-light flex items-center gap-1 border border-layali-pink/25">
                           <Sparkles className="w-3 h-3" /> AI Personalized
                         </span>
                       )}
                       {combo.dermatologist_verified && (
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 flex items-center gap-1">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-emerald-500/10 text-emerald-300 flex items-center gap-1 border border-emerald-500/20">
                           <Shield className="w-3 h-3" /> Verified
                         </span>
                       )}
                     </div>
-                    <h3 className="font-serif text-lg font-bold text-layali-black mb-1">{combo.name}</h3>
-                    <p className="text-sm text-layali-black/60 mb-3 line-clamp-2">{combo.description}</p>
+                    <h3 className="font-serif text-xl text-white mb-1">{combo.name}</h3>
+                    <p className="text-sm text-white/45 mb-3 line-clamp-2">{combo.description}</p>
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-bold text-layali-black">{formatPrice(Number(combo.price))}</span>
+                        <span className="font-serif text-lg text-white">
+                          {formatPrice(Number(combo.price))}
+                        </span>
                         {combo.compare_at_price && (
-                          <span className="text-sm text-layali-black/40 line-through ml-2">
+                          <span className="text-sm text-white/30 line-through ml-2">
                             {formatPrice(Number(combo.compare_at_price))}
                           </span>
                         )}
                       </div>
                       <Button
                         size="sm"
-                        variant="secondary"
-                        onClick={() => addItem({
-                          id: combo.id,
-                          type: 'combo',
-                          name: combo.name,
-                          price: Number(combo.price),
-                          image_url: combo.image_url,
-                        })}
+                        variant="outline"
+                        onClick={() =>
+                          addItem({
+                            id: combo.id,
+                            type: 'combo',
+                            name: combo.name,
+                            price: Number(combo.price),
+                            image_url: combo.image_url,
+                          })
+                        }
                       >
                         <ShoppingBag className="w-4 h-4" />
                       </Button>

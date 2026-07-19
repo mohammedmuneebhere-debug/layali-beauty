@@ -101,22 +101,22 @@ export default function AddressesPage() {
 
   if (fetching) {
     return (
-      <div className="min-h-screen bg-layali-cream flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="animate-pulse text-layali-pink">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-layali-cream py-12">
+    <div className="min-h-screen bg-transparent pt-24 pb-12">
       <div className="max-w-2xl mx-auto px-4">
         <FadeIn>
-          <Link href="/account" className="inline-flex items-center gap-2 text-sm text-layali-black/60 hover:text-layali-black mb-6">
+          <Link href="/account" className="inline-flex items-center gap-2 text-sm text-white/60 hover:text-white mb-6">
             <ArrowLeft className="w-4 h-4" /> Back to Account
           </Link>
 
           <div className="flex items-center justify-between mb-8">
-            <h1 className="font-serif text-4xl font-bold text-layali-black">Saved Addresses</h1>
+            <h1 className="font-serif text-4xl font-bold text-white">Saved Addresses</h1>
             {!showForm && (
               <Button size="sm" onClick={() => setShowForm(true)}>
                 <Plus className="w-4 h-4" /> Add
@@ -125,8 +125,8 @@ export default function AddressesPage() {
           </div>
 
           {showForm && (
-            <div className="bg-white rounded-2xl p-6 border border-layali-pink/20 mb-6">
-              <h2 className="font-medium text-layali-black mb-4">New Address</h2>
+            <div className="bg-layali-surface rounded-2xl p-6 border border-layali-pink/20 mb-6">
+              <h2 className="font-medium text-white mb-4">New Address</h2>
               <AddressForm
                 defaultCity={profileCity}
                 defaultCountry={profileCountry}
@@ -139,25 +139,25 @@ export default function AddressesPage() {
 
           <div className="space-y-4">
             {addresses.length === 0 && !showForm ? (
-              <div className="text-center py-16 bg-white rounded-2xl border border-layali-pink/20">
+              <div className="text-center py-16 bg-layali-surface rounded-2xl border border-layali-pink/20">
                 <MapPin className="w-10 h-10 mx-auto text-layali-pink mb-3" />
-                <p className="text-layali-black/60 mb-4">No saved addresses yet</p>
+                <p className="text-white/60 mb-4">No saved addresses yet</p>
                 <Button onClick={() => setShowForm(true)}>Add your first address</Button>
               </div>
             ) : (
               addresses.map((address) => (
-                <div key={address.id} className="bg-white rounded-2xl p-5 border border-layali-pink/20">
+                <div key={address.id} className="bg-layali-surface rounded-2xl p-5 border border-layali-pink/20">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-layali-pink-dark mb-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-layali-pink mb-1">
                         {addressDisplayLabel(address)}
                         {address.is_default && ' · Default'}
                       </p>
-                      <p className="font-medium text-layali-black">{address.receiver_name}</p>
-                      <p className="text-sm text-layali-black/60">{address.receiver_phone}</p>
-                      <p className="text-sm text-layali-black/70 mt-2">{address.address_line}</p>
+                      <p className="font-medium text-white">{address.receiver_name}</p>
+                      <p className="text-sm text-white/60">{address.receiver_phone}</p>
+                      <p className="text-sm text-white/70 mt-2">{address.address_line}</p>
                       {(address.city || address.country) && (
-                        <p className="text-xs text-layali-black/50 mt-1">
+                        <p className="text-xs text-white/50 mt-1">
                           {[address.city, address.country].filter(Boolean).join(', ')}
                         </p>
                       )}
@@ -182,7 +182,7 @@ export default function AddressesPage() {
                   {!address.is_default && (
                     <button
                       onClick={() => setDefault(address.id)}
-                      className="mt-3 text-xs text-layali-pink-dark font-medium hover:underline"
+                      className="mt-3 text-xs text-layali-pink font-medium hover:underline"
                     >
                       Set as default
                     </button>

@@ -78,14 +78,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 lg:hidden">
+        <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 lg:hidden text-gray-900">
           <button onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6" />
           </button>
           <span className="font-serif font-bold tracking-widest">LAYALI ADMIN</span>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8 overflow-auto">
+        <main className="flex-1 p-6 lg:p-8 overflow-auto text-gray-900">
           {children}
         </main>
       </div>

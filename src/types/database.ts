@@ -86,6 +86,7 @@ export interface Order {
   user_id: string;
   status: OrderStatus;
   total_amount: number;
+  delivery_fee?: number | null;
   payment_method: string;
   shipping_address: string;
   shipping_city: string;

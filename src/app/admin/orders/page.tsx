@@ -39,12 +39,39 @@ export default function AdminOrdersPage() {
 
   const updateStatus = async (orderId: string, status: OrderStatus) => {
     const supabase = createClient();
+    const previous = orders.find((o) => o.id === orderId);
     await supabase.from('orders').update({ status }).eq('id', orderId);
     await supabase.from('order_tracking').insert({
       order_id: orderId,
       status,
       message: statusMessage || `Order ${status}`,
     });
+
+    if (status === 'delivered' && previous?.profile?.email) {
+      try {
+        await fetch('/api/email/order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'delivered',
+            to: previous.profile.email,
+            customerName: previous.profile.full_name || previous.receiver_name || 'Customer',
+            orderId,
+            totalAmount: Number(previous.total_amount),
+            deliveryFee: Number(previous.delivery_fee ?? 20),
+            items: (previous.items || []).map((i) => ({
+              name: i.name,
+              quantity: i.quantity,
+              price: Number(i.price),
+            })),
+            shippingAddress: previous.shipping_address,
+          }),
+        });
+      } catch (err) {
+        console.error('Delivered email failed', err);
+      }
+    }
+
     setStatusMessage('');
     loadOrders();
     if (selectedOrder?.id === orderId) {

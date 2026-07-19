@@ -149,17 +149,17 @@ export default function AdminCombosPage() {
                 folder="combos"
                 label="Combo Photo"
               />
-              <Input label="Combo Name" {...register('name', { required: true })} />
+              <Input tone="light" label="Combo Name" {...register('name', { required: true })} />
               <div>
                 <label className="block text-sm font-medium mb-1.5">Description</label>
                 <textarea {...register('description')} className="w-full px-4 py-3 rounded-xl border border-layali-pink/30" rows={2} />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Price (SAR)" type="number" step="0.01" {...register('price', { required: true })} />
-                <Input label="Compare Price" type="number" step="0.01" {...register('compare_at_price')} />
+                <Input tone="light" label="Price (SAR)" type="number" step="0.01" {...register('price', { required: true })} />
+                <Input tone="light" label="Compare Price" type="number" step="0.01" {...register('compare_at_price')} />
               </div>
-              <Select label="Gender" options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]} {...register('gender', { required: true })} />
-              <Select label="Dermatologist Verified" options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} {...register('dermatologist_verified')} />
+              <Select tone="light" label="Gender" options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]} {...register('gender', { required: true })} />
+              <Select tone="light" label="Dermatologist Verified" options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} {...register('dermatologist_verified')} />
 
               <div>
                 <label className="block text-sm font-medium mb-2">Select Products</label>

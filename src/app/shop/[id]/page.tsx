@@ -67,14 +67,14 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-layali-cream py-12">
+      <div className="min-h-screen bg-transparent pt-24 pb-12">
         <div className="max-w-6xl mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-10">
-            <div className="aspect-square rounded-3xl bg-layali-pink-light/30 animate-pulse" />
+            <div className="aspect-square rounded-3xl bg-layali-surface animate-pulse border border-white/5" />
             <div className="space-y-4">
-              <div className="h-8 w-2/3 bg-layali-pink-light/40 rounded animate-pulse" />
-              <div className="h-6 w-1/3 bg-layali-pink-light/30 rounded animate-pulse" />
-              <div className="h-24 bg-layali-pink-light/20 rounded animate-pulse" />
+              <div className="h-8 w-2/3 bg-layali-surface rounded animate-pulse" />
+              <div className="h-6 w-1/3 bg-layali-surface rounded animate-pulse" />
+              <div className="h-24 bg-layali-surface/80 rounded animate-pulse" />
             </div>
           </div>
         </div>
@@ -84,8 +84,8 @@ export default function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="min-h-screen bg-layali-cream flex flex-col items-center justify-center px-4">
-        <p className="text-layali-black/60 mb-4">Product not found</p>
+      <div className="min-h-screen bg-transparent flex flex-col items-center justify-center px-4 pt-20">
+        <p className="text-white/50 mb-4">Product not found</p>
         <Button onClick={() => router.push('/shop')}>Back to Shop</Button>
       </div>
     );
@@ -99,12 +99,13 @@ export default function ProductDetailPage() {
       : description;
 
   return (
-    <div className="min-h-screen bg-layali-cream py-10 sm:py-14">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+    <div className="relative min-h-screen bg-transparent pt-24 pb-14 overflow-hidden">
+      <div className="glow-orb w-[480px] h-[480px] -top-20 right-0 opacity-35 pointer-events-none" />
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <FadeIn>
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 text-sm text-layali-black/60 hover:text-layali-black mb-8"
+            className="inline-flex items-center gap-2 text-sm text-white/45 hover:text-white mb-8 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Shop
           </Link>
@@ -113,19 +114,19 @@ export default function ProductDetailPage() {
             <ProductImageGallery images={productPhotos(product)} alt={product.name} />
 
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-layali-pink-dark mb-3">
+              <p className="text-[11px] uppercase tracking-[0.28em] text-layali-pink mb-3">
                 {product.category}
               </p>
-              <h1 className="font-serif text-3xl sm:text-4xl font-bold text-layali-black mb-4">
+              <h1 className="font-serif text-3xl sm:text-4xl font-medium text-white mb-4">
                 {product.name}
               </h1>
 
               <div className="flex items-baseline gap-3 mb-6">
-                <span className="text-2xl font-bold text-layali-black">
+                <span className="font-serif text-2xl text-white">
                   {formatPrice(Number(product.price))}
                 </span>
                 {product.compare_at_price && (
-                  <span className="text-lg text-layali-black/40 line-through">
+                  <span className="text-lg text-white/30 line-through">
                     {formatPrice(Number(product.compare_at_price))}
                   </span>
                 )}
@@ -133,15 +134,15 @@ export default function ProductDetailPage() {
 
               {description && (
                 <div className="mb-8">
-                  <h2 className="font-medium text-layali-black mb-2">About this product</h2>
-                  <p className="text-layali-black/70 leading-relaxed whitespace-pre-line">
+                  <h2 className="font-medium text-white mb-2">About this product</h2>
+                  <p className="text-white/55 leading-relaxed whitespace-pre-line">
                     {visibleDescription}
                   </p>
                   {isLongDescription && (
                     <button
                       type="button"
                       onClick={() => setShowFullDescription((v) => !v)}
-                      className="mt-2 text-sm font-medium text-layali-pink-dark hover:underline"
+                      className="mt-2 text-sm font-medium text-layali-pink hover:text-layali-pink-light transition-colors"
                     >
                       {showFullDescription ? 'Show less' : 'Read more'}
                     </button>
@@ -151,11 +152,11 @@ export default function ProductDetailPage() {
 
               {product.benefits?.length > 0 && (
                 <div className="mb-8">
-                  <h2 className="font-medium text-layali-black mb-3">Benefits</h2>
+                  <h2 className="font-medium text-white mb-3">Benefits</h2>
                   <ul className="space-y-2">
                     {product.benefits.map((benefit) => (
-                      <li key={benefit} className="flex items-start gap-2 text-sm text-layali-black/70">
-                        <Check className="w-4 h-4 text-layali-pink-dark mt-0.5 flex-shrink-0" />
+                      <li key={benefit} className="flex items-start gap-2 text-sm text-white/55">
+                        <Check className="w-4 h-4 text-layali-pink mt-0.5 flex-shrink-0" />
                         <span className="capitalize">{benefit}</span>
                       </li>
                     ))}
@@ -165,15 +166,15 @@ export default function ProductDetailPage() {
 
               {product.ingredients && (
                 <div className="mb-8">
-                  <h2 className="font-medium text-layali-black mb-2">Ingredients</h2>
-                  <p className="text-sm text-layali-black/60 leading-relaxed">
+                  <h2 className="font-medium text-white mb-2">Ingredients</h2>
+                  <p className="text-sm text-white/45 leading-relaxed">
                     {product.ingredients}
                   </p>
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 mb-4 text-sm text-layali-black/50">
-                <span className="capitalize">For {product.gender}</span>
+              <div className="flex flex-wrap items-center gap-3 mb-4 text-sm text-white/40">
+                <span>Authentic K-Beauty</span>
                 <span>·</span>
                 <span>
                   {product.stock_quantity > 0

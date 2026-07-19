@@ -10,7 +10,7 @@ export function Card({ children, className, hover = false }: CardProps) {
   return (
     <div
       className={cn(
-        'bg-white rounded-2xl shadow-sm border border-layali-pink/20 overflow-hidden',
+        'bg-layali-surface/80 rounded-2xl border border-white/8 overflow-hidden',
         hover && 'card-hover cursor-pointer',
         className
       )}
@@ -20,16 +20,29 @@ export function Card({ children, className, hover = false }: CardProps) {
   );
 }
 
-export function CardImage({ src, alt, className }: { src?: string | null; alt: string; className?: string }) {
+export function CardImage({
+  src,
+  alt,
+  className,
+}: {
+  src?: string | null;
+  alt: string;
+  className?: string;
+}) {
   return (
-    <div className={cn('relative aspect-square bg-layali-pink-light/30 overflow-hidden', className)}>
+    <div className={cn('relative aspect-[4/5] bg-layali-elevated overflow-hidden group', className)}>
       {src ? (
-        <img src={src} alt={alt} className="w-full h-full object-cover" />
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+        />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
-          <span className="text-4xl text-layali-pink">✦</span>
+          <span className="text-3xl text-layali-pink/50">✦</span>
         </div>
       )}
+      <div className="absolute inset-0 bg-gradient-to-t from-layali-void/50 via-transparent to-transparent opacity-60 pointer-events-none" />
     </div>
   );
 }

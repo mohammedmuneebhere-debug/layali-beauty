@@ -143,17 +143,17 @@ export default function SurveyPage() {
       onClick={onClick}
       className={`p-4 rounded-2xl border-2 transition-all duration-200 text-left ${
         selected
-          ? 'border-layali-black bg-layali-pink-light/50 shadow-md'
-          : 'border-layali-pink/30 hover:border-layali-pink hover:bg-layali-pink-light/20'
+          ? 'border-layali-pink bg-layali-pink-glow/20 shadow-md'
+          : 'border-layali-pink/30 hover:border-layali-pink hover:bg-layali-pink-glow/25/20'
       }`}
     >
-      <span className="capitalize font-medium text-layali-black">{children}</span>
-      {selected && <Check className="w-4 h-4 inline ml-2 text-layali-black" />}
+      <span className="capitalize font-medium text-white">{children}</span>
+      {selected && <Check className="w-4 h-4 inline ml-2 text-white" />}
     </button>
   );
 
   return (
-    <div className="min-h-screen gradient-pink py-12 px-4">
+    <div className="min-h-screen bg-transparent py-12 px-4">
       <div className="max-w-2xl mx-auto">
         {/* Progress */}
         <div className="flex justify-center gap-2 mb-8">
@@ -177,12 +177,12 @@ export default function SurveyPage() {
           >
             {step === 0 && (
               <div className="text-center">
-                <Sparkles className="w-12 h-12 mx-auto text-layali-black mb-6" />
-                <h1 className="font-serif text-4xl font-bold text-layali-black mb-4">
+                <Sparkles className="w-12 h-12 mx-auto text-white mb-6" />
+                <h1 className="font-serif text-4xl font-bold text-white mb-4">
                   Let&apos;s Get to Know You
                 </h1>
-                <p className="font-script text-3xl text-layali-black/70 mb-6">your beauty profile</p>
-                <p className="text-layali-black/60 mb-8 leading-relaxed">
+                <p className="font-script text-3xl text-white/70 mb-6">your beauty profile</p>
+                <p className="text-white/60 mb-8 leading-relaxed">
                   Answer a few fun questions about your skin and hair,
                   and we&apos;ll create a personalized beauty combo just for you!
                 </p>
@@ -191,8 +191,8 @@ export default function SurveyPage() {
 
             {step === 1 && (
               <div>
-                <h2 className="font-serif text-3xl font-bold text-layali-black mb-2">What&apos;s your skin type?</h2>
-                <p className="text-layali-black/60 mb-6">Select the one that best describes your skin</p>
+                <h2 className="font-serif text-3xl font-bold text-white mb-2">What&apos;s your skin type?</h2>
+                <p className="text-white/60 mb-6">Select the one that best describes your skin</p>
                 <div className="grid grid-cols-2 gap-3">
                   {SKIN_TYPES.map((type) => (
                     <OptionButton
@@ -209,8 +209,8 @@ export default function SurveyPage() {
 
             {step === 2 && (
               <div>
-                <h2 className="font-serif text-3xl font-bold text-layali-black mb-2">What&apos;s your hair type?</h2>
-                <p className="text-layali-black/60 mb-6">Select the one that best describes your hair</p>
+                <h2 className="font-serif text-3xl font-bold text-white mb-2">What&apos;s your hair type?</h2>
+                <p className="text-white/60 mb-6">Select the one that best describes your hair</p>
                 <div className="grid grid-cols-2 gap-3">
                   {HAIR_TYPES.map((type) => (
                     <OptionButton
@@ -227,10 +227,10 @@ export default function SurveyPage() {
 
             {step === 3 && (
               <div>
-                <h2 className="font-serif text-3xl font-bold text-layali-black mb-2">Your Concerns</h2>
-                <p className="text-layali-black/60 mb-6">Select all that apply</p>
+                <h2 className="font-serif text-3xl font-bold text-white mb-2">Your Concerns</h2>
+                <p className="text-white/60 mb-6">Select all that apply</p>
 
-                <h3 className="font-medium text-layali-black mb-3">Skin Concerns</h3>
+                <h3 className="font-medium text-white mb-3">Skin Concerns</h3>
                 <div className="grid grid-cols-2 gap-2 mb-6">
                   {SKIN_CONCERNS.map((concern) => (
                     <OptionButton
@@ -243,7 +243,7 @@ export default function SurveyPage() {
                   ))}
                 </div>
 
-                <h3 className="font-medium text-layali-black mb-3">Hair Concerns</h3>
+                <h3 className="font-medium text-white mb-3">Hair Concerns</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {HAIR_CONCERNS.map((concern) => (
                     <OptionButton
@@ -260,10 +260,10 @@ export default function SurveyPage() {
 
             {step === 4 && (
               <div>
-                <h2 className="font-serif text-3xl font-bold text-layali-black mb-2">A Bit More About You</h2>
-                <p className="text-layali-black/60 mb-6">Help us personalize your experience</p>
+                <h2 className="font-serif text-3xl font-bold text-white mb-2">A Bit More About You</h2>
+                <p className="text-white/60 mb-6">Help us personalize your experience</p>
 
-                <h3 className="font-medium text-layali-black mb-3">Age Range</h3>
+                <h3 className="font-medium text-white mb-3">Age Range</h3>
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   {AGE_RANGES.map((age) => (
                     <OptionButton
@@ -276,7 +276,7 @@ export default function SurveyPage() {
                   ))}
                 </div>
 
-                <h3 className="font-medium text-layali-black mb-3">Lifestyle</h3>
+                <h3 className="font-medium text-white mb-3">Lifestyle</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {LIFESTYLE_OPTIONS.map((opt) => (
                     <OptionButton
@@ -301,32 +301,32 @@ export default function SurveyPage() {
                   >
                     <Sparkles className="w-12 h-12 mx-auto text-layali-gold mb-4" />
                   </motion.div>
-                  <h2 className="font-serif text-3xl font-bold text-layali-black mb-2">
+                  <h2 className="font-serif text-3xl font-bold text-white mb-2">
                     Your Personalized Combo
                   </h2>
-                  <p className="font-script text-2xl text-layali-black/70">crafted just for you</p>
+                  <p className="font-script text-2xl text-white/70">crafted just for you</p>
                 </div>
 
                 <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-layali-pink/20 mb-6">
                   <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-layali-gold/10 border border-layali-gold/30">
                     <Shield className="w-5 h-5 text-layali-gold" />
-                    <span className="text-sm font-medium text-layali-black">
+                    <span className="text-sm font-medium text-white">
                       Certified & Verified by Dr. Layali
                     </span>
                   </div>
 
-                  <p className="text-layali-black/70 mb-6 leading-relaxed">{recommendation.summary}</p>
+                  <p className="text-white/70 mb-6 leading-relaxed">{recommendation.summary}</p>
 
-                  <h3 className="font-serif text-lg font-bold text-layali-black mb-3">Recommended Products</h3>
+                  <h3 className="font-serif text-lg font-bold text-white mb-3">Recommended Products</h3>
                   <div className="space-y-3 mb-6">
                     {recommendation.products.map((product) => (
-                      <div key={product.product_id} className="flex items-start gap-3 p-3 rounded-xl bg-layali-cream">
-                        <div className="w-8 h-8 rounded-full bg-layali-pink-light flex items-center justify-center flex-shrink-0">
-                          <Check className="w-4 h-4 text-layali-black" />
+                      <div key={product.product_id} className="flex items-start gap-3 p-3 rounded-xl bg-black">
+                        <div className="w-8 h-8 rounded-full bg-layali-pink-glow/25 flex items-center justify-center flex-shrink-0">
+                          <Check className="w-4 h-4 text-white" />
                         </div>
                         <div>
-                          <p className="font-medium text-layali-black">{product.name}</p>
-                          <p className="text-sm text-layali-black/60">{product.reason}</p>
+                          <p className="font-medium text-white">{product.name}</p>
+                          <p className="text-sm text-white/60">{product.reason}</p>
                         </div>
                       </div>
                     ))}
@@ -334,16 +334,16 @@ export default function SurveyPage() {
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <h4 className="font-medium text-layali-black mb-2">Morning Routine</h4>
-                      <ul className="text-sm text-layali-black/60 space-y-1">
+                      <h4 className="font-medium text-white mb-2">Morning Routine</h4>
+                      <ul className="text-sm text-white/60 space-y-1">
                         {recommendation.routine.morning.map((step, i) => (
                           <li key={i}>• {step}</li>
                         ))}
                       </ul>
                     </div>
                     <div>
-                      <h4 className="font-medium text-layali-black mb-2">Evening Routine</h4>
-                      <ul className="text-sm text-layali-black/60 space-y-1">
+                      <h4 className="font-medium text-white mb-2">Evening Routine</h4>
+                      <ul className="text-sm text-white/60 space-y-1">
                         {recommendation.routine.evening.map((step, i) => (
                           <li key={i}>• {step}</li>
                         ))}

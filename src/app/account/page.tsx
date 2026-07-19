@@ -44,7 +44,7 @@ export default function AccountPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-layali-cream flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center pt-20">
         <div className="animate-pulse text-layali-pink">Loading...</div>
       </div>
     );
@@ -53,65 +53,63 @@ export default function AccountPage() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-layali-cream py-12">
+    <div className="min-h-screen bg-transparent pt-24 pb-12">
       <div className="max-w-2xl mx-auto px-4">
         <FadeIn>
-          <h1 className="font-serif text-4xl font-bold text-layali-black mb-8">My Account</h1>
+          <h1 className="font-serif text-4xl font-bold text-white mb-8">My Account</h1>
 
-          <div className="bg-white rounded-2xl p-6 border border-layali-pink/20 mb-6">
+          <div className="bg-layali-surface rounded-2xl p-6 border border-layali-pink/25 mb-6">
             <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 rounded-full bg-layali-pink-light flex items-center justify-center">
-                <User className="w-8 h-8 text-layali-black" />
+              <div className="w-16 h-16 rounded-full bg-layali-pink-glow/25 border border-layali-pink/40 flex items-center justify-center">
+                <User className="w-8 h-8 text-layali-pink-light" />
               </div>
               <div>
-                <h2 className="font-bold text-lg text-layali-black">{profile.full_name}</h2>
-                <p className="text-layali-black/60 text-sm">{profile.email}</p>
+                <h2 className="font-bold text-lg text-white">{profile.full_name}</h2>
+                <p className="text-white/60 text-sm">{profile.email}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-layali-black/50">Gender</p>
-                <p className="font-medium capitalize">{profile.gender || '—'}</p>
+                <p className="text-white/50">Location</p>
+                <p className="font-medium text-white">
+                  {profile.city}, {profile.country}
+                </p>
               </div>
               <div>
-                <p className="text-layali-black/50">Location</p>
-                <p className="font-medium">{profile.city}, {profile.country}</p>
-              </div>
-              <div>
-                <p className="text-layali-black/50">Phone</p>
-                <p className="font-medium">{profile.phone || '—'}</p>
+                <p className="text-white/50">Phone</p>
+                <p className="font-medium text-white">{profile.phone || '—'}</p>
               </div>
             </div>
           </div>
 
           <div className="space-y-3">
             <Link href="/account/orders">
-              <div className="bg-white rounded-2xl p-4 border border-layali-pink/20 flex items-center gap-4 card-hover">
-                <Package className="w-6 h-6 text-layali-pink-dark" />
+              <div className="bg-layali-surface rounded-2xl p-4 border border-layali-pink/25 flex items-center gap-4 card-hover">
+                <Package className="w-6 h-6 text-layali-pink" />
                 <div>
-                  <p className="font-medium text-layali-black">My Orders</p>
-                  <p className="text-sm text-layali-black/50">Track and view your orders</p>
+                  <p className="font-medium text-white">My Orders</p>
+                  <p className="text-sm text-white/50">Track and view your orders</p>
                 </div>
               </div>
             </Link>
 
             <Link href="/account/addresses">
-              <div className="bg-white rounded-2xl p-4 border border-layali-pink/20 flex items-center gap-4 card-hover">
-                <MapPin className="w-6 h-6 text-layali-pink-dark" />
+              <div className="bg-layali-surface rounded-2xl p-4 border border-layali-pink/25 flex items-center gap-4 card-hover">
+                <MapPin className="w-6 h-6 text-layali-pink" />
                 <div>
-                  <p className="font-medium text-layali-black">Saved Addresses</p>
-                  <p className="text-sm text-layali-black/50">Home, work & other delivery locations</p>
+                  <p className="font-medium text-white">Saved Addresses</p>
+                  <p className="text-sm text-white/50">Home, work & other delivery locations</p>
                 </div>
               </div>
             </Link>
 
             <Link href="/survey">
-              <div className="bg-white rounded-2xl p-4 border border-layali-pink/20 flex items-center gap-4 card-hover">
-                <Sparkles className="w-6 h-6 text-layali-gold" />
+              <div className="bg-layali-surface rounded-2xl p-4 border border-layali-pink/25 flex items-center gap-4 card-hover">
+                <Sparkles className="w-6 h-6 text-layali-pink-light" />
                 <div>
-                  <p className="font-medium text-layali-black">Beauty Profile</p>
-                  <p className="text-sm text-layali-black/50">View your personalized recommendations</p>
+                  <p className="font-medium text-white">Beauty Profile</p>
+                  <p className="text-sm text-white/50">View your personalized recommendations</p>
                 </div>
               </div>
             </Link>
