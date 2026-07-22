@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Package, ShoppingCart, Layers, MapPin, LogOut, Menu, Headphones,
+  ImageIcon, BarChart3,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -11,8 +12,10 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/orders', label: 'Orders', icon: ShoppingCart },
   { href: '/admin/products', label: 'Products', icon: Package },
+  { href: '/admin/banners', label: 'Banners & Ads', icon: ImageIcon },
   { href: '/admin/combos', label: 'Combos', icon: Layers },
   { href: '/admin/regions', label: 'Regions', icon: MapPin },
   { href: '/admin/support', label: 'Customer Care', icon: Headphones },

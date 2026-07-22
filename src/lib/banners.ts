@@ -2,6 +2,9 @@ export type BannerSlide = {
   src: string;
   alt: string;
   href?: string;
+  width?: number;
+  height?: number;
+  span?: 'full' | 'half';
 };
 
 /** Exact pixel sizes after upscale — keeps CSS aspect-ratio correct (no squash) */

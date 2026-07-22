@@ -222,16 +222,56 @@ export default function CheckoutPage() {
       return;
     }
 
+    const productIds = items.filter((i) => i.type === 'product').map((i) => i.id);
+    const comboIds = items.filter((i) => i.type === 'combo').map((i) => i.id);
+    const costMap = new Map<string, number | null>();
+
+    if (productIds.length > 0) {
+      const { data: productCosts } = await supabase
+        .from('products')
+        .select('id, cost_price')
+        .in('id', productIds);
+      (productCosts || []).forEach((row) => {
+        costMap.set(
+          `product:${row.id}`,
+          row.cost_price != null ? Number(row.cost_price) : null
+        );
+      });
+    }
+
+    if (comboIds.length > 0) {
+      const { data: comboCosts } = await supabase
+        .from('combos')
+        .select('id, cost_price')
+        .in('id', comboIds);
+      (comboCosts || []).forEach((row) => {
+        costMap.set(`combo:${row.id}`, row.cost_price != null ? Number(row.cost_price) : null);
+      });
+    }
+
     const orderItems = items.map((item) => ({
       order_id: order.id,
       product_id: item.type === 'product' ? item.id : null,
       combo_id: item.type === 'combo' ? item.id : null,
       name: item.name,
       price: item.price,
+      cost_price: costMap.get(`${item.type}:${item.id}`) ?? null,
       quantity: item.quantity,
     }));
 
-    await supabase.from('order_items').insert(orderItems);
+    const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+    if (itemsError && String(itemsError.message).toLowerCase().includes('cost_price')) {
+      await supabase.from('order_items').insert(
+        items.map((item) => ({
+          order_id: order.id,
+          product_id: item.type === 'product' ? item.id : null,
+          combo_id: item.type === 'combo' ? item.id : null,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+        }))
+      );
+    }
     await supabase.from('order_tracking').insert({
       order_id: order.id,
       status: 'pending',

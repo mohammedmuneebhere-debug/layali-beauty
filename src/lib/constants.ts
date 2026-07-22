@@ -1,3 +1,5 @@
+export const SITE_URL = 'https://www.layalibeautystore.com';
+
 export const CONTACT_EMAIL = 'layalibeautystore@gmail.com';
 
 /** Fixed delivery charge (SAR) per order — regardless of item count */

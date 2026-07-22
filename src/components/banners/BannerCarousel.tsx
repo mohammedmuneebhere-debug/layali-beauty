@@ -19,18 +19,20 @@ type Props = {
 
 function BannerMedia({ slide }: { slide: BannerSlide }) {
   const size = BANNER_SIZES[slide.src];
+  const width = slide.width || size?.w || 2400;
+  const height = slide.height || size?.h || 400;
   const img = (
     // Native img keeps true pixel aspect — Next/Image width/height was squashing banners
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={slide.src}
       alt={slide.alt}
-      width={size?.w || 2400}
-      height={size?.h || 400}
+      width={width}
+      height={height}
       decoding="async"
       loading="eager"
       className="block w-full h-auto max-w-full"
-      style={{ aspectRatio: size ? `${size.w} / ${size.h}` : undefined }}
+      style={{ aspectRatio: `${width} / ${height}` }}
       draggable={false}
     />
   );
@@ -125,7 +127,7 @@ export function BannerCarousel({
         <div className="absolute bottom-2.5 inset-x-0 z-10 flex justify-center gap-1.5">
           {slides.map((s, i) => (
             <button
-              key={s.src}
+              key={`${s.src}-${i}`}
               type="button"
               onClick={() => setIndex(i)}
               className={cn(

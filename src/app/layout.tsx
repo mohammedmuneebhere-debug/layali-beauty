@@ -4,6 +4,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { StageBackdrop } from '@/components/layout/StageBackdrop';
 import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
+import { SITE_URL } from '@/lib/constants';
 import './globals.css';
 
 const cormorant = Cormorant_Garamond({
@@ -35,9 +36,10 @@ const notoArabic = Noto_Sans_Arabic({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'Layali | Authentic Korean Skincare',
   description:
-    'Your trusted destination for authentic Korean skincare in Saudi Arabia. COSRX, Isntree, Torriden, TOCOBO and more — curated for women who glow with confidence.',
+    'Your trusted destination for authentic Korean skincare in Saudi Arabia.',
   keywords: [
     'korean skincare',
     'k-beauty',
@@ -49,6 +51,34 @@ export const metadata: Metadata = {
     'saudi arabia',
     'skincare',
   ],
+  openGraph: {
+    title: 'Layali | Authentic Korean Skincare',
+    description:
+      'Your trusted destination for authentic Korean skincare in Saudi Arabia.',
+    url: SITE_URL,
+    siteName: 'Layali',
+    type: 'website',
+    locale: 'en_US',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Layali — Beauty Redefined',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Layali | Authentic Korean Skincare',
+    description:
+      'Your trusted destination for authentic Korean skincare in Saudi Arabia.',
+    images: ['/og-image.jpg'],
+  },
+  icons: {
+    icon: [{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' }],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
 };
 
 export default function RootLayout({

@@ -3,6 +3,25 @@ export type Gender = 'female' | 'male';
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 export type ProductCategory = 'skincare' | 'haircare' | 'fragrance' | 'bodycare' | 'makeup' | 'combo';
 
+export type BannerPlacement = 'landing_hero' | 'shop_hero' | 'promo_grid';
+
+export interface SiteBanner {
+  id: string;
+  placement: BannerPlacement;
+  image_url: string;
+  alt_text: string;
+  href: string | null;
+  span: 'full' | 'half' | null;
+  image_width: number | null;
+  image_height: number | null;
+  sort_order: number;
+  is_active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Profile {
   id: string;
   email: string;
@@ -32,6 +51,7 @@ export interface Product {
   description: string | null;
   price: number;
   compare_at_price: number | null;
+  cost_price: number | null;
   category: ProductCategory;
   gender: Gender;
   image_url: string | null;
@@ -52,6 +72,7 @@ export interface Combo {
   description: string | null;
   price: number;
   compare_at_price: number | null;
+  cost_price: number | null;
   gender: Gender;
   image_url: string | null;
   is_active: boolean;
@@ -114,6 +135,7 @@ export interface OrderItem {
   combo_id: string | null;
   name: string;
   price: number;
+  cost_price: number | null;
   quantity: number;
   created_at: string;
 }

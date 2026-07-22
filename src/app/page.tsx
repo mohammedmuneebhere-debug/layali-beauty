@@ -7,9 +7,7 @@ import { ArrowRight, Sparkles, Droplets, Leaf } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { RitualCarousel } from '@/components/home/RitualCarousel';
-import { BannerCarousel } from '@/components/banners/BannerCarousel';
-import { PromoOffersGrid } from '@/components/banners/PromoOffersGrid';
-import { LANDING_HERO_BANNERS, BRAND_PROMO_GRID } from '@/lib/banners';
+import { DynamicBannerCarousel, DynamicPromoGrid } from '@/components/banners/DynamicBanners';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 
 export default function HomePage() {
@@ -119,8 +117,8 @@ export default function HomePage() {
       <section className="py-10 sm:py-14 section-glide-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn>
-            <BannerCarousel
-              slides={LANDING_HERO_BANNERS}
+            <DynamicBannerCarousel
+              placement="landing_hero"
               className="border border-layali-pink/20 shadow-[0_0_40px_rgba(212,46,124,0.12)]"
             />
           </FadeIn>
@@ -160,7 +158,7 @@ export default function HomePage() {
               Spotlight
             </p>
           </FadeIn>
-          <PromoOffersGrid items={BRAND_PROMO_GRID} />
+          <DynamicPromoGrid />
         </div>
       </section>
 

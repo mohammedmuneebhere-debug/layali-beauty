@@ -58,6 +58,7 @@ export default function AdminCombosPage() {
     setValue('description', combo.description || '');
     setValue('price', combo.price);
     setValue('compare_at_price', combo.compare_at_price || '');
+    setValue('cost_price', combo.cost_price ?? '');
     setValue('gender', combo.gender);
     setValue('dermatologist_verified', combo.dermatologist_verified ? 'true' : 'false');
     setImageUrl(combo.image_url);
@@ -81,6 +82,7 @@ export default function AdminCombosPage() {
       description: data.description as string,
       price: Number(data.price),
       compare_at_price: data.compare_at_price ? Number(data.compare_at_price) : null,
+      cost_price: data.cost_price ? Number(data.cost_price) : null,
       gender: data.gender as string,
       image_url: imageUrl,
       is_active: true,
@@ -158,9 +160,10 @@ export default function AdminCombosPage() {
                 <label className="block text-sm font-medium mb-1.5">Description</label>
                 <textarea {...register('description')} className="w-full px-4 py-3 rounded-xl border border-layali-pink/30" rows={2} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <Input tone="light" label="Price (SAR)" type="number" step="0.01" {...register('price', { required: true })} />
                 <Input tone="light" label="Compare Price" type="number" step="0.01" {...register('compare_at_price')} />
+                <Input tone="light" label="Cost price (COGS)" type="number" step="0.01" {...register('cost_price')} />
               </div>
               <Select tone="light" label="Gender" options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }]} {...register('gender', { required: true })} />
               <Select tone="light" label="Dermatologist Verified" options={[{ value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }]} {...register('dermatologist_verified')} />

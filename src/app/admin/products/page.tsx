@@ -78,6 +78,7 @@ export default function AdminProductsPage() {
     setValue('benefits', (product.benefits || []).join(', '));
     setValue('price', product.price);
     setValue('compare_at_price', product.compare_at_price || '');
+    setValue('cost_price', product.cost_price ?? '');
     setValue('category', product.category);
     setValue('gender', product.gender);
     setValue('stock_quantity', product.stock_quantity);
@@ -110,6 +111,7 @@ export default function AdminProductsPage() {
         .filter(Boolean),
       price: Number(data.price),
       compare_at_price: data.compare_at_price ? Number(data.compare_at_price) : null,
+      cost_price: data.cost_price ? Number(data.cost_price) : null,
       category: data.category as string,
       gender: data.gender as string,
       stock_quantity: Number(data.stock_quantity) || 0,
@@ -204,9 +206,10 @@ export default function AdminProductsPage() {
                 placeholder="hydrating, brightening, anti-aging"
                 {...register('benefits')}
               />
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <Input tone="light" label="Price (SAR)" type="number" step="0.01" {...register('price', { required: true })} />
                 <Input tone="light" label="Compare Price" type="number" step="0.01" {...register('compare_at_price')} />
+                <Input tone="light" label="Cost price (COGS)" type="number" step="0.01" {...register('cost_price')} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <Select tone="light" label="Category" options={PRODUCT_CATEGORIES} {...register('category', { required: true })} />

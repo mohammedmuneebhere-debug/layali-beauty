@@ -3,17 +3,18 @@
 import { useRef, useState } from 'react';
 import { Upload, X, ImageIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { uploadCatalogImage } from '@/lib/storage';
+import { uploadCatalogImage, readImageDimensionsFromFile } from '@/lib/storage';
 import { cn } from '@/lib/utils';
 
 interface ImageUploadProps {
   value: string | null;
   onChange: (url: string | null) => void;
-  folder: 'products' | 'combos';
+  folder: 'products' | 'combos' | 'banners';
   label?: string;
+  onDimensions?: (size: { width: number; height: number } | null) => void;
 }
 
-export function ImageUpload({ value, onChange, folder, label = 'Product Image' }: ImageUploadProps) {
+export function ImageUpload({ value, onChange, folder, label = 'Product Image', onDimensions }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -23,7 +24,7 @@ export function ImageUpload({ value, onChange, folder, label = 'Product Image' }
     setError('');
 
     const supabase = createClient();
-    const { url, error: uploadError } = await uploadCatalogImage(supabase, file, folder);
+    const { url, error: uploadError, width, height } = await uploadCatalogImage(supabase, file, folder);
 
     if (uploadError || !url) {
       setError(uploadError || 'Upload failed. Please try again.');
@@ -32,6 +33,7 @@ export function ImageUpload({ value, onChange, folder, label = 'Product Image' }
     }
 
     onChange(url);
+    onDimensions?.(width && height ? { width, height } : null);
     setUploading(false);
   };
 
@@ -44,7 +46,10 @@ export function ImageUpload({ value, onChange, folder, label = 'Product Image' }
           <img src={value} alt="Preview" className="w-full h-full object-cover" />
           <button
             type="button"
-            onClick={() => onChange(null)}
+            onClick={() => {
+              onChange(null);
+              onDimensions?.(null);
+            }}
             className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
           >
             <X className="w-4 h-4" />

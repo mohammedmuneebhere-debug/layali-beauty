@@ -14,12 +14,7 @@ import { formatPrice } from '@/lib/utils';
 import { PRODUCT_CATEGORIES } from '@/lib/constants';
 import type { Product } from '@/types/database';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
-import { BannerCarousel } from '@/components/banners/BannerCarousel';
-import { PromoOffersGrid } from '@/components/banners/PromoOffersGrid';
-import {
-  SHOP_HERO_BANNERS,
-  BRAND_PROMO_GRID,
-} from '@/lib/banners';
+import { DynamicBannerCarousel, DynamicPromoGrid } from '@/components/banners/DynamicBanners';
 
 export default function ShopContent() {
   const searchParams = useSearchParams();
@@ -134,8 +129,8 @@ export default function ShopContent() {
         </FadeIn>
 
         <FadeIn className="mb-8">
-          <BannerCarousel
-            slides={SHOP_HERO_BANNERS}
+          <DynamicBannerCarousel
+            placement="shop_hero"
             className="border border-layali-pink/20"
           />
         </FadeIn>
@@ -233,7 +228,7 @@ export default function ShopContent() {
                 <p className="text-xs tracking-[0.22em] uppercase text-layali-pink mb-3">
                   Featured brands
                 </p>
-                <PromoOffersGrid items={BRAND_PROMO_GRID} />
+                <DynamicPromoGrid />
               </div>
             )}
 

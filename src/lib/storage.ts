@@ -15,13 +15,46 @@ export function validateImageFile(file: File): string | null {
   return null;
 }
 
+export function readImageDimensionsFromFile(
+  file: File
+): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read image dimensions'));
+    };
+    img.src = url;
+  });
+}
+
 export async function uploadCatalogImage(
   supabase: SupabaseClient,
   file: File,
-  folder: 'products' | 'combos'
-): Promise<{ url: string | null; error: string | null }> {
+  folder: 'products' | 'combos' | 'banners'
+): Promise<{
+  url: string | null;
+  error: string | null;
+  width?: number;
+  height?: number;
+}> {
   const validationError = validateImageFile(file);
   if (validationError) return { url: null, error: validationError };
+
+  let width: number | undefined;
+  let height: number | undefined;
+  try {
+    const dims = await readImageDimensionsFromFile(file);
+    width = dims.width;
+    height = dims.height;
+  } catch {
+    // optional
+  }
 
   const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
   const filePath = `${folder}/${crypto.randomUUID()}.${ext}`;
@@ -39,5 +72,5 @@ export async function uploadCatalogImage(
   }
 
   const { data } = supabase.storage.from(CATALOG_BUCKET).getPublicUrl(filePath);
-  return { url: data.publicUrl, error: null };
+  return { url: data.publicUrl, error: null, width, height };
 }

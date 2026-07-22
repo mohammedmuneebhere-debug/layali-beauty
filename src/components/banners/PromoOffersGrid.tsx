@@ -18,17 +18,19 @@ function Tile({
   className?: string;
 }) {
   const size = BANNER_SIZES[item.src];
+  const width = item.width || size?.w || 1600;
+  const height = item.height || size?.h || 900;
   const img = (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={item.src}
       alt={item.alt}
-      width={size?.w || 1600}
-      height={size?.h || 900}
+      width={width}
+      height={height}
       decoding="async"
       loading="lazy"
       className="block w-full h-auto max-w-full"
-      style={{ aspectRatio: size ? `${size.w} / ${size.h}` : undefined }}
+      style={{ aspectRatio: `${width} / ${height}` }}
       draggable={false}
     />
   );
@@ -64,9 +66,9 @@ export function PromoOffersGrid({
 }) {
   return (
     <div className={cn('grid grid-cols-2 gap-3 sm:gap-4', className)}>
-      {items.map((item) => (
+      {items.map((item, index) => (
         <div
-          key={item.src}
+          key={`${item.src}-${index}`}
           className={item.span === 'full' ? 'col-span-2' : 'col-span-1'}
         >
           <Tile item={item} />
