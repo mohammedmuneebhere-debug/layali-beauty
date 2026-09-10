@@ -24,18 +24,23 @@ export function CardImage({
   src,
   alt,
   className,
+  priority = false,
 }: {
   src?: string | null;
   alt: string;
   className?: string;
+  priority?: boolean;
 }) {
   return (
     <div className={cn('relative aspect-[4/5] bg-layali-elevated overflow-hidden group', className)}>
       {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}
-          className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">

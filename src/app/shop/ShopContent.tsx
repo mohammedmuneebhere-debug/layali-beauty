@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { ShoppingBag, Filter, Search, X, ChevronLeft, ChevronRight, PackageOpen } from 'lucide-react';
 import { Card, CardImage, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
+import { FadeIn } from '@/components/ui/FadeIn';
 import { createClient } from '@/lib/supabase/client';
 import { getProductsForRegion, getPublicProducts } from '@/lib/products';
 import { useCartStore } from '@/store/cart';
@@ -21,15 +21,75 @@ const VALID_CATEGORIES = new Set(
   PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((c) => c.value)
 );
 
+function normalizeCategory(value: string | null | undefined) {
+  if (!value) return '';
+  return VALID_CATEGORIES.has(value) ? value : '';
+}
+
+function writeCategoryToUrl(next: string) {
+  if (typeof window === 'undefined') return;
+  const params = new URLSearchParams(window.location.search);
+  if (next) params.set('category', next);
+  else params.delete('category');
+  const qs = params.toString();
+  const url = qs ? `/shop?${qs}` : '/shop';
+  window.history.replaceState(window.history.state, '', url);
+}
+
+function ProductCard({
+  product,
+  addLabel,
+  onAdd,
+}: {
+  product: Product;
+  addLabel: string;
+  onAdd: (e: React.MouseEvent, product: Product) => void;
+}) {
+  const cover = product.images?.[0] || product.image_url;
+
+  return (
+    <Link href={`/shop/${product.id}`} prefetch={false} className="block h-full">
+      <Card hover className="h-full bg-transparent border-0 shadow-none">
+        <div className="relative">
+          <CardImage src={cover} alt={product.name} className="rounded-2xl border border-white/8" />
+          {(product.images?.length || 0) > 1 && (
+            <span className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-white text-[10px] tracking-wide border border-white/10">
+              {product.images.length} photos
+            </span>
+          )}
+        </div>
+        <CardContent className="px-1 pt-4 pb-2">
+          <p className="text-eyebrow text-layali-pink uppercase tracking-[0.2em] mb-1.5">
+            {product.category}
+          </p>
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <h3 className="font-serif text-heading-sm text-white leading-snug line-clamp-2">
+              {product.name}
+            </h3>
+            <span className="font-serif text-heading-sm text-white/90 shrink-0">
+              {formatPrice(Number(product.price))}
+            </span>
+          </div>
+          {product.compare_at_price && (
+            <span className="text-sm text-white/30 line-through block mb-2">
+              {formatPrice(Number(product.compare_at_price))}
+            </span>
+          )}
+          <Button size="sm" variant="outline" className="w-full" onClick={(e) => onAdd(e, product)}>
+            <ShoppingBag className="w-3.5 h-3.5" /> {addLabel}
+          </Button>
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
+
 export default function ShopContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
-  const [, startTransition] = useTransition();
 
-  const categoryParam = searchParams.get('category') || '';
-  const category = VALID_CATEGORIES.has(categoryParam) ? categoryParam : '';
-
+  const categoryFromUrl = normalizeCategory(searchParams.get('category'));
+  const [category, setCategory] = useState(categoryFromUrl);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -45,6 +105,13 @@ export default function ShopContent() {
     country: string;
   } | null>(null);
   const addItem = useCartStore((s) => s.addItem);
+
+  // Sync only when Next navigation changes the URL (e.g. home → /shop?category=…)
+  useEffect(() => {
+    setCategory(categoryFromUrl);
+    setPage(1);
+    setBrand('');
+  }, [categoryFromUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,31 +170,23 @@ export default function ShopContent() {
     };
   }, []);
 
-  // Reset page + sticky brand when section changes (URL-driven)
-  useEffect(() => {
-    setPage(1);
-    setBrand('');
-  }, [category]);
-
   useEffect(() => {
     setPage(1);
   }, [search, brand, minPrice, maxPrice]);
 
-  const selectCategory = (value: string) => {
-    const next = VALID_CATEGORIES.has(value) ? value : '';
-    startTransition(() => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (next) params.set('category', next);
-      else params.delete('category');
-      const qs = params.toString();
-      router.replace(qs ? `/shop?${qs}` : '/shop', { scroll: false });
+  const selectCategory = useCallback((value: string) => {
+    const next = normalizeCategory(value);
+    setCategory((prev) => {
+      if (prev === next) return prev;
+      return next;
     });
-  };
+    setPage(1);
+    setBrand('');
+    writeCategoryToUrl(next);
+  }, []);
 
   const brands = useMemo(() => {
-    const inCategory = category
-      ? products.filter((p) => p.category === category)
-      : products;
+    const inCategory = category ? products.filter((p) => p.category === category) : products;
     return collectBrands(inCategory);
   }, [products, category]);
 
@@ -138,10 +197,7 @@ export default function ShopContent() {
 
     return products.filter((p) => {
       if (category && p.category !== category) return false;
-      if (brand) {
-        const detected = detectBrand(p.name);
-        if (detected !== brand) return false;
-      }
+      if (brand && detectBrand(p.name) !== brand) return false;
       const price = Number(p.price);
       if (min != null && !Number.isNaN(min) && price < min) return false;
       if (max != null && !Number.isNaN(max) && price > max) return false;
@@ -168,44 +224,42 @@ export default function ShopContent() {
 
   const hasSearchOrExtraFilters = Boolean(search || brand || minPrice || maxPrice);
   const hasActiveFilters = Boolean(category || hasSearchOrExtraFilters);
-  /** Empty category section with no other filters → coming soon */
   const isEmptySection =
     !loading && filtered.length === 0 && Boolean(category) && !hasSearchOrExtraFilters;
-  const isEmptySearch =
-    !loading && filtered.length === 0 && hasSearchOrExtraFilters;
+  const isEmptySearch = !loading && filtered.length === 0 && hasSearchOrExtraFilters;
 
-  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const image = product.images?.[0] || product.image_url;
-    addItem({
-      id: product.id,
-      type: 'product',
-      name: product.name,
-      price: Number(product.price),
-      image_url: image,
-    });
-  };
-
-  const productCover = (product: Product) => product.images?.[0] || product.image_url;
+  const handleAddToCart = useCallback(
+    (e: React.MouseEvent, product: Product) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const image = product.images?.[0] || product.image_url;
+      addItem({
+        id: product.id,
+        type: 'product',
+        name: product.name,
+        price: Number(product.price),
+        image_url: image,
+      });
+    },
+    [addItem]
+  );
 
   const goToPage = (next: number) => {
     setPage(next);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const chipClass = (active: boolean) =>
+    cn(
+      'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-colors border',
+      active
+        ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
+        : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
+    );
+
   const categoryChips = (
     <>
-      <button
-        type="button"
-        onClick={() => selectCategory('')}
-        className={cn(
-          'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-all border',
-          !category
-            ? 'bg-layali-pink-glow text-white border-layali-pink-glow shadow-[0_0_16px_rgba(212,46,124,0.35)]'
-            : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
-        )}
-      >
+      <button type="button" onClick={() => selectCategory('')} className={chipClass(!category)}>
         {t.shop.all}
       </button>
       {PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((cat) => (
@@ -213,20 +267,13 @@ export default function ShopContent() {
           key={cat.value}
           type="button"
           onClick={() => selectCategory(cat.value)}
-          className={cn(
-            'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-all border',
-            category === cat.value
-              ? 'bg-layali-pink-glow text-white border-layali-pink-glow shadow-[0_0_16px_rgba(212,46,124,0.35)]'
-              : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
-          )}
+          className={chipClass(category === cat.value)}
         >
           {cat.label}
         </button>
       ))}
     </>
   );
-
-  const gridKey = `${category}|${brand}|${search}|${minPrice}|${maxPrice}|${currentPage}`;
 
   return (
     <div className="relative min-h-screen page-shell pt-24 pb-16 overflow-hidden">
@@ -247,7 +294,7 @@ export default function ShopContent() {
               {t.shop.guest} —{' '}
               <Link
                 href="/auth/signin?redirect=/checkout"
-                prefetch
+                prefetch={false}
                 className="text-layali-pink hover:text-layali-pink-light transition-colors"
               >
                 {t.shop.signIn}
@@ -258,9 +305,9 @@ export default function ShopContent() {
           )}
         </FadeIn>
 
-        <FadeIn className="mb-8">
+        <div className="mb-8">
           <DynamicBannerCarousel placement="shop_hero" className="border border-layali-pink/20" />
-        </FadeIn>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
@@ -277,7 +324,7 @@ export default function ShopContent() {
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
             className={cn(
-              'inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs tracking-[0.14em] uppercase font-medium border transition-all',
+              'inline-flex items-center justify-center gap-2 px-5 py-3 rounded-full text-xs tracking-[0.14em] uppercase font-medium border transition-colors',
               filtersOpen || hasActiveFilters
                 ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                 : 'bg-transparent text-white/70 border-white/20 hover:border-layali-pink/40'
@@ -313,7 +360,7 @@ export default function ShopContent() {
                   type="button"
                   onClick={() => selectCategory('')}
                   className={cn(
-                    'px-3 py-1.5 rounded-full text-xs border transition-all',
+                    'px-3 py-1.5 rounded-full text-xs border transition-colors',
                     !category
                       ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                       : 'border-white/15 text-white/60 hover:border-layali-pink/40'
@@ -327,7 +374,7 @@ export default function ShopContent() {
                     type="button"
                     onClick={() => selectCategory(cat.value)}
                     className={cn(
-                      'px-3 py-1.5 rounded-full text-xs border transition-all',
+                      'px-3 py-1.5 rounded-full text-xs border transition-colors',
                       category === cat.value
                         ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                         : 'border-white/15 text-white/60 hover:border-layali-pink/40'
@@ -347,7 +394,7 @@ export default function ShopContent() {
                     type="button"
                     onClick={() => setBrand('')}
                     className={cn(
-                      'px-3 py-1.5 rounded-full text-xs border transition-all',
+                      'px-3 py-1.5 rounded-full text-xs border transition-colors',
                       !brand
                         ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                         : 'border-white/15 text-white/60 hover:border-layali-pink/40'
@@ -361,7 +408,7 @@ export default function ShopContent() {
                       type="button"
                       onClick={() => setBrand(b)}
                       className={cn(
-                        'px-3 py-1.5 rounded-full text-xs border transition-all',
+                        'px-3 py-1.5 rounded-full text-xs border transition-colors',
                         brand === b
                           ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                           : 'border-white/15 text-white/60 hover:border-layali-pink/40'
@@ -445,57 +492,17 @@ export default function ShopContent() {
           </div>
         ) : (
           <>
-            <StaggerContainer
-              remountKey={gridKey}
-              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6"
-            >
+            {/* Plain grid — no Framer remount/stagger (was causing section-switch lag) */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
               {pageItems.map((product) => (
-                <StaggerItem key={product.id}>
-                  <Link href={`/shop/${product.id}`} prefetch className="block h-full">
-                    <Card hover className="h-full bg-transparent border-0 shadow-none">
-                      <div className="relative">
-                        <CardImage
-                          src={productCover(product)}
-                          alt={product.name}
-                          className="rounded-2xl border border-white/8"
-                        />
-                        {(product.images?.length || 0) > 1 && (
-                          <span className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-white text-[10px] tracking-wide border border-white/10">
-                            {product.images.length} photos
-                          </span>
-                        )}
-                      </div>
-                      <CardContent className="px-1 pt-4 pb-2">
-                        <p className="text-eyebrow text-layali-pink uppercase tracking-[0.2em] mb-1.5">
-                          {product.category}
-                        </p>
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <h3 className="font-serif text-heading-sm text-white leading-snug line-clamp-2">
-                            {product.name}
-                          </h3>
-                          <span className="font-serif text-heading-sm text-white/90 shrink-0">
-                            {formatPrice(Number(product.price))}
-                          </span>
-                        </div>
-                        {product.compare_at_price && (
-                          <span className="text-sm text-white/30 line-through block mb-2">
-                            {formatPrice(Number(product.compare_at_price))}
-                          </span>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="w-full"
-                          onClick={(e) => handleAddToCart(e, product)}
-                        >
-                          <ShoppingBag className="w-3.5 h-3.5" /> {t.shop.add}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </StaggerItem>
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  addLabel={t.shop.add}
+                  onAdd={handleAddToCart}
+                />
               ))}
-            </StaggerContainer>
+            </div>
 
             {totalPages > 1 && (
               <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
