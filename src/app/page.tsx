@@ -4,10 +4,9 @@ import Link from 'next/link';
 import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Sparkles, Droplets, Leaf } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { RitualCarousel } from '@/components/home/RitualCarousel';
-import { DynamicBannerCarousel, DynamicPromoGrid } from '@/components/banners/DynamicBanners';
+import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 
 export default function HomePage() {
@@ -57,26 +56,29 @@ export default function HomePage() {
             transition={{ duration: 0.85 }}
             className="max-w-2xl"
           >
-            <p className="text-xs sm:text-sm tracking-[0.32em] text-layali-pink mb-6 uppercase">
+            <p className="text-eyebrow tracking-[0.32em] text-layali-pink mb-6 uppercase">
               {t.hero.eyebrow}
             </p>
-            <h1 className="font-serif text-5xl sm:text-6xl lg:text-8xl font-bold text-white leading-[0.95] mb-2">
+            <h1 className="font-serif text-display-xl text-white leading-[0.95] mb-2">
               {t.hero.titleBeauty}
             </h1>
-            <p className="font-script text-5xl sm:text-6xl lg:text-7xl text-layali-pink-light mb-6">
+            <p className="font-script text-script-xl text-layali-pink-light mb-6">
               {t.hero.titleRedefined}
             </p>
-            <p className="text-white/70 text-base sm:text-lg max-w-md mb-10 leading-relaxed">
+            <p className="text-body-lg text-white/70 max-w-md mb-10">
               {t.hero.subtitle}
             </p>
             <div className="flex flex-wrap items-center gap-5">
-              <Link href="/shop">
-                <Button size="lg" className="rounded-full tracking-[0.14em] uppercase text-xs sm:text-sm">
-                  {t.hero.shopCta} <ArrowRight className="w-4 h-4" />
-                </Button>
+              <Link
+                href="/shop"
+                prefetch
+                className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-sm tracking-[0.14em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
+              >
+                {t.hero.shopCta} <ArrowRight className="w-4 h-4" />
               </Link>
               <Link
                 href="/about"
+                prefetch
                 className="text-xs sm:text-sm tracking-[0.2em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
               >
                 {t.hero.storyCta}
@@ -132,43 +134,29 @@ export default function HomePage() {
           aria-hidden
         />
         <FadeIn className="relative z-10 px-4">
-          <p className="font-serif text-3xl sm:text-4xl text-white mb-3">{t.glow.line1}</p>
-          <p className="font-serif text-4xl sm:text-5xl lg:text-6xl text-layali-pink-light font-bold mb-8">
+          <p className="font-serif text-heading-md text-white mb-3">{t.glow.line1}</p>
+          <p className="font-serif text-heading-lg text-layali-pink-light font-bold mb-8">
             {t.glow.line2}
           </p>
-          <Link href="/shop">
-            <Button
-              variant="outline"
-              size="lg"
-              className="rounded-full border-layali-pink tracking-[0.16em] uppercase text-xs"
-            >
-              {t.glow.enter} <ArrowRight className="w-4 h-4" />
-            </Button>
+          <Link
+            href="/shop"
+            prefetch
+            className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-xs tracking-[0.16em] border border-layali-pink/60 text-white hover:bg-layali-pink/10 hover:border-layali-pink hover:shadow-[0_0_24px_rgba(212,46,124,0.3)]"
+          >
+            {t.glow.enter} <ArrowRight className="w-4 h-4" />
           </Link>
         </FadeIn>
       </section>
 
       <RitualCarousel />
 
-      {/* Feature banner row */}
-      <section className="py-12 section-glide-soft border-t border-layali-pink/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FadeIn className="mb-4">
-            <p className="text-xs tracking-[0.22em] uppercase text-layali-pink">
-              Spotlight
-            </p>
-          </FadeIn>
-          <DynamicPromoGrid />
-        </div>
-      </section>
-
       {/* Why Layali */}
       <section className="py-20 section-glide border-y border-layali-pink/15 relative overflow-hidden">
         <div className="glow-orb w-[400px] h-[400px] -right-32 top-0 opacity-50" aria-hidden />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn className="text-center mb-16">
-            <h2 className="font-serif text-4xl font-bold text-white mb-4">{t.why.title}</h2>
-            <p className="text-white/60 max-w-2xl mx-auto">{t.why.subtitle}</p>
+            <h2 className="font-serif text-heading-lg text-white mb-4">{t.why.title}</h2>
+            <p className="text-body-lg text-white/60 max-w-2xl mx-auto">{t.why.subtitle}</p>
           </FadeIn>
 
           <StaggerContainer className="grid md:grid-cols-3 gap-8">
@@ -178,8 +166,8 @@ export default function HomePage() {
                   <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-layali-pink-glow/20 border border-layali-pink/40 flex items-center justify-center shadow-[0_0_20px_rgba(212,46,124,0.25)]">
                     <feature.icon className="w-7 h-7 text-layali-pink-light" />
                   </div>
-                  <h3 className="font-serif text-xl font-bold text-white mb-3">{feature.title}</h3>
-                  <p className="text-white/55 text-sm leading-relaxed">{feature.description}</p>
+                  <h3 className="font-serif text-heading-sm text-white mb-3">{feature.title}</h3>
+                  <p className="text-body text-white/55">{feature.description}</p>
                 </div>
               </StaggerItem>
             ))}
@@ -195,15 +183,17 @@ export default function HomePage() {
         />
         <div className="relative max-w-4xl mx-auto px-4 text-center">
           <FadeIn>
-            <p className="font-script text-4xl text-layali-pink-light mb-4">{t.survey.script}</p>
-            <h2 className="font-serif text-4xl lg:text-5xl font-bold text-white mb-6">
-              {t.survey.title}
-            </h2>
-            <p className="text-white/65 mb-8 max-w-2xl mx-auto leading-relaxed">{t.survey.body}</p>
-            <Link href="/auth/signup">
-              <Button variant="primary" size="lg">
-                {t.survey.cta} <Sparkles className="w-5 h-5" />
-              </Button>
+            <p className="font-script text-script-xl text-layali-pink-light mb-4 scale-75 origin-center">
+              {t.survey.script}
+            </p>
+            <h2 className="font-serif text-heading-lg text-white mb-6">{t.survey.title}</h2>
+            <p className="text-body-lg text-white/65 mb-8 max-w-2xl mx-auto">{t.survey.body}</p>
+            <Link
+              href="/auth/signup"
+              prefetch
+              className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-sm tracking-[0.14em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
+            >
+              {t.survey.cta} <Sparkles className="w-5 h-5" />
             </Link>
           </FadeIn>
         </div>

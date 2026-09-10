@@ -66,6 +66,15 @@ export interface Product {
   regions?: Region[];
 }
 
+export interface TrendingProduct {
+  id: string;
+  product_id: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  product?: Product;
+}
+
 export interface Combo {
   id: string;
   name: string;

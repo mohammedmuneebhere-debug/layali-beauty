@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { fetchTrendingProducts } from '@/lib/trending';
 import type { Product } from '@/types/database';
 
 export function RitualCarousel() {
@@ -15,19 +16,8 @@ export function RitualCarousel() {
   const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
 
   useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .eq('gender', 'female')
-        .order('is_featured', { ascending: false })
-        .order('created_at', { ascending: false })
-        .limit(12);
-      setProducts((data as Product[]) || []);
-    }
-    load();
+    const supabase = createClient();
+    void fetchTrendingProducts(supabase).then(setProducts);
   }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -54,10 +44,12 @@ export function RitualCarousel() {
     <section className="py-20 section-glide relative overflow-hidden border-t border-layali-pink/10">
       <div className="glow-orb w-[420px] h-[420px] -right-24 top-10 opacity-45" aria-hidden />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <p className="text-xs tracking-[0.28em] uppercase text-layali-pink mb-3">{t.ritual.eyebrow}</p>
-        <h2 className="font-serif text-4xl lg:text-5xl font-bold text-white mb-3">{t.ritual.title}</h2>
-        <p className="text-white/60 max-w-xl leading-relaxed">{t.ritual.subtitle}</p>
-        <p className="mt-6 text-[11px] tracking-[0.22em] uppercase text-white/40">
+        <p className="text-eyebrow tracking-[0.28em] uppercase text-layali-pink mb-3">
+          {t.ritual.eyebrow}
+        </p>
+        <h2 className="font-serif text-heading-lg text-white mb-3">{t.ritual.title}</h2>
+        <p className="text-body-lg text-white/60 max-w-xl">{t.ritual.subtitle}</p>
+        <p className="mt-6 text-eyebrow tracking-[0.22em] uppercase text-white/40">
           III · {t.ritual.drag}
         </p>
       </div>
@@ -82,7 +74,7 @@ export function RitualCarousel() {
               transition={{ delay: Math.min(i * 0.05, 0.3) }}
               className="min-w-[240px] sm:min-w-[280px] max-w-[280px]"
             >
-              <Link href={`/shop/${product.id}`} className="block group">
+              <Link href={`/shop/${product.id}`} prefetch className="block group">
                 <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-layali-surface border border-white/8 mb-3">
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -91,6 +83,8 @@ export function RitualCarousel() {
                       alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                       draggable={false}
+                      loading="lazy"
+                      decoding="async"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-layali-pink/40 text-3xl">
@@ -98,13 +92,15 @@ export function RitualCarousel() {
                     </div>
                   )}
                 </div>
-                <p className="text-[10px] tracking-[0.2em] uppercase text-layali-pink mb-1">
+                <p className="text-eyebrow tracking-[0.2em] uppercase text-layali-pink mb-1">
                   {product.category}
                 </p>
-                <h3 className="font-serif text-lg text-white line-clamp-2 group-hover:text-layali-pink-light transition-colors">
+                <h3 className="font-serif text-heading-sm text-white line-clamp-2 group-hover:text-layali-pink-light transition-colors">
                   {product.name}
                 </h3>
-                <p className="font-serif text-xl text-white/90 mt-1">{formatPrice(Number(product.price))}</p>
+                <p className="font-serif text-heading-sm text-white/90 mt-1">
+                  {formatPrice(Number(product.price))}
+                </p>
               </Link>
             </motion.div>
           );

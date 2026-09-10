@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import type { BannerSlide } from '@/lib/banners';
 import { BANNER_SIZES } from '@/lib/banners';
+import { isExternalHref, normalizeAppHref } from '@/lib/navigation';
 
 type GridItem = BannerSlide & {
   /** full = one row; half = side-by-side tile */
@@ -46,9 +47,17 @@ function Tile({
     </div>
   );
 
-  if (item.href) {
+  const href = normalizeAppHref(item.href);
+  if (href) {
+    if (isExternalHref(href)) {
+      return (
+        <a href={href} className="block" aria-label={item.alt} rel="noopener noreferrer">
+          {shell}
+        </a>
+      );
+    }
     return (
-      <Link href={item.href} className="block" aria-label={item.alt}>
+      <Link href={href} prefetch className="block" aria-label={item.alt}>
         {shell}
       </Link>
     );

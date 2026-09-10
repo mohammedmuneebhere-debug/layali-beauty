@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BannerSlide } from '@/lib/banners';
 import { BANNER_SIZES } from '@/lib/banners';
+import { isExternalHref, normalizeAppHref } from '@/lib/navigation';
 
 type Props = {
   slides: BannerSlide[];
@@ -17,7 +18,7 @@ type Props = {
   showArrows?: boolean;
 };
 
-function BannerMedia({ slide }: { slide: BannerSlide }) {
+function BannerMedia({ slide, priority = false }: { slide: BannerSlide; priority?: boolean }) {
   const size = BANNER_SIZES[slide.src];
   const width = slide.width || size?.w || 2400;
   const height = slide.height || size?.h || 400;
@@ -30,16 +31,24 @@ function BannerMedia({ slide }: { slide: BannerSlide }) {
       width={width}
       height={height}
       decoding="async"
-      loading="eager"
+      loading={priority ? 'eager' : 'lazy'}
       className="block w-full h-auto max-w-full"
       style={{ aspectRatio: `${width} / ${height}` }}
       draggable={false}
     />
   );
 
-  if (slide.href) {
+  const href = normalizeAppHref(slide.href);
+  if (href) {
+    if (isExternalHref(href)) {
+      return (
+        <a href={href} className="block w-full" aria-label={slide.alt} rel="noopener noreferrer">
+          {img}
+        </a>
+      );
+    }
     return (
-      <Link href={slide.href} className="block w-full" aria-label={slide.alt}>
+      <Link href={href} prefetch className="block w-full" aria-label={slide.alt}>
         {img}
       </Link>
     );
@@ -98,7 +107,7 @@ export function BannerCarousel({
           transition={{ duration: 0.3 }}
           className="w-full"
         >
-          <BannerMedia slide={slide} />
+          <BannerMedia slide={slide} priority={index === 0} />
         </motion.div>
       </AnimatePresence>
 

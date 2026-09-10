@@ -71,16 +71,109 @@ body {
   background: transparent !important;
   color: #ffffff !important;
   font-family: var(--font-outfit), system-ui, sans-serif;
+  font-size: 1rem;
+  line-height: 1.6;
   overflow-x: hidden;
 }
 
 html[lang='ar'] body,
 html[dir='rtl'] body {
   font-family: var(--font-arabic), var(--font-outfit), system-ui, sans-serif;
+  line-height: 1.75;
+  letter-spacing: 0;
 }
 
 html[lang='ar'] .font-serif {
   font-family: var(--font-arabic), var(--font-cormorant), serif;
+  letter-spacing: 0;
+}
+
+html[lang='ar'] .tracking-widest,
+html[lang='ar'] .tracking-\[0\.18em\],
+html[lang='ar'] .tracking-\[0\.14em\],
+html[lang='ar'] .tracking-\[0\.16em\],
+html[lang='ar'] .tracking-\[0\.2em\],
+html[lang='ar'] .tracking-\[0\.22em\],
+html[lang='ar'] .tracking-\[0\.28em\],
+html[lang='ar'] .tracking-\[0\.3em\],
+html[lang='ar'] .tracking-\[0\.32em\],
+html[lang='ar'] .tracking-\[0\.35em\] {
+  letter-spacing: 0.04em;
+}
+
+/* —— Type scale (EN + AR) —— */
+.text-eyebrow {
+  font-size: 0.6875rem; /* 11px */
+  line-height: 1.4;
+  font-weight: 500;
+}
+@media (min-width: 640px) {
+  .text-eyebrow { font-size: 0.75rem; }
+}
+
+.text-body {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.text-body-lg {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+@media (min-width: 640px) {
+  .text-body-lg { font-size: 1.125rem; }
+}
+
+.text-heading-sm {
+  font-size: 1.125rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+.text-heading-md {
+  font-size: 1.5rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+@media (min-width: 1024px) {
+  .text-heading-md { font-size: 1.75rem; }
+}
+.text-heading-lg {
+  font-size: 2rem;
+  line-height: 1.2;
+  font-weight: 700;
+}
+@media (min-width: 1024px) {
+  .text-heading-lg { font-size: 2.5rem; }
+}
+
+.text-display-sm {
+  font-size: 1.5rem;
+  line-height: 1.1;
+  font-weight: 700;
+}
+.text-display-md {
+  font-size: 1.875rem;
+  line-height: 1.1;
+  font-weight: 700;
+}
+.text-display-xl {
+  font-size: clamp(2.75rem, 8vw, 5.5rem);
+  line-height: 0.95;
+  font-weight: 700;
+}
+.text-script-xl {
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  line-height: 1.1;
+}
+
+html[lang='ar'] .text-display-xl,
+html[lang='ar'] .text-heading-lg,
+html[lang='ar'] .text-heading-md {
+  line-height: 1.25;
+}
+
+html[lang='ar'] .text-script-xl {
+  font-family: var(--font-arabic), var(--font-great-vibes), cursive;
+  font-size: clamp(2rem, 6vw, 3.25rem);
 }
 
 @keyframes marquee {
@@ -112,10 +205,18 @@ html[lang='ar'] .font-serif {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  opacity: 0.035;
+  opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 180px;
+  will-change: auto;
+  contain: strict;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .film-grain::before { display: none; }
+  .animate-marquee { animation: none; }
+  .glow-orb { animation: none; }
 }
 
 /* Soft magenta glow — never wash text areas */

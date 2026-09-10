@@ -30,11 +30,11 @@ export function Navbar() {
     <header className="fixed top-0 inset-x-0 z-50 glass-dark">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
-          <Link href="/" className="flex flex-col items-start group">
-            <span className="font-serif text-2xl lg:text-3xl font-bold tracking-widest text-white group-hover:text-layali-pink-light transition-colors">
+          <Link href="/" prefetch className="flex flex-col items-start group">
+            <span className="font-serif text-display-sm lg:text-display-md font-bold tracking-widest text-white group-hover:text-layali-pink-light transition-colors">
               {t.brand}
             </span>
-            <span className="text-[10px] tracking-[0.3em] text-layali-pink -mt-1">
+            <span className="text-eyebrow tracking-[0.3em] text-layali-pink -mt-1">
               {t.brandSub}
             </span>
           </Link>
@@ -49,6 +49,7 @@ export function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch
                   className={cn(
                     'relative text-xs font-medium tracking-[0.18em] uppercase transition-colors',
                     active ? 'text-white' : 'text-white/60 hover:text-layali-pink-light'
