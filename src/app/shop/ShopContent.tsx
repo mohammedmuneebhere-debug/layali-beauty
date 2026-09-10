@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { ShoppingBag, Filter, Search, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ShoppingBag, Filter, Search, X, ChevronLeft, ChevronRight, PackageOpen } from 'lucide-react';
 import { Card, CardImage, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
@@ -17,12 +17,21 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { collectBrands, detectBrand, PAGE_SIZE } from '@/lib/shop-filters';
 
+const VALID_CATEGORIES = new Set(
+  PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((c) => c.value)
+);
+
 export default function ShopContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useLanguage();
+  const [, startTransition] = useTransition();
+
+  const categoryParam = searchParams.get('category') || '';
+  const category = VALID_CATEGORIES.has(categoryParam) ? categoryParam : '';
+
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [category, setCategory] = useState(searchParams.get('category') || '');
   const [search, setSearch] = useState('');
   const [brand, setBrand] = useState('');
   const [minPrice, setMinPrice] = useState('');
@@ -38,6 +47,8 @@ export default function ShopContent() {
   const addItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       setLoading(true);
       const supabase = createClient();
@@ -50,7 +61,7 @@ export default function ShopContent() {
       let country = '';
 
       if (user) {
-        setIsGuest(false);
+        if (!cancelled) setIsGuest(false);
         const { data: profile } = await supabase
           .from('profiles')
           .select('city, country')
@@ -60,39 +71,65 @@ export default function ShopContent() {
         if (profile) {
           city = profile.city || '';
           country = profile.country || '';
-          if (city && country) setUserRegion({ gender, city, country });
+          if (city && country && !cancelled) {
+            setUserRegion({ gender, city, country });
+          }
         }
 
-        if (city && country) {
-          const regional = await getProductsForRegion(supabase, {
-            gender,
-            country,
-            city,
-          });
-          setProducts(regional);
+        const list =
+          city && country
+            ? await getProductsForRegion(supabase, { gender, country, city })
+            : await getPublicProducts(supabase, { gender });
+
+        if (!cancelled) {
+          setProducts(list);
           setLoading(false);
-          return;
         }
-
-        setProducts(await getPublicProducts(supabase, { gender }));
-        setLoading(false);
         return;
       }
 
-      setIsGuest(true);
-      setUserRegion(null);
-      setProducts(await getPublicProducts(supabase, { gender }));
-      setLoading(false);
+      const publicProducts = await getPublicProducts(supabase, { gender });
+      if (!cancelled) {
+        setIsGuest(true);
+        setUserRegion(null);
+        setProducts(publicProducts);
+        setLoading(false);
+      }
     }
 
     void load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Reset page + sticky brand when section changes (URL-driven)
+  useEffect(() => {
+    setPage(1);
+    setBrand('');
+  }, [category]);
 
   useEffect(() => {
     setPage(1);
-  }, [category, search, brand, minPrice, maxPrice]);
+  }, [search, brand, minPrice, maxPrice]);
 
-  const brands = useMemo(() => collectBrands(products), [products]);
+  const selectCategory = (value: string) => {
+    const next = VALID_CATEGORIES.has(value) ? value : '';
+    startTransition(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (next) params.set('category', next);
+      else params.delete('category');
+      const qs = params.toString();
+      router.replace(qs ? `/shop?${qs}` : '/shop', { scroll: false });
+    });
+  };
+
+  const brands = useMemo(() => {
+    const inCategory = category
+      ? products.filter((p) => p.category === category)
+      : products;
+    return collectBrands(inCategory);
+  }, [products, category]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -121,15 +158,21 @@ export default function ShopContent() {
   const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const clearFilters = () => {
-    setCategory('');
     setSearch('');
     setBrand('');
     setMinPrice('');
     setMaxPrice('');
     setPage(1);
+    selectCategory('');
   };
 
-  const hasActiveFilters = Boolean(category || search || brand || minPrice || maxPrice);
+  const hasSearchOrExtraFilters = Boolean(search || brand || minPrice || maxPrice);
+  const hasActiveFilters = Boolean(category || hasSearchOrExtraFilters);
+  /** Empty category section with no other filters → coming soon */
+  const isEmptySection =
+    !loading && filtered.length === 0 && Boolean(category) && !hasSearchOrExtraFilters;
+  const isEmptySearch =
+    !loading && filtered.length === 0 && hasSearchOrExtraFilters;
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
@@ -150,6 +193,40 @@ export default function ShopContent() {
     setPage(next);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const categoryChips = (
+    <>
+      <button
+        type="button"
+        onClick={() => selectCategory('')}
+        className={cn(
+          'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-all border',
+          !category
+            ? 'bg-layali-pink-glow text-white border-layali-pink-glow shadow-[0_0_16px_rgba(212,46,124,0.35)]'
+            : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
+        )}
+      >
+        {t.shop.all}
+      </button>
+      {PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((cat) => (
+        <button
+          key={cat.value}
+          type="button"
+          onClick={() => selectCategory(cat.value)}
+          className={cn(
+            'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-all border',
+            category === cat.value
+              ? 'bg-layali-pink-glow text-white border-layali-pink-glow shadow-[0_0_16px_rgba(212,46,124,0.35)]'
+              : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
+          )}
+        >
+          {cat.label}
+        </button>
+      ))}
+    </>
+  );
+
+  const gridKey = `${category}|${brand}|${search}|${minPrice}|${maxPrice}|${currentPage}`;
 
   return (
     <div className="relative min-h-screen page-shell pt-24 pb-16 overflow-hidden">
@@ -185,7 +262,6 @@ export default function ShopContent() {
           <DynamicBannerCarousel placement="shop_hero" className="border border-layali-pink/20" />
         </FadeIn>
 
-        {/* Search + filter toggle */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <div className="relative flex-1">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
@@ -235,7 +311,7 @@ export default function ShopContent() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => setCategory('')}
+                  onClick={() => selectCategory('')}
                   className={cn(
                     'px-3 py-1.5 rounded-full text-xs border transition-all',
                     !category
@@ -249,7 +325,7 @@ export default function ShopContent() {
                   <button
                     key={cat.value}
                     type="button"
-                    onClick={() => setCategory(cat.value)}
+                    onClick={() => selectCategory(cat.value)}
                     className={cn(
                       'px-3 py-1.5 rounded-full text-xs border transition-all',
                       category === cat.value
@@ -325,38 +401,7 @@ export default function ShopContent() {
           </div>
         )}
 
-        {/* Quick category chips when filters panel closed */}
-        {!filtersOpen && (
-          <div className="flex flex-wrap gap-2 mb-8">
-            <button
-              type="button"
-              onClick={() => setCategory('')}
-              className={cn(
-                'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-all border',
-                !category
-                  ? 'bg-layali-pink-glow text-white border-layali-pink-glow shadow-[0_0_16px_rgba(212,46,124,0.35)]'
-                  : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
-              )}
-            >
-              {t.shop.all}
-            </button>
-            {PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((cat) => (
-              <button
-                key={cat.value}
-                type="button"
-                onClick={() => setCategory(cat.value)}
-                className={cn(
-                  'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-all border',
-                  category === cat.value
-                    ? 'bg-layali-pink-glow text-white border-layali-pink-glow shadow-[0_0_16px_rgba(212,46,124,0.35)]'
-                    : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
-                )}
-              >
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        )}
+        {!filtersOpen && <div className="flex flex-wrap gap-2 mb-8">{categoryChips}</div>}
 
         {!loading && filtered.length > 0 && (
           <p className="text-sm text-white/45 mb-5">
@@ -375,28 +420,35 @@ export default function ShopContent() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-20">
-            <Filter className="w-12 h-12 mx-auto text-layali-pink/50 mb-4" />
-            <p className="text-white/45">
-              {hasActiveFilters
-                ? t.shop.noMatch
-                : userRegion
-                  ? `No products available at our ${userRegion.city} outlet yet.`
-                  : t.shop.empty}
+          <div className="text-center py-20 px-4">
+            <PackageOpen className="w-12 h-12 mx-auto text-layali-pink/50 mb-4" />
+            <p className="font-serif text-heading-sm text-white mb-2">
+              {isEmptySearch ? t.shop.noMatch : t.shop.comingSoon}
             </p>
-            {hasActiveFilters && (
+            {isEmptySection && (
+              <p className="text-sm text-white/45 max-w-md mx-auto capitalize">
+                {PRODUCT_CATEGORIES.find((c) => c.value === category)?.label || category}
+              </p>
+            )}
+            {(isEmptySearch || isEmptySection) && (
               <button
                 type="button"
-                onClick={clearFilters}
-                className="mt-4 text-sm text-layali-pink hover:underline"
+                onClick={() => {
+                  if (isEmptySection) selectCategory('');
+                  else clearFilters();
+                }}
+                className="mt-5 text-sm text-layali-pink hover:underline"
               >
-                {t.shop.clearFilters}
+                {isEmptySection ? t.shop.all : t.shop.clearFilters}
               </button>
             )}
           </div>
         ) : (
           <>
-            <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
+            <StaggerContainer
+              remountKey={gridKey}
+              className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6"
+            >
               {pageItems.map((product) => (
                 <StaggerItem key={product.id}>
                   <Link href={`/shop/${product.id}`} prefetch className="block h-full">
@@ -464,11 +516,7 @@ export default function ShopContent() {
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
                       .filter((n) => {
                         if (totalPages <= 7) return true;
-                        return (
-                          n === 1 ||
-                          n === totalPages ||
-                          Math.abs(n - currentPage) <= 1
-                        );
+                        return n === 1 || n === totalPages || Math.abs(n - currentPage) <= 1;
                       })
                       .map((n, idx, arr) => {
                         const prev = arr[idx - 1];

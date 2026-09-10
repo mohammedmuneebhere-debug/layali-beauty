@@ -30,15 +30,24 @@ export function FadeIn({ children, delay = 0, className, direction = 'up' }: Fad
   );
 }
 
-export function StaggerContainer({ children, className }: { children: React.ReactNode; className?: string }) {
+export function StaggerContainer({
+  children,
+  className,
+  remountKey,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** Change this when content filters change so stagger re-animates cleanly */
+  remountKey?: string | number;
+}) {
   return (
     <motion.div
+      key={remountKey}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true }}
+      animate="visible"
       variants={{
         hidden: {},
-        visible: { transition: { staggerChildren: 0.1 } },
+        visible: { transition: { staggerChildren: 0.06 } },
       }}
       className={className}
     >

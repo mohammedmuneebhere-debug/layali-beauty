@@ -112,6 +112,7 @@ export const translations = {
       previous: 'Previous',
       next: 'Next',
       noMatch: 'No products match your search or filters.',
+      comingSoon: 'Products will be available soon',
     },
     cart: {
       title: 'Your Cart',
@@ -295,6 +296,7 @@ export const translations = {
       previous: 'السابق',
       next: 'التالي',
       noMatch: 'لا توجد منتجات تطابق البحث أو التصفية.',
+      comingSoon: 'المنتجات ستكون متاحة قريباً',
     },
     cart: {
       title: 'سلتكِ',
