@@ -16,7 +16,6 @@ export type ShopifyProductVariant = {
   id: string; // GID
   title: string;
   availableForSale: boolean;
-  quantityAvailable: number | null;
   price: Money;
   compareAtPrice: Money | null;
   selectedOptions: { name: string; value: string }[];

@@ -40,7 +40,6 @@ export const PRODUCT_CARD_FRAGMENT = `#graphql
         id
         title
         availableForSale
-        quantityAvailable
         price {
           amount
           currencyCode

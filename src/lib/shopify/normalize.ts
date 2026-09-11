@@ -20,7 +20,6 @@ type GqlVariant = {
   id: string;
   title: string;
   availableForSale: boolean;
-  quantityAvailable?: number | null;
   price: GqlMoney;
   compareAtPrice?: GqlMoney;
   selectedOptions?: { name: string; value: string }[];
@@ -60,7 +59,6 @@ function mapVariant(v: GqlVariant): ShopifyProductVariant {
     id: v.id,
     title: v.title,
     availableForSale: v.availableForSale,
-    quantityAvailable: v.quantityAvailable ?? null,
     price: parseMoney(v.price?.amount, v.price?.currencyCode || 'SAR'),
     compareAtPrice: v.compareAtPrice
       ? parseMoney(v.compareAtPrice.amount, v.compareAtPrice.currencyCode || 'SAR')
