@@ -31,15 +31,15 @@ export function Navbar() {
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-20">
           <Link href="/" prefetch className="flex flex-col items-start group">
-            <span className="font-serif text-display-sm lg:text-display-md font-bold tracking-widest text-white group-hover:text-layali-pink-light transition-colors">
+            <span className="font-serif text-display-sm lg:text-display-md font-bold tracking-[0.12em] text-white group-hover:text-layali-pink-light transition-colors">
               {t.brand}
             </span>
-            <span className="text-eyebrow tracking-[0.3em] text-layali-pink -mt-1">
+            <span className="text-meta tracking-[0.18em] text-layali-pink -mt-1">
               {t.brandSub}
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6 lg:gap-8 rtl:gap-7">
             {navLinks.map((link) => {
               const active =
                 link.href === '/'
@@ -51,7 +51,7 @@ export function Navbar() {
                   href={link.href}
                   prefetch
                   className={cn(
-                    'relative text-xs font-medium tracking-[0.18em] uppercase transition-colors',
+                    'relative text-nav tracking-[0.12em] uppercase transition-colors',
                     active ? 'text-white' : 'text-white/60 hover:text-layali-pink-light'
                   )}
                 >
@@ -86,7 +86,7 @@ export function Navbar() {
                 <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-layali-pink-glow text-white text-[10px] rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,46,124,0.7)]"
+                  className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 bg-layali-pink-glow text-white text-meta rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,46,124,0.7)]"
                 >
                   {itemCount}
                 </motion.span>
@@ -115,7 +115,7 @@ export function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setMobileOpen(false)}
-                  className="block py-2.5 text-sm font-medium text-white/70 hover:text-layali-pink-light"
+                  className="block py-2.5 text-nav text-white/70 hover:text-layali-pink-light"
                 >
                   {link.label}
                 </Link>

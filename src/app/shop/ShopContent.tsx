@@ -53,25 +53,25 @@ function ProductCard({
         <div className="relative">
           <CardImage src={cover} alt={product.name} className="rounded-2xl border border-white/8" />
           {(product.images?.length || 0) > 1 && (
-            <span className="absolute bottom-3 right-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-white text-[10px] tracking-wide border border-white/10">
+            <span className="absolute bottom-3 end-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-white text-meta border border-white/10">
               {product.images.length} photos
             </span>
           )}
         </div>
         <CardContent className="px-1 pt-4 pb-2">
-          <p className="text-eyebrow text-layali-pink uppercase tracking-[0.2em] mb-1.5">
+          <p className="text-meta text-layali-pink uppercase tracking-[0.14em] mb-1.5">
             {product.category}
           </p>
           <div className="flex items-start justify-between gap-2 mb-3">
-            <h3 className="font-serif text-heading-sm text-white leading-snug line-clamp-2">
+            <h3 className="text-product-name text-white leading-snug line-clamp-2">
               {product.name}
             </h3>
-            <span className="font-serif text-heading-sm text-white/90 shrink-0">
+            <span className="text-price text-white/90 shrink-0">
               {formatPrice(Number(product.price))}
             </span>
           </div>
           {product.compare_at_price && (
-            <span className="text-sm text-white/30 line-through block mb-2">
+            <span className="text-meta text-white/30 line-through block mb-2">
               {formatPrice(Number(product.compare_at_price))}
             </span>
           )}
@@ -293,7 +293,7 @@ export default function ShopContent() {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn className="mb-6">
-          <p className="text-eyebrow tracking-[0.28em] uppercase text-layali-pink mb-2">
+          <p className="text-meta tracking-[0.18em] uppercase text-layali-pink mb-2">
             {t.shop.eyebrow}
           </p>
           <h1 className="font-serif text-heading-lg text-white mb-3">{t.shop.title}</h1>

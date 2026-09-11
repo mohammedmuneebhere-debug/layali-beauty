@@ -108,28 +108,28 @@ export default function ProductDetailPage() {
         <FadeIn>
           <Link
             href="/shop"
-            className="inline-flex items-center gap-2 text-sm text-white/45 hover:text-white mb-8 transition-colors"
+            className="inline-flex items-center gap-2 text-nav text-white/45 hover:text-white mb-8 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Shop
+            <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> Back to Shop
           </Link>
 
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-start">
             <ProductImageGallery images={productPhotos(product)} alt={product.name} />
 
             <div>
-              <p className="text-[11px] uppercase tracking-[0.28em] text-layali-pink mb-3">
+              <p className="text-meta uppercase tracking-[0.18em] text-layali-pink mb-3">
                 {product.category}
               </p>
-              <h1 className="font-serif text-3xl sm:text-4xl font-medium text-white mb-4">
+              <h1 className="font-serif text-heading-lg text-white mb-4">
                 {product.name}
               </h1>
 
               <div className="flex items-baseline gap-3 mb-6">
-                <span className="font-serif text-2xl text-white">
+                <span className="text-price text-xl text-white">
                   {formatPrice(Number(product.price))}
                 </span>
                 {product.compare_at_price && (
-                  <span className="text-lg text-white/30 line-through">
+                  <span className="text-body text-white/30 line-through">
                     {formatPrice(Number(product.compare_at_price))}
                   </span>
                 )}
@@ -137,8 +137,8 @@ export default function ProductDetailPage() {
 
               {description && (
                 <div className="mb-8">
-                  <h2 className="font-medium text-white mb-2">About this product</h2>
-                  <p className="text-white/55 leading-relaxed whitespace-pre-line">
+                  <h2 className="text-product-name text-white mb-2">About this product</h2>
+                  <p className="text-body text-white/55 whitespace-pre-line">
                     {visibleDescription}
                   </p>
                   {isLongDescription && (

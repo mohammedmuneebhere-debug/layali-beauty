@@ -46,7 +46,7 @@ export function RitualCarousel() {
     <section className="py-20 section-glide relative overflow-hidden border-t border-layali-pink/10">
       <div className="glow-orb w-[420px] h-[420px] -right-24 top-10 opacity-45" aria-hidden />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <p className="text-eyebrow tracking-[0.28em] uppercase text-layali-pink mb-3">
+        <p className="text-meta tracking-[0.18em] uppercase text-layali-pink mb-3">
           {t.ritual.eyebrow}
         </p>
         <h2 className="font-serif text-heading-lg text-white mb-3">{t.ritual.title}</h2>
@@ -95,13 +95,13 @@ export function RitualCarousel() {
                     </div>
                   )}
                 </div>
-                <p className="text-eyebrow tracking-[0.2em] uppercase text-layali-pink mb-1">
+                <p className="text-meta tracking-[0.14em] uppercase text-layali-pink mb-1">
                   {product.category}
                 </p>
-                <h3 className="font-serif text-heading-sm text-white line-clamp-2 group-hover:text-layali-pink-light transition-colors">
+                <h3 className="text-product-name text-white line-clamp-2 group-hover:text-layali-pink-light transition-colors">
                   {product.name}
                 </h3>
-                <p className="font-serif text-heading-sm text-white/90 mt-1">
+                <p className="text-price text-white/90 mt-1">
                   {formatPrice(Number(product.price))}
                 </p>
               </Link>

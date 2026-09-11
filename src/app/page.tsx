@@ -57,13 +57,13 @@ export default function HomePage() {
             transition={{ duration: 0.85 }}
             className="max-w-2xl"
           >
-            <p className="text-eyebrow tracking-[0.32em] text-layali-pink mb-6 uppercase">
+            <p className="text-meta tracking-[0.18em] text-layali-pink mb-6 uppercase">
               {t.hero.eyebrow}
             </p>
-            <h1 className="font-serif text-display-xl text-white leading-[0.95] mb-2">
+            <h1 className="font-serif text-hero text-white mb-1">
               {t.hero.titleBeauty}
             </h1>
-            <p className="font-script text-script-xl text-layali-pink-light mb-6">
+            <p className="font-serif text-hero text-layali-pink-light mb-6">
               {t.hero.titleRedefined}
             </p>
             <p className="text-body-lg text-white/70 max-w-md mb-10">
@@ -73,14 +73,14 @@ export default function HomePage() {
               <Link
                 href="/shop"
                 prefetch
-                className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-sm tracking-[0.14em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
+                className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-nav tracking-[0.1em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
               >
-                {t.hero.shopCta} <ArrowRight className="w-4 h-4" />
+                {t.hero.shopCta} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
               </Link>
               <Link
                 href="/about"
                 prefetch
-                className="text-xs sm:text-sm tracking-[0.2em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
+                className="text-nav tracking-[0.12em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
               >
                 {t.hero.storyCta}
               </Link>
@@ -92,7 +92,7 @@ export default function HomePage() {
           <motion.p
             animate={{ opacity: [0.35, 0.8, 0.35], y: [0, 4, 0] }}
             transition={{ duration: 2.2, repeat: Infinity }}
-            className="text-[10px] tracking-[0.35em] uppercase text-white/50"
+            className="text-meta tracking-[0.2em] uppercase text-white/50"
           >
             {t.hero.scroll} ↓
           </motion.p>
@@ -105,7 +105,7 @@ export default function HomePage() {
           {[0, 1].map((i) => (
             <span
               key={i}
-              className="mx-4 text-4xl sm:text-5xl font-serif italic text-transparent"
+              className="mx-4 text-heading-lg font-serif italic text-transparent"
               style={{
                 WebkitTextStroke: '1px rgba(224, 122, 138, 0.55)',
               }}
@@ -142,9 +142,9 @@ export default function HomePage() {
           <Link
             href="/shop"
             prefetch
-            className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-xs tracking-[0.16em] border border-layali-pink/60 text-white hover:bg-layali-pink/10 hover:border-layali-pink hover:shadow-[0_0_24px_rgba(212,46,124,0.3)]"
+            className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-nav tracking-[0.1em] border border-layali-pink/60 text-white hover:bg-layali-pink/10 hover:border-layali-pink hover:shadow-[0_0_24px_rgba(212,46,124,0.3)]"
           >
-            {t.glow.enter} <ArrowRight className="w-4 h-4" />
+            {t.glow.enter} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
           </Link>
         </FadeIn>
       </section>
@@ -204,7 +204,7 @@ export default function HomePage() {
       <section className="py-20 section-glide border-t border-layali-pink/15">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn className="text-center mb-12">
-            <h2 className="font-serif text-4xl font-bold text-white mb-4">{t.categories.title}</h2>
+            <h2 className="font-serif text-heading-lg text-white mb-4">{t.categories.title}</h2>
           </FadeIn>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categories.map((cat, i) => (
@@ -212,7 +212,7 @@ export default function HomePage() {
                 <Link href={`/shop?category=${cat.href}`}>
                   <div className="aspect-square rounded-2xl bg-black/40 backdrop-blur-md border border-layali-pink/25 flex items-center justify-center card-hover relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-t from-layali-pink-glow/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <span className="relative font-serif text-lg font-bold text-white text-center px-2">
+                    <span className="relative font-serif text-heading-sm text-white text-center px-2">
                       {cat.label}
                     </span>
                   </div>

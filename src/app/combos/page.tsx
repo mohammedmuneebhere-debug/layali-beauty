@@ -84,8 +84,8 @@ export default function CombosPage() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn className="mb-12 text-center">
           <Sparkles className="w-8 h-8 mx-auto text-layali-pink mb-4" />
-          <h1 className="font-serif text-4xl font-bold text-white mb-2">Curated Combos</h1>
-          <p className="text-white/60 max-w-xl mx-auto">
+          <h1 className="font-serif text-heading-lg font-bold text-white mb-2">Curated Combos</h1>
+          <p className="text-body-lg text-white/60 max-w-xl mx-auto">
             Beautifully bundled products at special prices — including AI-personalized combos
             verified by our dermatologist.
           </p>
@@ -111,19 +111,19 @@ export default function CombosPage() {
                   <CardImage src={combo.image_url} alt={combo.name} />
                   <CardContent>
                     <div className="flex flex-wrap gap-2 mb-2">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-white/10 text-white/70 border border-white/15">
+                    <span className="px-2 py-0.5 rounded-full text-meta uppercase bg-white/10 text-white/70 border border-white/15">
                         Shopify bundle
                       </span>
                     </div>
-                    <h3 className="font-serif text-xl text-white mb-1">{combo.name}</h3>
-                    <p className="text-sm text-white/45 mb-3 line-clamp-2">{combo.description}</p>
+                    <h3 className="text-product-name text-white mb-1">{combo.name}</h3>
+                    <p className="text-body text-white/45 mb-3 line-clamp-2">{combo.description}</p>
                     <div className="flex items-center justify-between">
                       <div>
-                        <span className="font-serif text-lg text-white">
+                        <span className="text-price text-white">
                           {formatPrice(Number(combo.price))}
                         </span>
                         {combo.compare_at_price && (
-                          <span className="text-sm text-white/30 line-through ml-2">
+                          <span className="text-meta text-white/30 line-through ms-2">
                             {formatPrice(Number(combo.compare_at_price))}
                           </span>
                         )}
@@ -160,29 +160,29 @@ export default function CombosPage() {
                     <CardContent>
                       <div className="flex flex-wrap gap-2 mb-2">
                         {combo.is_ai_generated ? (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-layali-pink/15 text-layali-pink-light flex items-center gap-1 border border-layali-pink/25">
+                          <span className="px-2 py-0.5 rounded-full text-meta uppercase bg-layali-pink/15 text-layali-pink-light flex items-center gap-1 border border-layali-pink/25">
                             <Sparkles className="w-3 h-3" /> AI Personalized
                           </span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-white/10 text-white/70 border border-white/15">
+                          <span className="px-2 py-0.5 rounded-full text-meta uppercase bg-white/10 text-white/70 border border-white/15">
                             Curated
                           </span>
                         )}
                         {combo.dermatologist_verified && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-emerald-500/10 text-emerald-300 flex items-center gap-1 border border-emerald-500/20">
+                          <span className="px-2 py-0.5 rounded-full text-meta uppercase bg-emerald-500/10 text-emerald-300 flex items-center gap-1 border border-emerald-500/20">
                             <Shield className="w-3 h-3" /> Verified
                           </span>
                         )}
                       </div>
-                      <h3 className="font-serif text-xl text-white mb-1">{combo.name}</h3>
-                      <p className="text-sm text-white/45 mb-3 line-clamp-2">{combo.description}</p>
+                      <h3 className="text-product-name text-white mb-1">{combo.name}</h3>
+                      <p className="text-body text-white/45 mb-3 line-clamp-2">{combo.description}</p>
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="font-serif text-lg text-white">
+                          <span className="text-price text-white">
                             {formatPrice(Number(combo.price))}
                           </span>
                           {combo.compare_at_price && (
-                            <span className="text-sm text-white/30 line-through ml-2">
+                            <span className="text-meta text-white/30 line-through ms-2">
                               {formatPrice(Number(combo.compare_at_price))}
                             </span>
                           )}

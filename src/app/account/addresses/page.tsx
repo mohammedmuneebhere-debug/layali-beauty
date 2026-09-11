@@ -116,7 +116,7 @@ export default function AddressesPage() {
           </Link>
 
           <div className="flex items-center justify-between mb-8">
-            <h1 className="font-serif text-4xl font-bold text-white">Saved Addresses</h1>
+            <h1 className="font-serif text-heading-lg font-bold text-white">Saved Addresses</h1>
             {!showForm && (
               <Button size="sm" onClick={() => setShowForm(true)}>
                 <Plus className="w-4 h-4" /> Add

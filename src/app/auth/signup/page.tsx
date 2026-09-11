@@ -184,9 +184,9 @@ export default function SignUpPage() {
             <LanguageSwitcher />
           </div>
           <Link href="/">
-            <h1 className="font-serif text-4xl font-bold tracking-widest text-white">LAYALI</h1>
+            <h1 className="font-serif text-heading-lg font-bold tracking-[0.12em] text-white">LAYALI</h1>
           </Link>
-          <p className="font-script text-2xl text-white/70 mt-2">
+          <p className="font-serif text-heading-sm text-white/70 mt-2">
             {step === 'otp' ? t.signup.verify : t.signup.join}
           </p>
         </div>
@@ -194,7 +194,7 @@ export default function SignUpPage() {
         <div className="glass-panel rounded-3xl p-8 shadow-xl border border-layali-pink/20">
           {step === 'details' ? (
             <>
-              <h2 className="font-serif text-2xl font-bold text-white mb-6 text-center">
+              <h2 className="font-serif text-heading-md font-bold text-white mb-6 text-center">
                 {t.signup.create}
               </h2>
 
@@ -243,10 +243,10 @@ export default function SignUpPage() {
             </>
           ) : (
             <>
-              <h2 className="font-serif text-2xl font-bold text-white mb-2 text-center">
+              <h2 className="font-serif text-heading-md font-bold text-white mb-2 text-center">
                 {t.signup.otpTitle}
               </h2>
-              <p className="text-sm text-white/60 text-center mb-6">
+              <p className="text-body text-white/60 text-center mb-6">
                 {t.signup.otpBody} <strong>{pendingData?.email}</strong>
               </p>
 

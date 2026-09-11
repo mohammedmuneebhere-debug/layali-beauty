@@ -191,8 +191,8 @@ function CustomerCareContent() {
       <div className="max-w-4xl mx-auto px-4">
         <FadeIn className="text-center mb-10">
           <Headphones className="w-10 h-10 mx-auto text-layali-pink mb-4" />
-          <h1 className="font-serif text-4xl font-medium text-white mb-2">Customer Care</h1>
-          <p className="text-white/50">We&apos;re here for you — share a review or chat with our team</p>
+          <h1 className="font-serif text-heading-lg font-medium text-white mb-2">Customer Care</h1>
+          <p className="text-body text-white/50">We&apos;re here for you — share a review or chat with our team</p>
           <a
             href={`mailto:${CONTACT_EMAIL}`}
             className="inline-flex items-center gap-2 mt-4 text-sm text-layali-pink hover:text-layali-pink-light transition-colors"
@@ -222,7 +222,7 @@ function CustomerCareContent() {
         {tab === 'reviews' && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
             <div className="glass-panel rounded-2xl p-6">
-              <h2 className="font-serif text-xl font-bold text-white mb-4">Write a Review</h2>
+              <h2 className="font-serif text-heading-sm font-bold text-white mb-4">Write a Review</h2>
               {!userId ? (
                 <p className="text-sm text-white/50 mb-4">
                   <Link href="/auth/signin?redirect=/customer-care" className="text-layali-pink font-medium hover:underline">
@@ -277,7 +277,7 @@ function CustomerCareContent() {
             </div>
 
             <div className="space-y-4">
-              <h2 className="font-serif text-xl font-bold text-white">What Our Customers Say</h2>
+              <h2 className="font-serif text-heading-sm font-bold text-white">What Our Customers Say</h2>
               {reviews.length === 0 ? (
                 <p className="text-white/50 text-center py-8">No reviews yet. Be the first to share!</p>
               ) : (
@@ -315,7 +315,7 @@ function CustomerCareContent() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <div className="bg-layali-surface rounded-2xl border border-layali-pink/20 overflow-hidden flex flex-col h-[500px]">
               <div className="p-4 border-b border-layali-pink/20 bg-layali-pink-glow/15">
-                <h2 className="font-serif text-lg font-bold text-white">Chat with Layali Support</h2>
+                <h2 className="font-serif text-heading-sm font-bold text-white">Chat with Layali Support</h2>
                 <p className="text-xs text-white/50">Our team typically replies within a few hours</p>
               </div>
 

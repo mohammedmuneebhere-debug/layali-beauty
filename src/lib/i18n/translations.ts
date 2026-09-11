@@ -7,7 +7,7 @@ type DeepStringify<T> = {
 export const translations = {
   en: {
     brand: 'LAYALI',
-    brandSub: 'BEAUTY REDEFINED',
+    brandSub: 'BEAUTY & LIFESTYLE',
     tagline: 'Beauty Redefined',
     nav: {
       home: 'Home',
@@ -157,7 +157,7 @@ export const translations = {
     },
     manifesto: {
       title: 'Manifesto',
-      script: 'beauty redefined',
+      script: 'Beauty, Redefined.',
       p1: 'Layali is a women’s beauty destination for makeup, skincare, haircare, and lifestyle essentials. Our name means “nights” in Arabic — those quiet rituals when self-care becomes self-love.',
       p2: 'We curate trusted brands across beauty categories — from everyday makeup to skincare, haircare, body care, and fragrance — made for real glow, not filters.',
       p3: 'From Riyadh to Jeddah and across the Gulf, we bring beauty you can trust to your door — with personalized guidance and delivery you can rely on.',
@@ -193,7 +193,7 @@ export const translations = {
   },
   ar: {
     brand: 'LAYALI',
-    brandSub: 'BEAUTY REDEFINED',
+    brandSub: 'الجمال ونمط الحياة',
     tagline: 'جمال معاد تعريفه',
     nav: {
       home: 'الرئيسية',

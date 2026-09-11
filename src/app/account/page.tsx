@@ -56,7 +56,7 @@ export default function AccountPage() {
     <div className="min-h-screen bg-transparent pt-24 pb-12">
       <div className="max-w-2xl mx-auto px-4">
         <FadeIn>
-          <h1 className="font-serif text-4xl font-bold text-white mb-8">My Account</h1>
+          <h1 className="font-serif text-heading-lg font-bold text-white mb-8">My Account</h1>
 
           <div className="bg-layali-surface rounded-2xl p-6 border border-layali-pink/25 mb-6">
             <div className="flex items-center gap-4 mb-6">

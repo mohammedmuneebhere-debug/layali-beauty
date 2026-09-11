@@ -45,7 +45,7 @@ export default function OrdersPage() {
             <ArrowLeft className="w-4 h-4" /> Back to Account
           </Link>
 
-          <h1 className="font-serif text-4xl font-bold text-white mb-8">My Orders</h1>
+          <h1 className="font-serif text-heading-lg font-bold text-white mb-8">My Orders</h1>
 
           {loading ? (
             <div className="animate-pulse space-y-4">

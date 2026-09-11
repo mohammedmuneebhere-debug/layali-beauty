@@ -53,7 +53,7 @@ export default function CartPage() {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center py-20 pt-28 bg-transparent">
         <ShoppingBag className="w-14 h-14 text-layali-pink/60 mb-4" />
-        <h2 className="font-serif text-3xl font-medium text-white mb-2">{t.cart.empty}</h2>
+        <h2 className="font-serif text-heading-md font-medium text-white mb-2">{t.cart.empty}</h2>
         <p className="text-white/45 mb-6">{t.cart.emptyHint}</p>
         <Link href="/shop">
           <Button>{t.cart.continue}</Button>
@@ -66,7 +66,7 @@ export default function CartPage() {
     <div className="min-h-screen bg-transparent pt-24 pb-16">
       <div className="max-w-4xl mx-auto px-4">
         <FadeIn>
-          <h1 className="font-serif text-4xl font-medium text-white mb-8">
+          <h1 className="font-serif text-heading-lg font-medium text-white mb-8">
             {t.cart.title} ({itemCount()})
           </h1>
         </FadeIn>
@@ -92,7 +92,7 @@ export default function CartPage() {
 
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-white truncate">{item.name}</h3>
-                <p className="font-serif text-lg text-white mt-1">{formatPrice(item.price)}</p>
+                <p className="text-price text-white mt-1">{formatPrice(item.price)}</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -124,7 +124,7 @@ export default function CartPage() {
         <div className="glass-panel rounded-2xl p-6">
           <div className="flex justify-between items-center mb-2">
             <span className="text-white/50">{t.cart.subtotal}</span>
-            <span className="font-serif text-lg text-white">{formatPrice(subtotal)}</span>
+            <span className="text-price text-white">{formatPrice(subtotal)}</span>
           </div>
           <div className="flex justify-between items-center mb-2">
             <span className="text-white/50">{t.cart.delivery}</span>
@@ -132,7 +132,7 @@ export default function CartPage() {
           </div>
           <div className="flex justify-between items-center mb-4 pt-3 border-t border-white/10">
             <span className="text-white font-medium">{t.cart.total}</span>
-            <span className="font-serif text-xl text-white">{formatPrice(subtotal)}</span>
+            <span className="text-price text-lg text-white">{formatPrice(subtotal)}</span>
           </div>
           <p className="text-xs text-white/40 mb-6">
             You will complete payment and shipping on Shopify Checkout.

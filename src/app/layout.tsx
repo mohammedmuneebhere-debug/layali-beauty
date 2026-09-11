@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Cormorant_Garamond, Outfit, Great_Vibes, Noto_Sans_Arabic } from 'next/font/google';
+import { Manrope, IBM_Plex_Sans_Arabic } from 'next/font/google';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { StageBackdrop } from '@/components/layout/StageBackdrop';
@@ -8,28 +8,14 @@ import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 import { SITE_URL } from '@/lib/constants';
 import './globals.css';
 
-const cormorant = Cormorant_Garamond({
-  variable: '--font-cormorant',
+const manrope = Manrope({
+  variable: '--font-manrope',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   display: 'swap',
 });
 
-const outfit = Outfit({
-  variable: '--font-outfit',
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  display: 'swap',
-});
-
-const greatVibes = Great_Vibes({
-  variable: '--font-great-vibes',
-  subsets: ['latin'],
-  weight: '400',
-  display: 'swap',
-});
-
-const notoArabic = Noto_Sans_Arabic({
+const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   variable: '--font-arabic',
   subsets: ['arabic'],
   weight: ['400', '500', '600', '700'],
@@ -38,24 +24,28 @@ const notoArabic = Noto_Sans_Arabic({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Layali | Beauty Redefined',
+  title: 'Layali | Beauty & Lifestyle',
   description:
-    'Your trusted destination for beauty essentials in Saudi Arabia — makeup, skincare, haircare, and more.',
+    'Layali is a premium beauty, self-care and lifestyle destination for women across Saudi Arabia and the Gulf — makeup, skincare, haircare, fragrance, and more.',
   keywords: [
+    'beauty & lifestyle',
     'beauty store',
+    'self-care',
     'makeup',
     'skincare',
+    'korean beauty',
+    'k-beauty',
     'haircare',
     'fragrance',
     'body care',
     'layali',
     'saudi arabia',
-    'beauty shop',
+    'gulf beauty',
   ],
   openGraph: {
-    title: 'Layali | Beauty Redefined',
+    title: 'Layali | Beauty & Lifestyle',
     description:
-      'Your trusted destination for beauty essentials in Saudi Arabia — makeup, skincare, haircare, and more.',
+      'A premium beauty, self-care and lifestyle destination — curated essentials for women who glow with confidence.',
     url: SITE_URL,
     siteName: 'Layali',
     type: 'website',
@@ -65,15 +55,15 @@ export const metadata: Metadata = {
         url: '/og-image.jpg',
         width: 1200,
         height: 630,
-        alt: 'Layali — Beauty Redefined',
+        alt: 'Layali — Beauty & Lifestyle',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Layali | Beauty Redefined',
+    title: 'Layali | Beauty & Lifestyle',
     description:
-      'Your trusted destination for beauty essentials in Saudi Arabia — makeup, skincare, haircare, and more.',
+      'A premium beauty, self-care and lifestyle destination — curated essentials for women who glow with confidence.',
     images: ['/og-image.jpg'],
   },
   icons: {
@@ -90,7 +80,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${cormorant.variable} ${outfit.variable} ${greatVibes.variable} ${notoArabic.variable} h-full`}
+      className={`${manrope.variable} ${ibmPlexArabic.variable} h-full`}
       style={{ colorScheme: 'dark', background: '#000000' }}
       suppressHydrationWarning
     >
