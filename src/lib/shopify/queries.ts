@@ -116,13 +116,17 @@ export const PRODUCTS_BY_IDS_QUERY = `#graphql
 
 export const COLLECTION_PRODUCTS_QUERY = `#graphql
   ${PRODUCT_CARD_FRAGMENT}
-  query CollectionProducts($handle: String!, $first: Int!) {
+  query CollectionProducts($handle: String!, $first: Int!, $after: String) {
     collection(handle: $handle) {
       id
       handle
       title
       description
-      products(first: $first) {
+      products(first: $first, after: $after) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
         nodes {
           ...ProductCard
         }

@@ -119,7 +119,9 @@ export async function loadShopCatalog(options: {
   const catalog = await getCatalogProducts({
     category: options.category,
     query: options.query,
-    first: options.first ?? 50,
+    // Omit `first` for the full Storefront catalog (cursor-paginated).
+    // Callers that need a bound (e.g. trending, AI) pass `first` explicitly.
+    first: options.first,
   });
 
   let products = catalog.map((p) => toShopProduct(p));

@@ -9,11 +9,25 @@ import {
 } from './queries';
 import type { ShopifyProduct } from './types';
 
+/** Storefront API page size (max 250). */
+const STOREFRONT_PAGE_SIZE = 100;
+/** Safety cap: 100 pages × 100 = 10_000 products. */
+const MAX_CATALOG_PAGES = 100;
+
 type ProductsResult = {
   products: {
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
     nodes: unknown[];
   };
+};
+
+type CollectionProductsResult = {
+  collection: {
+    products: {
+      pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      nodes: unknown[];
+    };
+  } | null;
 };
 
 export async function fetchShopifyProducts(options?: {
@@ -25,8 +39,10 @@ export async function fetchShopifyProducts(options?: {
     return { products: [], hasNextPage: false, endCursor: null };
   }
 
+  const first = Math.min(Math.max(options?.first ?? STOREFRONT_PAGE_SIZE, 1), 250);
+
   const data = await shopifyFetch<ProductsResult>(PRODUCTS_QUERY, {
-    first: options?.first ?? 50,
+    first,
     after: options?.after ?? null,
     query: options?.query || null,
   });
@@ -40,6 +56,53 @@ export async function fetchShopifyProducts(options?: {
     hasNextPage: data.products.pageInfo.hasNextPage,
     endCursor: data.products.pageInfo.endCursor,
   };
+}
+
+/**
+ * Cursor-paginate Storefront products until exhausted (or optional maxCount).
+ * Does NOT filter by availableForSale / inventory — unpublished channels aside,
+ * out-of-stock products remain in the catalog when Shopify returns them.
+ */
+export async function fetchAllShopifyProducts(options?: {
+  query?: string;
+  pageSize?: number;
+  maxCount?: number;
+}): Promise<ShopifyProduct[]> {
+  if (!isShopifyConfigured()) return [];
+
+  const pageSize = Math.min(
+    Math.max(options?.pageSize ?? STOREFRONT_PAGE_SIZE, 1),
+    250
+  );
+  const maxCount = options?.maxCount;
+  const all: ShopifyProduct[] = [];
+  let after: string | null = null;
+  let hasNextPage = true;
+  let guard = 0;
+
+  while (hasNextPage && guard < MAX_CATALOG_PAGES) {
+    guard += 1;
+    const remaining =
+      typeof maxCount === 'number' ? Math.max(maxCount - all.length, 0) : pageSize;
+    if (typeof maxCount === 'number' && remaining === 0) break;
+
+    const page = await fetchShopifyProducts({
+      first: typeof maxCount === 'number' ? Math.min(pageSize, remaining) : pageSize,
+      after,
+      query: options?.query,
+    });
+
+    all.push(...page.products);
+    hasNextPage = page.hasNextPage;
+    after = page.endCursor;
+
+    if (!page.products.length) break;
+    if (typeof maxCount === 'number' && all.length >= maxCount) {
+      return all.slice(0, maxCount);
+    }
+  }
+
+  return all;
 }
 
 export async function fetchShopifyProductByHandle(
@@ -66,22 +129,60 @@ export async function fetchShopifyProductsByIds(ids: string[]): Promise<ShopifyP
 
 export async function fetchCollectionProducts(
   handle: string,
-  first = 50
+  options?: { maxCount?: number; pageSize?: number }
 ): Promise<ShopifyProduct[]> {
   if (!isShopifyConfigured() || !handle) return [];
-  const data = await shopifyFetch<{
-    collection: { products: { nodes: unknown[] } } | null;
-  }>(COLLECTION_PRODUCTS_QUERY, { handle, first });
 
-  return (data.collection?.products.nodes || [])
-    .map((n) => normalizeProduct(n as Parameters<typeof normalizeProduct>[0]))
-    .filter((p): p is ShopifyProduct => Boolean(p));
+  const pageSize = Math.min(
+    Math.max(options?.pageSize ?? STOREFRONT_PAGE_SIZE, 1),
+    250
+  );
+  const maxCount = options?.maxCount;
+  const all: ShopifyProduct[] = [];
+  let after: string | null = null;
+  let hasNextPage = true;
+  let guard = 0;
+
+  while (hasNextPage && guard < MAX_CATALOG_PAGES) {
+    guard += 1;
+    const remaining =
+      typeof maxCount === 'number' ? Math.max(maxCount - all.length, 0) : pageSize;
+    if (typeof maxCount === 'number' && remaining === 0) break;
+
+    const data: CollectionProductsResult = await shopifyFetch<CollectionProductsResult>(
+      COLLECTION_PRODUCTS_QUERY,
+      {
+        handle,
+        first: typeof maxCount === 'number' ? Math.min(pageSize, remaining) : pageSize,
+        after,
+      }
+    );
+
+    if (!data.collection) break;
+
+    const nodes: unknown[] = data.collection.products.nodes || [];
+    const page = nodes
+      .map((n) => normalizeProduct(n as Parameters<typeof normalizeProduct>[0]))
+      .filter((p): p is ShopifyProduct => Boolean(p));
+
+    all.push(...page);
+    hasNextPage = data.collection.products.pageInfo.hasNextPage;
+    after = data.collection.products.pageInfo.endCursor;
+
+    if (!page.length) break;
+    if (typeof maxCount === 'number' && all.length >= maxCount) {
+      return all.slice(0, maxCount);
+    }
+  }
+
+  return all;
 }
 
-/** Catalog list for shop UI */
+/** Full catalog list for shop UI (cursor-paginated; not capped at 50). */
 export async function getCatalogProducts(options?: {
   category?: string;
   query?: string;
+  /** Optional upper bound. Omit to fetch the complete published Storefront catalog. */
   first?: number;
 }): Promise<CatalogProduct[]> {
   const category = options?.category?.trim();
@@ -89,21 +190,21 @@ export async function getCatalogProducts(options?: {
 
   if (category) {
     // Prefer Shopify collection handle matching category
-    products = await fetchCollectionProducts(category, options?.first ?? 50);
+    products = await fetchCollectionProducts(category, {
+      maxCount: options?.first,
+    });
     if (products.length === 0) {
       const q = [`product_type:${category}`, `tag:${category}`].join(' OR ');
-      const res = await fetchShopifyProducts({
-        first: options?.first ?? 50,
+      products = await fetchAllShopifyProducts({
         query: options?.query ? `(${q}) AND ${options.query}` : q,
+        maxCount: options?.first,
       });
-      products = res.products;
     }
   } else {
-    const res = await fetchShopifyProducts({
-      first: options?.first ?? 50,
+    products = await fetchAllShopifyProducts({
       query: options?.query,
+      maxCount: options?.first,
     });
-    products = res.products;
   }
 
   return products.map(toCatalogProduct);
@@ -117,25 +218,11 @@ export async function getCatalogProductByHandle(
   return { ...toCatalogProduct(product), shopify: product };
 }
 
-/** Paginated Storefront product count (approximate upper bound: 2000) */
+/** Paginated Storefront product count */
 export async function countCatalogProducts(): Promise<number> {
   if (!isShopifyConfigured()) return 0;
-
-  let total = 0;
-  let after: string | null = null;
-  let hasNextPage = true;
-  let guard = 0;
-
-  while (hasNextPage && guard < 20) {
-    guard += 1;
-    const page = await fetchShopifyProducts({ first: 100, after });
-    total += page.products.length;
-    hasNextPage = page.hasNextPage;
-    after = page.endCursor;
-    if (!hasNextPage) break;
-  }
-
-  return total;
+  const products = await fetchAllShopifyProducts();
+  return products.length;
 }
 
 export type { CatalogProduct };
