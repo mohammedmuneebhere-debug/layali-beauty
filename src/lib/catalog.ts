@@ -6,8 +6,15 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
-import { getCatalogProductByHandle, getCatalogProducts, isShopifyConfigured } from '@/lib/shopify';
-import { getRegionId } from '@/lib/products';
+import {
+  fetchShopifyProductsByIds,
+  getCatalogProductByHandle,
+  getCatalogProducts,
+  isShopifyConfigured,
+} from '@/lib/shopify';
+import { toCatalogProduct } from '@/lib/shopify/normalize';
+import { getRegionId } from '@/lib/regions';
+import type { RecommendationProduct } from '@/lib/recommendation';
 
 export type ShopProduct = CatalogProduct & {
   /** UI fields expected by existing product cards / PDP */
@@ -22,22 +29,52 @@ export type ShopProduct = CatalogProduct & {
   updated_at: string;
 };
 
-function toShopProduct(p: CatalogProduct): ShopProduct {
+function toShopProduct(p: CatalogProduct, extras?: { benefits?: string[]; is_featured?: boolean }): ShopProduct {
   return {
     ...p,
-    benefits: [],
+    benefits: extras?.benefits || [],
     ingredients: null,
     stock_quantity: p.available ? 99 : 0,
     is_active: p.available,
     cost_price: null,
     gender: 'unisex',
-    is_featured: false,
+    is_featured: extras?.is_featured ?? false,
     created_at: '',
     updated_at: '',
   };
 }
 
-async function filterByRegion(
+async function loadMetadataMap(
+  supabase: SupabaseClient,
+  productIds: string[]
+): Promise<Map<string, { benefits: string[]; is_featured: boolean }>> {
+  const map = new Map<string, { benefits: string[]; is_featured: boolean }>();
+  if (productIds.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from('layali_product_metadata')
+    .select('shopify_product_id, beauty_attributes, ai_tags, notes')
+    .in('shopify_product_id', productIds);
+
+  if (error) {
+    console.warn('layali_product_metadata unavailable:', error.message);
+    return map;
+  }
+
+  for (const row of data || []) {
+    const benefits = [
+      ...((row.beauty_attributes as string[] | null) || []),
+      ...((row.ai_tags as string[] | null) || []),
+    ];
+    map.set(row.shopify_product_id as string, {
+      benefits,
+      is_featured: false,
+    });
+  }
+  return map;
+}
+
+export async function filterByRegion(
   supabase: SupabaseClient,
   products: ShopProduct[],
   country: string,
@@ -53,7 +90,6 @@ async function filterByRegion(
     .eq('is_available', true);
 
   if (error) {
-    // Table may not exist yet — show full catalog during migration
     console.warn('layali_product_regions unavailable:', error.message);
     return products;
   }
@@ -73,16 +109,20 @@ export async function loadShopCatalog(options: {
   country?: string;
   city?: string;
   query?: string;
+  first?: number;
+  enrichMetadata?: boolean;
 }): Promise<{ products: ShopProduct[]; source: 'shopify' | 'unconfigured' }> {
   if (!isShopifyConfigured()) {
     return { products: [], source: 'unconfigured' };
   }
 
-  let products = (await getCatalogProducts({
+  const catalog = await getCatalogProducts({
     category: options.category,
     query: options.query,
-    first: 50,
-  })).map(toShopProduct);
+    first: options.first ?? 50,
+  });
+
+  let products = catalog.map((p) => toShopProduct(p));
 
   if (options.country && options.city) {
     products = await filterByRegion(
@@ -93,7 +133,84 @@ export async function loadShopCatalog(options: {
     );
   }
 
+  if (options.enrichMetadata !== false) {
+    const meta = await loadMetadataMap(
+      options.supabase,
+      products.map((p) => p.shopifyProductId)
+    );
+    products = products.map((p) => {
+      const m = meta.get(p.shopifyProductId);
+      if (!m) return p;
+      return {
+        ...p,
+        benefits: [...new Set([...p.benefits, ...m.benefits, ...p.tags])],
+        is_featured: m.is_featured || p.is_featured,
+      };
+    });
+  }
+
   return { products, source: 'shopify' };
+}
+
+/** Convert shop catalog rows into AI scoring candidates */
+export function toRecommendationProducts(products: ShopProduct[]): RecommendationProduct[] {
+  return products.map((p) => ({
+    shopifyProductId: p.shopifyProductId,
+    shopifyVariantId: p.defaultVariantId,
+    handle: p.handle,
+    name: p.name,
+    description: p.description,
+    price: Number(p.price),
+    image_url: p.image_url,
+    category: p.category,
+    benefits: [...new Set([...(p.benefits || []), ...(p.tags || [])])],
+    tags: p.tags || [],
+    available: p.available,
+    is_featured: p.is_featured,
+  }));
+}
+
+/**
+ * Load products for survey/AI: Shopify catalog + regional filter + metadata.
+ * Single list fetch (not N+1).
+ */
+export async function loadRecommendationCatalog(options: {
+  supabase: SupabaseClient;
+  country?: string;
+  city?: string;
+}): Promise<{
+  products: RecommendationProduct[];
+  source: 'shopify' | 'unconfigured';
+  error?: string;
+}> {
+  if (!isShopifyConfigured()) {
+    return {
+      products: [],
+      source: 'unconfigured',
+      error: 'Shopify catalog is not configured',
+    };
+  }
+
+  try {
+    const { products, source } = await loadShopCatalog({
+      supabase: options.supabase,
+      country: options.country,
+      city: options.city,
+      first: 100,
+      enrichMetadata: true,
+    });
+
+    // Prefer available products for recommendations
+    const scored = toRecommendationProducts(products);
+    return { products: scored, source };
+  } catch (err) {
+    console.error('loadRecommendationCatalog failed', err);
+    return {
+      products: [],
+      source: 'shopify',
+      error: 'Unable to load products for recommendations',
+    };
+  }
 }
 
 export async function loadShopProductByParam(
@@ -101,7 +218,6 @@ export async function loadShopProductByParam(
 ): Promise<(ShopProduct & { shopifyVariants: { id: string; available: boolean }[] }) | null> {
   if (!isShopifyConfigured() || !param) return null;
 
-  // Prefer handle (new URLs). Also accept raw GID for transitional links.
   const byHandle = await getCatalogProductByHandle(param);
   if (byHandle) {
     return {
@@ -114,10 +230,20 @@ export async function loadShopProductByParam(
   }
 
   if (param.startsWith('gid://')) {
-    const { fetchShopifyProductById } = await import('@/lib/shopify/products');
-    const product = await fetchShopifyProductById(param);
-    if (!product) return null;
-    const { toCatalogProduct } = await import('@/lib/shopify/normalize');
+    const product = (await fetchShopifyProductsByIds([param]))[0];
+    if (!product) {
+      const { fetchShopifyProductById } = await import('@/lib/shopify/products');
+      const byId = await fetchShopifyProductById(param);
+      if (!byId) return null;
+      const catalog = toCatalogProduct(byId);
+      return {
+        ...toShopProduct(catalog),
+        shopifyVariants: byId.variants.map((v) => ({
+          id: v.id,
+          available: v.availableForSale,
+        })),
+      };
+    }
     const catalog = toCatalogProduct(product);
     return {
       ...toShopProduct(catalog),

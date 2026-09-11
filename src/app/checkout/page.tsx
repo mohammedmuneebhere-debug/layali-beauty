@@ -21,8 +21,8 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState('');
-  const [userName, setUserName] = useState('');
+  const [, setUserEmail] = useState('');
+  const [, setUserName] = useState('');
   const [profileCity, setProfileCity] = useState('');
   const [profileCountry, setProfileCountry] = useState('');
   const [addresses, setAddresses] = useState<Address[]>([]);

@@ -88,6 +88,8 @@ export interface Combo {
   is_active: boolean;
   is_ai_generated: boolean;
   dermatologist_verified: boolean;
+  /** AI recommendation Shopify lines (Phase 2+). Not used for curated Shopify bundles. */
+  shopify_items?: AIRecommendationProduct[] | null;
   created_at: string;
   updated_at: string;
   products?: Product[];
@@ -178,19 +180,33 @@ export interface PersonalizedCombo {
   survey_id: string | null;
   combo_id: string | null;
   ai_recommendation: AIRecommendation | null;
+  /** Explicit Shopify GID lines (Phase 2+). Older rows may be empty. */
+  recommendation_items?: AIRecommendationProduct[] | null;
   dermatologist_verified: boolean;
   dermatologist_name: string;
   created_at: string;
   combo?: Combo;
 }
 
+export interface AIRecommendationProduct {
+  shopify_product_id: string;
+  shopify_variant_id: string | null;
+  name: string;
+  reason: string;
+  price?: number;
+  handle?: string;
+  image_url?: string | null;
+  available?: boolean;
+  /**
+   * Legacy Supabase products.id — only present on historical JSON.
+   * New recommendations must not set this.
+   */
+  product_id?: string;
+}
+
 export interface AIRecommendation {
   summary: string;
-  products: {
-    product_id: string;
-    name: string;
-    reason: string;
-  }[];
+  products: AIRecommendationProduct[];
   routine: {
     morning: string[];
     evening: string[];

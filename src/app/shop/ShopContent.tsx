@@ -109,9 +109,11 @@ export default function ShopContent() {
 
   // Sync only when Next navigation changes the URL (e.g. home → /shop?category=…)
   useEffect(() => {
-    setCategory(categoryFromUrl);
-    setPage(1);
-    setBrand('');
+    void Promise.resolve().then(() => {
+      setCategory(categoryFromUrl);
+      setPage(1);
+      setBrand('');
+    });
   }, [categoryFromUrl]);
 
   useEffect(() => {
@@ -177,7 +179,9 @@ export default function ShopContent() {
   }, []);
 
   useEffect(() => {
-    setPage(1);
+    void Promise.resolve().then(() => {
+      setPage(1);
+    });
   }, [search, brand, minPrice, maxPrice]);
 
   const selectCategory = useCallback((value: string) => {

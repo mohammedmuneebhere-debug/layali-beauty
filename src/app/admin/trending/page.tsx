@@ -48,7 +48,9 @@ export default function AdminTrendingPage() {
   };
 
   useEffect(() => {
-    void load();
+    void Promise.resolve().then(() => {
+      void load();
+    });
   }, []);
 
   const selectedIds = useMemo(

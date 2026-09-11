@@ -8,18 +8,30 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
+import { isVariantGid } from '@/lib/recommendation';
 import type { ShopProduct } from '@/lib/catalog';
-import type { Combo } from '@/types/database';
+import type { AIRecommendationProduct, Combo } from '@/types/database';
+
+type AiCombo = Combo & { shopify_items?: AIRecommendationProduct[] | null };
+
+function aiVariantIds(combo: AiCombo): string[] {
+  const items = combo.shopify_items || [];
+  return items
+    .filter((i) => i.available !== false && isVariantGid(i.shopify_variant_id))
+    .map((i) => i.shopify_variant_id as string);
+}
 
 /**
  * Hybrid combos:
  * - Curated purchasable bundles → Shopify collection/product_type "combo"
- * - AI recommendations → Supabase history UI (add requires Shopify variant GIDs in a later AI phase)
+ * - AI recommendations → Supabase grouping with Shopify variant GIDs in shopify_items
  */
 export default function CombosPage() {
   const [shopCombos, setShopCombos] = useState<ShopProduct[]>([]);
-  const [aiCombos, setAiCombos] = useState<Combo[]>([]);
+  const [aiCombos, setAiCombos] = useState<AiCombo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const addItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
@@ -38,11 +50,37 @@ export default function CombosPage() {
 
       const shopJson = (await shopRes.json()) as { products?: ShopProduct[] };
       setShopCombos(shopJson.products || []);
-      setAiCombos((aiRes.data as Combo[]) || []);
+      setAiCombos((aiRes.data as AiCombo[]) || []);
       setLoading(false);
     }
     void load();
   }, []);
+
+  const addAiCombo = async (combo: AiCombo) => {
+    const variantIds = aiVariantIds(combo);
+    if (variantIds.length === 0) {
+      setMessage(
+        'This personalized combo is not linked to purchasable Shopify variants yet.'
+      );
+      return;
+    }
+    setAddingId(combo.id);
+    setMessage(null);
+    const ok = await addItem({
+      id: combo.id,
+      type: 'combo',
+      name: combo.name,
+      price: Number(combo.price),
+      image_url: combo.image_url,
+      merchandiseIds: variantIds,
+    });
+    setAddingId(null);
+    setMessage(
+      ok
+        ? `Added ${variantIds.length} products from “${combo.name}” to your cart.`
+        : 'Could not add this combo to cart.'
+    );
+  };
 
   const hasAny = shopCombos.length > 0 || aiCombos.length > 0;
 
@@ -58,6 +96,7 @@ export default function CombosPage() {
             Beautifully bundled products at special prices — including AI-personalized combos
             verified by our dermatologist.
           </p>
+          {message && <p className="text-sm text-white/70 mt-4">{message}</p>}
         </FadeIn>
 
         {loading ? (
@@ -119,52 +158,58 @@ export default function CombosPage() {
               </StaggerItem>
             ))}
 
-            {aiCombos.map((combo) => (
-              <StaggerItem key={combo.id}>
-                <Card hover>
-                  <CardImage src={combo.image_url} alt={combo.name} />
-                  <CardContent>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {combo.is_ai_generated && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-layali-pink/15 text-layali-pink-light flex items-center gap-1 border border-layali-pink/25">
-                          <Sparkles className="w-3 h-3" /> AI Personalized
-                        </span>
-                      )}
-                      {combo.dermatologist_verified && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-emerald-500/10 text-emerald-300 flex items-center gap-1 border border-emerald-500/20">
-                          <Shield className="w-3 h-3" /> Verified
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="font-serif text-xl text-white mb-1">{combo.name}</h3>
-                    <p className="text-sm text-white/45 mb-3 line-clamp-2">{combo.description}</p>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <span className="font-serif text-lg text-white">
-                          {formatPrice(Number(combo.price))}
-                        </span>
-                        {combo.compare_at_price && (
-                          <span className="text-sm text-white/30 line-through ml-2">
-                            {formatPrice(Number(combo.compare_at_price))}
+            {aiCombos.map((combo) => {
+              const canAdd = aiVariantIds(combo).length > 0;
+              return (
+                <StaggerItem key={combo.id}>
+                  <Card hover>
+                    <CardImage src={combo.image_url} alt={combo.name} />
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {combo.is_ai_generated && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-layali-pink/15 text-layali-pink-light flex items-center gap-1 border border-layali-pink/25">
+                            <Sparkles className="w-3 h-3" /> AI Personalized
+                          </span>
+                        )}
+                        {combo.dermatologist_verified && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-emerald-500/10 text-emerald-300 flex items-center gap-1 border border-emerald-500/20">
+                            <Shield className="w-3 h-3" /> Verified
                           </span>
                         )}
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          alert(
-                            'AI combo lines will add Shopify variants once recommendation GIDs are migrated. Curated Shopify bundles above are purchasable now.'
-                          );
-                        }}
-                      >
-                        <ShoppingBag className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </StaggerItem>
-            ))}
+                      <h3 className="font-serif text-xl text-white mb-1">{combo.name}</h3>
+                      <p className="text-sm text-white/45 mb-3 line-clamp-2">{combo.description}</p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-serif text-lg text-white">
+                            {formatPrice(Number(combo.price))}
+                          </span>
+                          {combo.compare_at_price && (
+                            <span className="text-sm text-white/30 line-through ml-2">
+                              {formatPrice(Number(combo.compare_at_price))}
+                            </span>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          loading={addingId === combo.id}
+                          disabled={!canAdd}
+                          onClick={() => void addAiCombo(combo)}
+                        >
+                          <ShoppingBag className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      {!canAdd && (
+                        <p className="text-[11px] text-white/35 mt-2">
+                          Legacy combo — retake the survey for Shopify-linked recommendations.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </StaggerItem>
+              );
+            })}
           </StaggerContainer>
         )}
       </div>

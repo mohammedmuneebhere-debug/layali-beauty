@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Check, ArrowRight, ArrowLeft, Shield } from 'lucide-react';
+import { Sparkles, Check, ArrowRight, ArrowLeft, Shield, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
-import { getProductsForRegion } from '@/lib/products';
 import {
   SKIN_TYPES, HAIR_TYPES, SKIN_CONCERNS, HAIR_CONCERNS,
-  generatePersonalizedCombo,
 } from '@/lib/ai-recommendation';
-import type { AIRecommendation } from '@/types/database';
+import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
+import type { AIRecommendation, AIRecommendationProduct } from '@/types/database';
+import { isVariantGid } from '@/lib/recommendation';
 
 const STEPS = [
   { id: 'welcome', title: 'Welcome' },
@@ -26,11 +26,25 @@ const STEPS = [
 const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
 const LIFESTYLE_OPTIONS = ['active', 'office work', 'outdoor', 'minimal routine', 'full routine'];
 
+function recommendationLines(rec: AIRecommendation): AIRecommendationProduct[] {
+  return rec.products;
+}
+
+function purchasableVariantIds(rec: AIRecommendation): string[] {
+  return rec.products
+    .filter((p) => p.available !== false && isVariantGid(p.shopify_variant_id))
+    .map((p) => p.shopify_variant_id as string);
+}
+
 export default function SurveyPage() {
   const router = useRouter();
+  const addItem = useCartStore((s) => s.addItem);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [addingCart, setAddingCart] = useState(false);
+  const [cartMessage, setCartMessage] = useState<string | null>(null);
   const [recommendation, setRecommendation] = useState<AIRecommendation | null>(null);
+  const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
 
   const [survey, setSurvey] = useState({
     skin_type: '',
@@ -54,6 +68,7 @@ export default function SurveyPage() {
 
   const handleFinish = async () => {
     setLoading(true);
+    setCatalogMessage(null);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -68,55 +83,118 @@ export default function SurveyPage() {
       .eq('id', user.id)
       .single();
 
-    const products = profile?.country && profile?.city
-      ? await getProductsForRegion(supabase, {
-          gender: profile.gender || 'female',
-          country: profile.country,
-          city: profile.city,
-        })
-      : [];
+    const country = profile?.country || undefined;
+    const city = profile?.city || undefined;
 
-    const aiRec = generatePersonalizedCombo(survey, products);
-    setRecommendation(aiRec);
-
-    await supabase.from('survey_responses').insert({
-      user_id: user.id,
-      ...survey,
+    const genRes = await fetch('/api/recommendations/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ survey, country, city }),
     });
 
-    const comboPrice = products
-      .filter((p) => aiRec.products.some((ap) => ap.product_id === p.id))
-      .reduce((sum, p) => sum + Number(p.price), 0);
+    const genJson = (await genRes.json()) as {
+      recommendation?: AIRecommendation | null;
+      configured?: boolean;
+      empty?: boolean;
+      message?: string;
+      error?: string;
+    };
 
-    const { data: combo } = await supabase
-      .from('combos')
+    if (!genRes.ok || !genJson.recommendation) {
+      setCatalogMessage(genJson.error || 'Unable to generate your combo right now. Please try again.');
+      setLoading(false);
+      return;
+    }
+
+    if (genJson.configured === false) {
+      setCatalogMessage('Product catalog is not configured yet. Please try again later.');
+      setLoading(false);
+      return;
+    }
+
+    const aiRec = genJson.recommendation;
+    setRecommendation(aiRec);
+    if (genJson.empty || aiRec.products.length === 0) {
+      setCatalogMessage(
+        genJson.message || 'No matching products were found for your profile yet.'
+      );
+    }
+
+    const { data: surveyRow } = await supabase
+      .from('survey_responses')
       .insert({
-        name: 'Your Personalized Combo',
-        description: aiRec.summary,
-        price: comboPrice * 0.85,
-        compare_at_price: comboPrice,
-        gender: profile?.gender || 'female',
-        is_ai_generated: true,
-        dermatologist_verified: true,
+        user_id: user.id,
+        ...survey,
       })
+      .select('id')
+      .single();
+
+    const lines = recommendationLines(aiRec);
+    const comboPrice = lines.reduce((sum, p) => sum + Number(p.price || 0), 0);
+    const shopifyItems = lines.map((p) => ({
+      shopify_product_id: p.shopify_product_id,
+      shopify_variant_id: p.shopify_variant_id,
+      name: p.name,
+      price: p.price || 0,
+      handle: p.handle || '',
+      image_url: p.image_url || null,
+      reason: p.reason,
+      available: p.available !== false,
+    }));
+
+    // AI combo row is recommendation grouping data (not a Shopify product).
+    // Do NOT insert into combo_products (legacy UUID FK to products).
+    const comboPayload: Record<string, unknown> = {
+      name: 'Your Personalized Combo',
+      description: aiRec.summary,
+      price: comboPrice > 0 ? comboPrice * 0.85 : 0,
+      compare_at_price: comboPrice > 0 ? comboPrice : null,
+      gender: profile?.gender || 'female',
+      is_ai_generated: true,
+      dermatologist_verified: true,
+      shopify_items: shopifyItems,
+      image_url: lines[0]?.image_url || null,
+    };
+
+    let { data: combo, error: comboError } = await supabase
+      .from('combos')
+      .insert(comboPayload)
       .select()
       .single();
 
-    if (combo) {
-      const comboProducts = aiRec.products.map((p) => ({
-        combo_id: combo.id,
-        product_id: p.product_id,
-        quantity: 1,
-      }));
-      await supabase.from('combo_products').insert(comboProducts);
+    if (comboError && String(comboError.message).toLowerCase().includes('shopify_items')) {
+      delete comboPayload.shopify_items;
+      const retry = await supabase.from('combos').insert(comboPayload).select().single();
+      combo = retry.data;
+      comboError = retry.error;
+    }
 
-      await supabase.from('personalized_combos').insert({
-        user_id: user.id,
-        combo_id: combo.id,
-        ai_recommendation: aiRec,
-        dermatologist_verified: true,
-        dermatologist_name: 'Dr. Layali Certified',
-      });
+    if (comboError) {
+      console.error('Failed to save AI combo row', comboError.message);
+    }
+
+    const personalizedPayload: Record<string, unknown> = {
+      user_id: user.id,
+      survey_id: surveyRow?.id || null,
+      combo_id: combo?.id || null,
+      ai_recommendation: aiRec,
+      recommendation_items: shopifyItems,
+      dermatologist_verified: true,
+      dermatologist_name: 'Dr. Layali Certified',
+    };
+
+    let { error: pcError } = await supabase
+      .from('personalized_combos')
+      .insert(personalizedPayload);
+
+    if (pcError && String(pcError.message).toLowerCase().includes('recommendation_items')) {
+      delete personalizedPayload.recommendation_items;
+      const retry = await supabase.from('personalized_combos').insert(personalizedPayload);
+      pcError = retry.error;
+    }
+
+    if (pcError) {
+      console.error('Failed to save personalized combo', pcError.message);
     }
 
     await supabase
@@ -128,9 +206,35 @@ export default function SurveyPage() {
     setLoading(false);
   };
 
+  const addRecommendationToCart = async () => {
+    if (!recommendation) return;
+    const variantIds = purchasableVariantIds(recommendation);
+    if (variantIds.length === 0) {
+      setCartMessage('None of the recommended products are available to purchase right now.');
+      return;
+    }
+
+    setAddingCart(true);
+    setCartMessage(null);
+    const ok = await addItem({
+      id: 'ai-recommendation',
+      type: 'combo',
+      name: 'Your Personalized Combo',
+      price: recommendation.products.reduce((s, p) => s + Number(p.price || 0), 0),
+      image_url: recommendation.products[0]?.image_url || null,
+      merchandiseIds: variantIds,
+    });
+    setAddingCart(false);
+    setCartMessage(
+      ok
+        ? `Added ${variantIds.length} product${variantIds.length === 1 ? '' : 's'} to your cart.`
+        : 'Could not add items to cart. Please try again.'
+    );
+  };
+
   const next = () => {
     if (step === 4) {
-      handleFinish();
+      void handleFinish();
     } else {
       setStep((s) => s + 1);
     }
@@ -155,7 +259,6 @@ export default function SurveyPage() {
   return (
     <div className="min-h-screen bg-transparent py-12 px-4">
       <div className="max-w-2xl mx-auto">
-        {/* Progress */}
         <div className="flex justify-center gap-2 mb-8">
           {STEPS.map((s, i) => (
             <div
@@ -307,6 +410,10 @@ export default function SurveyPage() {
                   <p className="font-script text-2xl text-white/70">crafted just for you</p>
                 </div>
 
+                {catalogMessage && (
+                  <p className="text-sm text-amber-200/90 mb-4 text-center">{catalogMessage}</p>
+                )}
+
                 <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-layali-pink/20 mb-6">
                   <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-layali-gold/10 border border-layali-gold/30">
                     <Shield className="w-5 h-5 text-layali-gold" />
@@ -320,13 +427,24 @@ export default function SurveyPage() {
                   <h3 className="font-serif text-lg font-bold text-white mb-3">Recommended Products</h3>
                   <div className="space-y-3 mb-6">
                     {recommendation.products.map((product) => (
-                      <div key={product.product_id} className="flex items-start gap-3 p-3 rounded-xl bg-black">
+                      <div
+                        key={product.shopify_product_id || product.name}
+                        className="flex items-start gap-3 p-3 rounded-xl bg-black"
+                      >
                         <div className="w-8 h-8 rounded-full bg-layali-pink-glow/25 flex items-center justify-center flex-shrink-0">
                           <Check className="w-4 h-4 text-white" />
                         </div>
-                        <div>
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium text-white">{product.name}</p>
                           <p className="text-sm text-white/60">{product.reason}</p>
+                          {product.price != null && (
+                            <p className="text-sm text-layali-pink mt-1">
+                              {formatPrice(Number(product.price))}
+                            </p>
+                          )}
+                          {product.available === false && (
+                            <p className="text-xs text-amber-300/80 mt-1">Currently unavailable</p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -336,25 +454,59 @@ export default function SurveyPage() {
                     <div>
                       <h4 className="font-medium text-white mb-2">Morning Routine</h4>
                       <ul className="text-sm text-white/60 space-y-1">
-                        {recommendation.routine.morning.map((step, i) => (
-                          <li key={i}>• {step}</li>
+                        {recommendation.routine.morning.map((line, i) => (
+                          <li key={i}>• {line}</li>
                         ))}
                       </ul>
                     </div>
                     <div>
                       <h4 className="font-medium text-white mb-2">Evening Routine</h4>
                       <ul className="text-sm text-white/60 space-y-1">
-                        {recommendation.routine.evening.map((step, i) => (
-                          <li key={i}>• {step}</li>
+                        {recommendation.routine.evening.map((line, i) => (
+                          <li key={i}>• {line}</li>
                         ))}
                       </ul>
                     </div>
                   </div>
                 </div>
 
-                <Button className="w-full" size="lg" onClick={() => router.push('/shop')}>
-                  Start Shopping <ArrowRight className="w-5 h-5" />
+                {cartMessage && (
+                  <p className="text-sm text-center text-white/70 mb-3">{cartMessage}</p>
+                )}
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    className="flex-1"
+                    size="lg"
+                    loading={addingCart}
+                    onClick={() => void addRecommendationToCart()}
+                    disabled={purchasableVariantIds(recommendation).length === 0}
+                  >
+                    <ShoppingBag className="w-5 h-5" /> Add Combo to Cart
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    size="lg"
+                    variant="outline"
+                    onClick={() => router.push('/cart')}
+                  >
+                    View Cart <ArrowRight className="w-5 h-5" />
+                  </Button>
+                </div>
+                <Button
+                  className="w-full mt-3"
+                  variant="ghost"
+                  onClick={() => router.push('/shop')}
+                >
+                  Browse Shop
                 </Button>
+              </div>
+            )}
+
+            {step === 5 && !recommendation && catalogMessage && (
+              <div className="text-center py-12">
+                <p className="text-white/70 mb-6">{catalogMessage}</p>
+                <Button onClick={() => router.push('/shop')}>Browse Shop</Button>
               </div>
             )}
           </motion.div>
