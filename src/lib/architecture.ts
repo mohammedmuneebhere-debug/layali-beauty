@@ -8,7 +8,8 @@
  * Supabase = SINGLE SOURCE OF TRUTH for Layali application data
  *   auth/profiles, surveys, AI recommendation history,
  *   regions/outlets, addresses, banners, trending config,
- *   layali_product_metadata / regions / costs, shopify_order_links
+ *   layali_product_metadata / regions / costs, shopify_order_links,
+ *   shopify_product_links (legacy products.id → Shopify GID mapping)
  *
  * Next.js = UI + orchestration (Shopify + Supabase clients)
  * Zustand = Shopify cart ID + UI/optimistic state only (not authoritative cart)
@@ -37,4 +38,5 @@ export const OWNERSHIP = {
   productRegions: 'supabase' as AppDataOwner,
   productCosts: 'supabase' as AppDataOwner,
   orderLinks: 'supabase' as AppDataOwner,
+  productLinks: 'supabase' as AppDataOwner,
 } as const;

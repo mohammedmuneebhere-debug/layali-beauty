@@ -66,6 +66,16 @@ export interface Product {
   regions?: Region[];
 }
 
+/** Idempotent mapping: legacy Supabase product → Shopify commerce IDs */
+export interface ShopifyProductLink {
+  id: string;
+  supabase_product_id: string;
+  shopify_product_id: string;
+  shopify_variant_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface TrendingProduct {
   id: string;
   product_id: string | null;
