@@ -140,6 +140,7 @@ export default function SurveyPage() {
       image_url: p.image_url || null,
       reason: p.reason,
       available: p.available !== false,
+      quantity: 1,
     }));
 
     // AI combo row is recommendation grouping data (not a Shopify product).
@@ -208,8 +209,13 @@ export default function SurveyPage() {
 
   const addRecommendationToCart = async () => {
     if (!recommendation) return;
-    const variantIds = purchasableVariantIds(recommendation);
-    if (variantIds.length === 0) {
+    const lines = recommendation.products
+      .filter((p) => p.available !== false && isVariantGid(p.shopify_variant_id))
+      .map((p) => ({
+        merchandiseId: p.shopify_variant_id as string,
+        quantity: Math.max(1, Number(p.quantity) || 1),
+      }));
+    if (lines.length === 0) {
       setCartMessage('None of the recommended products are available to purchase right now.');
       return;
     }
@@ -222,12 +228,13 @@ export default function SurveyPage() {
       name: 'Your Personalized Combo',
       price: recommendation.products.reduce((s, p) => s + Number(p.price || 0), 0),
       image_url: recommendation.products[0]?.image_url || null,
-      merchandiseIds: variantIds,
+      lines,
     });
     setAddingCart(false);
+    const unitCount = lines.reduce((sum, l) => sum + l.quantity, 0);
     setCartMessage(
       ok
-        ? `Added ${variantIds.length} product${variantIds.length === 1 ? '' : 's'} to your cart.`
+        ? `Added ${unitCount} product${unitCount === 1 ? '' : 's'} to your cart.`
         : 'Could not add items to cart. Please try again.'
     );
   };

@@ -117,4 +117,25 @@ export async function getCatalogProductByHandle(
   return { ...toCatalogProduct(product), shopify: product };
 }
 
+/** Paginated Storefront product count (approximate upper bound: 2000) */
+export async function countCatalogProducts(): Promise<number> {
+  if (!isShopifyConfigured()) return 0;
+
+  let total = 0;
+  let after: string | null = null;
+  let hasNextPage = true;
+  let guard = 0;
+
+  while (hasNextPage && guard < 20) {
+    guard += 1;
+    const page = await fetchShopifyProducts({ first: 100, after });
+    total += page.products.length;
+    hasNextPage = page.hasNextPage;
+    after = page.endCursor;
+    if (!hasNextPage) break;
+  }
+
+  return total;
+}
+
 export type { CatalogProduct };

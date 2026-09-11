@@ -76,22 +76,40 @@ export interface TrendingProduct {
   product?: Product;
 }
 
+/** Curated/AI combo line — Shopify GIDs are authoritative commerce keys */
+export type ComboShopifyItem = {
+  shopify_product_id: string;
+  shopify_variant_id: string | null;
+  quantity: number;
+  name?: string;
+  price?: number;
+  handle?: string;
+  image_url?: string | null;
+  available?: boolean;
+  reason?: string;
+};
+
 export interface Combo {
   id: string;
   name: string;
   description: string | null;
   price: number;
   compare_at_price: number | null;
+  /** Layali-internal COGS for the combo grouping (not Shopify inventory) */
   cost_price: number | null;
   gender: Gender;
   image_url: string | null;
   is_active: boolean;
   is_ai_generated: boolean;
   dermatologist_verified: boolean;
-  /** AI recommendation Shopify lines (Phase 2+). Not used for curated Shopify bundles. */
-  shopify_items?: AIRecommendationProduct[] | null;
+  /**
+   * Active commerce line references (Shopify GIDs).
+   * Display snapshots optional/non-authoritative.
+   */
+  shopify_items?: ComboShopifyItem[] | null;
   created_at: string;
   updated_at: string;
+  /** @deprecated Legacy join via combo_products → products UUID */
   products?: Product[];
 }
 
@@ -197,6 +215,7 @@ export interface AIRecommendationProduct {
   handle?: string;
   image_url?: string | null;
   available?: boolean;
+  quantity?: number;
   /**
    * Legacy Supabase products.id — only present on historical JSON.
    * New recommendations must not set this.

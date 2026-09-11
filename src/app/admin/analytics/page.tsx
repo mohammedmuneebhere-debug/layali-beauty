@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatPrice } from '@/lib/utils';
 import {
+  type AnalyticsCatalogProduct,
   type AnalyticsOrderRow,
   computeDateSeries,
   computeProductBreakdown,
@@ -22,7 +23,7 @@ import {
   defaultDateRange,
   filterOrders,
 } from '@/lib/analytics';
-import type { Product } from '@/types/database';
+import type { ShopProduct } from '@/lib/catalog';
 
 function StatCard({
   label,
@@ -111,7 +112,7 @@ export default function AdminAnalyticsPage() {
   const [to, setTo] = useState(defaults.to);
   const [includePending, setIncludePending] = useState(true);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<AnalyticsCatalogProduct[]>([]);
   const [orders, setOrders] = useState<AnalyticsOrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'overview' | 'sales' | 'profit' | 'products'>('overview');
@@ -120,8 +121,9 @@ export default function AdminAnalyticsPage() {
     const load = async () => {
       setLoading(true);
       const supabase = createClient();
-      const [productsRes, ordersRes] = await Promise.all([
-        supabase.from('products').select('id, name, price, cost_price, category').order('name'),
+      const [catalogRes, costsRes, ordersRes] = await Promise.all([
+        fetch('/api/shopify/products'),
+        supabase.from('layali_product_costs').select('shopify_product_id, cost_price'),
         supabase
           .from('orders')
           .select(
@@ -130,23 +132,48 @@ export default function AdminAnalyticsPage() {
           .order('created_at', { ascending: false }),
       ]);
 
-      setProducts((productsRes.data as Product[]) || []);
+      const catalogJson = (await catalogRes.json()) as { products?: ShopProduct[] };
+      const costMap = new Map<string, number>();
+      (costsRes.data || []).forEach((row) => {
+        if (row.shopify_product_id != null && row.cost_price != null) {
+          costMap.set(row.shopify_product_id as string, Number(row.cost_price));
+        }
+      });
+
+      const catalogProducts: AnalyticsCatalogProduct[] = (catalogJson.products || []).map(
+        (p) => ({
+          id: p.shopifyProductId,
+          name: p.name,
+          cost_price: costMap.get(p.shopifyProductId) ?? null,
+        })
+      );
+
+      setProducts(catalogProducts);
       setOrders((ordersRes.data as AnalyticsOrderRow[]) || []);
       setLoading(false);
     };
 
-    void load();
+    void Promise.resolve().then(() => {
+      void load();
+    });
   }, []);
+
+  const selectedNames = useMemo(
+    () =>
+      products.filter((p) => selectedProductIds.includes(p.id)).map((p) => p.name),
+    [products, selectedProductIds]
+  );
 
   const filtered = useMemo(
     () =>
       filterOrders(orders, {
         from,
         to,
-        productIds: selectedProductIds.length ? selectedProductIds : undefined,
+        shopifyProductIds: selectedProductIds.length ? selectedProductIds : undefined,
+        productNames: selectedNames.length ? selectedNames : undefined,
         includePending,
       }),
-    [orders, from, to, selectedProductIds, includePending]
+    [orders, from, to, selectedProductIds, selectedNames, includePending]
   );
 
   const summary = useMemo(() => computeSummary(filtered), [filtered]);
@@ -167,7 +194,10 @@ export default function AdminAnalyticsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Analytics</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Financial and sales insights — filter by date range and products. Set cost prices on products for profit tracking.
+          Financial and sales insights from Layali order history. Product filters use the Shopify
+          catalog. Set Layali COGS in Admin → Products regions/costs tables (
+          <code className="text-xs">layali_product_costs</code>) for future Shopify-linked
+          analytics; historical line costs still use order snapshots.
         </p>
       </div>
 
@@ -218,7 +248,9 @@ export default function AdminAnalyticsPage() {
         </div>
 
         <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">Products (optional — leave empty for all)</p>
+          <p className="text-sm font-medium text-gray-700 mb-2">
+            Shopify products (optional — leave empty for all)
+          </p>
           <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
             {products.map((product) => {
               const selected = selectedProductIds.includes(product.id);
@@ -347,9 +379,10 @@ export default function AdminAnalyticsPage() {
               <div className="rounded-2xl border border-gray-200 bg-white p-5">
                 <p className="text-sm font-semibold text-gray-900 mb-2">Profit note</p>
                 <p className="text-sm text-gray-500 leading-relaxed">
-                  Profit is calculated as selling price minus cost price (COGS) per line item.
-                  Add cost prices in Products or Combos admin. Historical orders snapshot cost at checkout time.
-                  Delivery fees are shown separately and not deducted from profit.
+                  Profit is calculated as selling price minus cost price (COGS) per line item
+                  snapshot on historical orders. New commerce uses Shopify; Layali-internal COGS
+                  for catalog products lives in <code>layali_product_costs</code>. Delivery fees are
+                  shown separately and not deducted from profit.
                 </p>
               </div>
             )}

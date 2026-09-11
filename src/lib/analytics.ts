@@ -6,7 +6,18 @@ export type AnalyticsOrderRow = {
   total_amount: number;
   delivery_fee: number | null;
   created_at: string;
-  items: Pick<OrderItem, 'product_id' | 'combo_id' | 'name' | 'price' | 'cost_price' | 'quantity'>[];
+  items: Pick<
+    OrderItem,
+    'product_id' | 'combo_id' | 'name' | 'price' | 'cost_price' | 'quantity'
+  >[];
+};
+
+/** Catalog chip for filters — Shopify-backed (id = Shopify product GID) */
+export type AnalyticsCatalogProduct = {
+  id: string;
+  name: string;
+  /** Optional Layali COGS from layali_product_costs */
+  cost_price: number | null;
 };
 
 export type DateSeriesPoint = {
@@ -59,16 +70,33 @@ function lineCost(item: AnalyticsOrderRow['items'][number]) {
   return unitCost * item.quantity;
 }
 
+/**
+ * Filter legacy Supabase orders for Layali analytics.
+ * Product filter accepts Shopify GIDs + catalog names (for historical rows without GIDs)
+ * and optional legacy product UUID set.
+ */
 export function filterOrders(
   orders: AnalyticsOrderRow[],
   options: {
     from?: string;
     to?: string;
+    /** Shopify product GIDs selected in UI */
+    shopifyProductIds?: string[];
+    /** Display names for selected Shopify products (legacy name match) */
+    productNames?: string[];
+    /** @deprecated Legacy Supabase products.id filter */
     productIds?: string[];
     includePending?: boolean;
   }
 ) {
-  const productSet = options.productIds?.length ? new Set(options.productIds) : null;
+  const shopifySet = options.shopifyProductIds?.length
+    ? new Set(options.shopifyProductIds)
+    : null;
+  const nameSet = options.productNames?.length
+    ? new Set(options.productNames.map((n) => n.toLowerCase()))
+    : null;
+  const legacyIdSet = options.productIds?.length ? new Set(options.productIds) : null;
+  const filteringProducts = Boolean(shopifySet || nameSet || legacyIdSet);
 
   return orders
     .filter((order) => isCountableOrder(order.status, options.includePending ?? false))
@@ -79,10 +107,14 @@ export function filterOrders(
       return true;
     })
     .map((order) => {
-      if (!productSet) return order;
-      const items = order.items.filter(
-        (item) => item.product_id && productSet.has(item.product_id)
-      );
+      if (!filteringProducts) return order;
+      const items = order.items.filter((item) => {
+        if (legacyIdSet && item.product_id && legacyIdSet.has(item.product_id)) return true;
+        if (nameSet && nameSet.has(item.name.toLowerCase())) return true;
+        // Future-ready: if line ever carries a Shopify GID in product_id field
+        if (shopifySet && item.product_id && shopifySet.has(item.product_id)) return true;
+        return false;
+      });
       return { ...order, items };
     })
     .filter((order) => order.items.length > 0);

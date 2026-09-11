@@ -11,6 +11,7 @@ interface Stats {
   pendingOrders: number;
   totalProducts: number;
   totalRevenue: number;
+  catalogConfigured: boolean;
   recentOrders: {
     id: string;
     status: string;
@@ -26,6 +27,7 @@ export default function AdminDashboard() {
     pendingOrders: 0,
     totalProducts: 0,
     totalRevenue: 0,
+    catalogConfigured: true,
     recentOrders: [],
   });
 
@@ -33,15 +35,20 @@ export default function AdminDashboard() {
     async function load() {
       const supabase = createClient();
 
-      const [ordersRes, productsRes, recentRes] = await Promise.all([
+      const [ordersRes, countRes, recentRes] = await Promise.all([
         supabase.from('orders').select('id, status, total_amount'),
-        supabase.from('products').select('id', { count: 'exact' }),
+        fetch('/api/shopify/products/count'),
         supabase
           .from('orders')
           .select('id, status, total_amount, created_at, profile:profiles(full_name)')
           .order('created_at', { ascending: false })
           .limit(5),
       ]);
+
+      const countJson = (await countRes.json()) as {
+        count?: number;
+        configured?: boolean;
+      };
 
       const orders = ordersRes.data || [];
       const recent = (recentRes.data || []).map((order) => ({
@@ -55,24 +62,36 @@ export default function AdminDashboard() {
       setStats({
         totalOrders: orders.length,
         pendingOrders: orders.filter((o) => o.status === 'pending').length,
-        totalProducts: productsRes.count || 0,
+        totalProducts: countJson.count || 0,
+        catalogConfigured: countJson.configured !== false,
         totalRevenue: orders.reduce((sum, o) => sum + Number(o.total_amount), 0),
         recentOrders: recent,
       });
     }
-    load();
+    void Promise.resolve().then(() => {
+      void load();
+    });
   }, []);
 
   const cards = [
     { label: 'Total Orders', value: stats.totalOrders, icon: ShoppingCart, color: 'bg-blue-500' },
     { label: 'Pending Orders', value: stats.pendingOrders, icon: TrendingUp, color: 'bg-yellow-500' },
-    { label: 'Products', value: stats.totalProducts, icon: Package, color: 'bg-purple-500' },
+    {
+      label: 'Products (Shopify)',
+      value: stats.catalogConfigured ? stats.totalProducts : '—',
+      icon: Package,
+      color: 'bg-purple-500',
+    },
     { label: 'Revenue', value: formatPrice(stats.totalRevenue), icon: Users, color: 'bg-green-500' },
   ];
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-8">Dashboard</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h1>
+      <p className="text-sm text-gray-500 mb-8">
+        Product count comes from Shopify. Order cards still reflect legacy Supabase COD orders
+        until Shopify order links land in a later phase.
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {cards.map((card) => (
@@ -110,7 +129,9 @@ export default function AdminDashboard() {
                   <td className="p-4 text-sm">{order.profile?.full_name || 'N/A'}</td>
                   <td className="p-4 text-sm font-medium">{formatPrice(Number(order.total_amount))}</td>
                   <td className="p-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${ORDER_STATUS_LABELS[order.status]?.color || ''}`}>
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${ORDER_STATUS_LABELS[order.status]?.color || ''}`}
+                    >
                       {ORDER_STATUS_LABELS[order.status]?.label || order.status}
                     </span>
                   </td>
@@ -121,7 +142,9 @@ export default function AdminDashboard() {
               ))}
               {stats.recentOrders.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400">No orders yet</td>
+                  <td colSpan={5} className="p-8 text-center text-gray-400">
+                    No orders yet
+                  </td>
                 </tr>
               )}
             </tbody>

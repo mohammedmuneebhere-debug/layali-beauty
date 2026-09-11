@@ -3,6 +3,8 @@
  * Commerce identity is always Shopify GIDs — never Supabase product UUIDs.
  */
 
+import type { ComboShopifyItem } from '@/types/database';
+
 export type ShopifyProductId = string;
 export type ShopifyVariantId = string;
 
@@ -23,16 +25,8 @@ export type RecommendationProduct = {
   is_featured: boolean;
 };
 
-export type RecommendationLine = {
-  shopify_product_id: ShopifyProductId;
-  shopify_variant_id: ShopifyVariantId | null;
-  name: string;
-  reason: string;
-  price: number;
-  handle: string;
-  image_url: string | null;
-  available: boolean;
-};
+export type { ComboShopifyItem };
+export type RecommendationLine = ComboShopifyItem;
 
 export function isShopifyGid(value: string | null | undefined): boolean {
   return Boolean(value && value.startsWith('gid://shopify/'));
@@ -44,4 +38,17 @@ export function isProductGid(value: string | null | undefined): boolean {
 
 export function isVariantGid(value: string | null | undefined): boolean {
   return Boolean(value && value.startsWith('gid://shopify/ProductVariant/'));
+}
+
+/** Expand combo shopify_items into Shopify Cart line inputs */
+export function comboItemsToCartLines(
+  items: ComboShopifyItem[] | null | undefined
+): { merchandiseId: string; quantity: number }[] {
+  if (!items?.length) return [];
+  return items
+    .filter((i) => i.available !== false && isVariantGid(i.shopify_variant_id))
+    .map((i) => ({
+      merchandiseId: i.shopify_variant_id as string,
+      quantity: Math.max(1, Number(i.quantity) || 1),
+    }));
 }

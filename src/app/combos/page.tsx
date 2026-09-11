@@ -8,27 +8,18 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
-import { isVariantGid } from '@/lib/recommendation';
+import { comboItemsToCartLines } from '@/lib/recommendation';
 import type { ShopProduct } from '@/lib/catalog';
-import type { AIRecommendationProduct, Combo } from '@/types/database';
-
-type AiCombo = Combo & { shopify_items?: AIRecommendationProduct[] | null };
-
-function aiVariantIds(combo: AiCombo): string[] {
-  const items = combo.shopify_items || [];
-  return items
-    .filter((i) => i.available !== false && isVariantGid(i.shopify_variant_id))
-    .map((i) => i.shopify_variant_id as string);
-}
+import type { Combo } from '@/types/database';
 
 /**
  * Hybrid combos:
- * - Curated purchasable bundles → Shopify collection/product_type "combo"
- * - AI recommendations → Supabase grouping with Shopify variant GIDs in shopify_items
+ * - Shopify collection/product_type "combo" (commerce bundles)
+ * - Layali curated + AI combos from Supabase with shopify_items GIDs
  */
 export default function CombosPage() {
   const [shopCombos, setShopCombos] = useState<ShopProduct[]>([]);
-  const [aiCombos, setAiCombos] = useState<AiCombo[]>([]);
+  const [layaliCombos, setLayaliCombos] = useState<Combo[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingId, setAddingId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -37,30 +28,31 @@ export default function CombosPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const [shopRes, aiRes] = await Promise.all([
+      const [shopRes, layaliRes] = await Promise.all([
         fetch('/api/shopify/products?category=combo'),
         supabase
           .from('combos')
           .select('*')
           .eq('is_active', true)
-          .eq('is_ai_generated', true)
           .eq('gender', 'female')
           .order('created_at', { ascending: false }),
       ]);
 
       const shopJson = (await shopRes.json()) as { products?: ShopProduct[] };
       setShopCombos(shopJson.products || []);
-      setAiCombos((aiRes.data as AiCombo[]) || []);
+      setLayaliCombos((layaliRes.data as Combo[]) || []);
       setLoading(false);
     }
     void load();
   }, []);
 
-  const addAiCombo = async (combo: AiCombo) => {
-    const variantIds = aiVariantIds(combo);
-    if (variantIds.length === 0) {
+  const addLayaliCombo = async (combo: Combo) => {
+    const lines = comboItemsToCartLines(combo.shopify_items);
+    if (lines.length === 0) {
       setMessage(
-        'This personalized combo is not linked to purchasable Shopify variants yet.'
+        combo.is_ai_generated
+          ? 'This personalized combo is not linked to purchasable Shopify variants yet.'
+          : 'This curated combo needs Shopify product lines. Ask an admin to re-save it with Shopify products.'
       );
       return;
     }
@@ -72,17 +64,18 @@ export default function CombosPage() {
       name: combo.name,
       price: Number(combo.price),
       image_url: combo.image_url,
-      merchandiseIds: variantIds,
+      lines,
     });
     setAddingId(null);
+    const unitCount = lines.reduce((sum, l) => sum + l.quantity, 0);
     setMessage(
       ok
-        ? `Added ${variantIds.length} products from “${combo.name}” to your cart.`
+        ? `Added ${unitCount} item${unitCount === 1 ? '' : 's'} from “${combo.name}” to your cart.`
         : 'Could not add this combo to cart.'
     );
   };
 
-  const hasAny = shopCombos.length > 0 || aiCombos.length > 0;
+  const hasAny = shopCombos.length > 0 || layaliCombos.length > 0;
 
   return (
     <div className="relative min-h-screen bg-transparent pt-24 pb-16 overflow-hidden">
@@ -158,17 +151,21 @@ export default function CombosPage() {
               </StaggerItem>
             ))}
 
-            {aiCombos.map((combo) => {
-              const canAdd = aiVariantIds(combo).length > 0;
+            {layaliCombos.map((combo) => {
+              const canAdd = comboItemsToCartLines(combo.shopify_items).length > 0;
               return (
                 <StaggerItem key={combo.id}>
                   <Card hover>
                     <CardImage src={combo.image_url} alt={combo.name} />
                     <CardContent>
                       <div className="flex flex-wrap gap-2 mb-2">
-                        {combo.is_ai_generated && (
+                        {combo.is_ai_generated ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-layali-pink/15 text-layali-pink-light flex items-center gap-1 border border-layali-pink/25">
                             <Sparkles className="w-3 h-3" /> AI Personalized
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-white/10 text-white/70 border border-white/15">
+                            Curated
                           </span>
                         )}
                         {combo.dermatologist_verified && (
@@ -195,14 +192,16 @@ export default function CombosPage() {
                           variant="outline"
                           loading={addingId === combo.id}
                           disabled={!canAdd}
-                          onClick={() => void addAiCombo(combo)}
+                          onClick={() => void addLayaliCombo(combo)}
                         >
                           <ShoppingBag className="w-4 h-4" />
                         </Button>
                       </div>
                       {!canAdd && (
                         <p className="text-[11px] text-white/35 mt-2">
-                          Legacy combo — retake the survey for Shopify-linked recommendations.
+                          {combo.is_ai_generated
+                            ? 'Legacy combo — retake the survey for Shopify-linked recommendations.'
+                            : 'Awaiting Shopify product links from admin.'}
                         </p>
                       )}
                     </CardContent>

@@ -108,6 +108,7 @@ export function generatePersonalizedCombo(
       handle: s.product.handle,
       image_url: s.product.image_url,
       available: s.product.available && Boolean(s.product.shopifyVariantId),
+      quantity: 1,
     })),
     routine: { morning, evening },
     tips: [

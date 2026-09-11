@@ -13,8 +13,10 @@ export type AddToCartInput = {
   quantity?: number;
   /** Required for Shopify Cart API — variant GID */
   merchandiseId?: string;
-  /** Extra variant GIDs (AI combo: add all lines) */
+  /** Extra variant GIDs (AI combo: add all lines at same quantity) */
   merchandiseIds?: string[];
+  /** Preferred for curated combos with per-line quantities */
+  lines?: { merchandiseId: string; quantity: number }[];
 };
 
 type CartState = {
@@ -150,11 +152,18 @@ export const useCartStore = create<CartState>()(
       },
 
       addItem: async (item) => {
-        const ids =
-          item.merchandiseIds?.filter(Boolean) ||
-          (item.merchandiseId ? [item.merchandiseId] : []);
+        const lineInputs =
+          item.lines?.filter((l) => l.merchandiseId) ||
+          (item.merchandiseIds?.length
+            ? item.merchandiseIds.map((merchandiseId) => ({
+                merchandiseId,
+                quantity: item.quantity ?? 1,
+              }))
+            : item.merchandiseId
+              ? [{ merchandiseId: item.merchandiseId, quantity: item.quantity ?? 1 }]
+              : []);
 
-        if (ids.length === 0) {
+        if (lineInputs.length === 0) {
           set({
             error:
               'This item is not linked to Shopify yet. Add a product/variant GID before adding to cart.',
@@ -163,8 +172,8 @@ export const useCartStore = create<CartState>()(
         }
 
         let ok = true;
-        for (const merchandiseId of ids) {
-          const success = await get().addVariant(merchandiseId, item.quantity ?? 1);
+        for (const line of lineInputs) {
+          const success = await get().addVariant(line.merchandiseId, line.quantity);
           if (!success) ok = false;
         }
         return ok;

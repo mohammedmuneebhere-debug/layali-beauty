@@ -1,19 +1,22 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Legacy helpers retained temporarily for admin/analytics that still touch
- * deprecated Supabase commerce tables (Phase 3/4).
+ * Legacy helpers retained temporarily for historical product_regions UUID rows.
  *
- * Region lookup lives in `@/lib/regions`.
- * Storefront catalog lives in `@/lib/catalog` + `@/lib/shopify`.
+ * Region lookup: `@/lib/regions`
+ * Storefront / AI catalog: `@/lib/catalog` + `@/lib/shopify`
+ * Curated combo lines: `combos.shopify_items` (Shopify GIDs)
+ * Regional availability: `layali_product_regions` (Shopify GIDs)
  *
- * Do NOT use getProductsForRegion / getPublicProducts for survey or AI —
- * those paths must use loadRecommendationCatalog.
+ * Do NOT use this module as a commerce catalog.
  */
 
 export { getRegionId } from '@/lib/regions';
 
-/** @deprecated Phase 3 — admin curated combo picker still uses UUID product rows */
+/**
+ * @deprecated Phase 3+ — historical `product_regions` UUID helper only.
+ * Prefer `layali_product_regions` keyed by Shopify product GID.
+ */
 export async function saveProductRegions(
   supabase: SupabaseClient,
   productId: string,
@@ -32,7 +35,9 @@ export async function saveProductRegions(
   );
 }
 
-/** @deprecated Phase 3 — prefer layali_product_regions by Shopify GID */
+/**
+ * @deprecated Phase 3+ — historical `product_regions` UUID helper only.
+ */
 export async function getProductRegionIds(
   supabase: SupabaseClient,
   productId: string
