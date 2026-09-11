@@ -20,11 +20,11 @@ export const translations = {
     },
     lang: { en: 'EN', ar: 'عربي' },
     hero: {
-      eyebrow: 'Authentic Korean Skincare',
+      eyebrow: 'Beauty & Lifestyle',
       titleBeauty: 'Beauty,',
       titleRedefined: 'Redefined.',
       subtitle:
-        'Your trusted destination for authentic Korean skincare. Glow with confidence — shop with Layali.',
+        'Your trusted destination for beauty essentials — makeup, skincare, haircare, and more. Glow with confidence — shop with Layali.',
       shopCta: 'Shop the Collection',
       storyCta: 'Our Story',
       scroll: 'Scroll',
@@ -38,37 +38,38 @@ export const translations = {
       eyebrow: 'Trending',
       title: 'Trending Products',
       subtitle:
-        'Our most-loved picks right now — carefully selected to make your skin glow.',
+        'Our most-loved picks right now — carefully selected to make you glow.',
       drag: 'Drag to explore',
     },
     why: {
       title: 'Why Layali?',
       subtitle:
-        'From Seoul’s most-loved formulas to your glow ritual in Saudi Arabia — curated for women who care.',
+        'From everyday essentials to statement beauty — curated for women across Saudi Arabia and the Gulf.',
       glass: {
-        title: 'Glass Skin Rituals',
+        title: 'Complete Beauty Rituals',
         description:
-          'Hydration-first K-beauty: hyaluronic acid, ceramides, and centella for a plump, dewy finish.',
+          'Makeup, skincare, haircare, body care, and fragrance — everything you need in one place.',
       },
       authentic: {
-        title: 'Authentic K-Beauty',
+        title: 'Curated Quality',
         description:
-          'COSRX, Isntree, Torriden, TOCOBO and more — genuine Korean formulas, thoughtfully curated.',
+          'Thoughtfully selected products from trusted brands — quality you can feel, chosen with care.',
       },
       personal: {
         title: 'Personalized For You',
         description:
-          'AI-powered recommendations tailored to your skin, verified with care for Gulf climates.',
+          'AI-powered recommendations tailored to your preferences, verified with care for Gulf lifestyles.',
       },
     },
     survey: {
       script: 'your glow journey',
       title: 'Start with a Personalized Survey',
-      body: 'Take our beauty quiz and receive a custom K-beauty combo curated for your skin — just for you.',
+      body: 'Take our beauty quiz and receive a custom combo curated for you — just for you.',
       cta: 'Take the Survey',
     },
     categories: {
-      title: 'Shop by Ritual',
+      title: 'Shop by Category',
+      makeup: 'Makeup',
       skincare: 'Skincare',
       haircare: 'Haircare',
       fragrance: 'Fragrance',
@@ -76,7 +77,7 @@ export const translations = {
     },
     footer: {
       blurb:
-        'Your trusted destination for authentic Korean skincare. Carefully curated rituals for the woman who glows with confidence.',
+        'Your trusted destination for beauty and lifestyle essentials. Carefully curated for the woman who glows with confidence.',
       explore: 'Explore',
       shopAll: 'Shop All',
       serums: 'Serums',
@@ -90,8 +91,9 @@ export const translations = {
     },
     shop: {
       title: 'Shop',
-      guest: 'Browse our Korean skincare edit',
-      signedIn: 'Authentic Korean skincare, curated for you',
+      eyebrow: 'Beauty & Lifestyle',
+      guest: 'Browse our beauty collection',
+      signedIn: 'Beauty essentials, curated for you',
       region: 'Showing products for women in',
       signIn: 'Sign in to checkout',
       add: 'Add',
@@ -117,7 +119,7 @@ export const translations = {
     cart: {
       title: 'Your Cart',
       empty: 'Your cart is empty',
-      emptyHint: 'Discover authentic Korean skincare',
+      emptyHint: 'Discover beauty essentials',
       continue: 'Continue Shopping',
       subtotal: 'Subtotal',
       delivery: 'Delivery',
@@ -156,9 +158,9 @@ export const translations = {
     manifesto: {
       title: 'Manifesto',
       script: 'beauty redefined',
-      p1: 'Layali is a women’s beauty destination for authentic Korean skincare. Our name means “nights” in Arabic — those quiet rituals when glass-skin care becomes self-love.',
-      p2: 'We curate beloved K-beauty houses — COSRX, Isntree, Torriden, TOCOBO — hydration, barrier care, gentle exfoliation, and sun protection made for real glow, not filters.',
-      p3: 'From Riyadh to Jeddah and across the Gulf, we bring Seoul’s skincare wisdom to your door — with personalized guidance and delivery you can trust.',
+      p1: 'Layali is a women’s beauty destination for makeup, skincare, haircare, and lifestyle essentials. Our name means “nights” in Arabic — those quiet rituals when self-care becomes self-love.',
+      p2: 'We curate trusted brands across beauty categories — from everyday makeup to skincare, haircare, body care, and fragrance — made for real glow, not filters.',
+      p3: 'From Riyadh to Jeddah and across the Gulf, we bring beauty you can trust to your door — with personalized guidance and delivery you can rely on.',
       closing: 'glow with confidence, just for you',
     },
     signup: {
@@ -204,11 +206,11 @@ export const translations = {
     },
     lang: { en: 'EN', ar: 'عربي' },
     hero: {
-      eyebrow: 'عناية كورية أصيلة',
+      eyebrow: 'الجمال ونمط الحياة',
       titleBeauty: 'الجمال،',
       titleRedefined: 'بمعناه الجديد.',
       subtitle:
-        'وجهتك الموثوقة للعناية الكورية الأصيلة. تألقي بثقة — تسوقي مع Layali.',
+        'وجهتك الموثوقة لمستلزمات الجمال — مكياج، عناية بالبشرة، عناية بالشعر والمزيد. تألقي بثقة — تسوقي مع Layali.',
       shopCta: 'تسوقي المجموعة',
       storyCta: 'قصتنا',
       scroll: 'تمرير',
@@ -222,37 +224,38 @@ export const translations = {
       eyebrow: 'الأكثر رواجاً',
       title: 'المنتجات الرائجة',
       subtitle:
-        'اختياراتنا الأكثر حباً الآن — مختارة بعناية ليمنحكِ بشرة متوهجة.',
+        'اختياراتنا الأكثر حباً الآن — مختارة بعناية ليمنحكِ توهجاً مميزاً.',
       drag: 'اسحبي للاستكشاف',
     },
     why: {
       title: 'لماذا Layali؟',
       subtitle:
-        'من أشهر تركيبات سيول إلى طقوس توهجكِ في المملكة — مختارة للنساء اللواتي يهتممن ببشرتهن.',
+        'من الأساسيات اليومية إلى إطلالات الجمال المميزة — مختارة للنساء في المملكة وعبر الخليج.',
       glass: {
-        title: 'طقوس البشرة الزجاجية',
+        title: 'طقوس جمال متكاملة',
         description:
-          'عناية كورية ترتكز على الترطيب: حمض الهيالورونيك، السيراميد، والسنتيلا لبشرة ممتلئة وندية.',
+          'مكياج، عناية بالبشرة، عناية بالشعر، عناية بالجسم، وعطور — كل ما تحتاجينه في مكان واحد.',
       },
       authentic: {
-        title: 'كوري أصلي',
+        title: 'جودة مختارة',
         description:
-          'COSRX و Isntree و Torriden و TOCOBO وغيرها — تركيبات كورية أصيلة مختارة بعناية.',
+          'منتجات مختارة بعناية من علامات موثوقة — جودة تشعرين بها، منتقاة باهتمام.',
       },
       personal: {
         title: 'مخصصة لكِ',
         description:
-          'توصيات بالذكاء الاصطناعي تناسب بشرتكِ، مع مراعاة مناخ الخليج.',
+          'توصيات بالذكاء الاصطناعي تناسب ذوقكِ، مع مراعاة أسلوب الحياة في الخليج.',
       },
     },
     survey: {
       script: 'رحلة توهجكِ',
       title: 'ابدئي باستبيان شخصي',
-      body: 'أجيبِ على أسئلتنا واحصلي على باقة عناية كورية مصممة لبشرتكِ — خصيصاً لكِ.',
+      body: 'أجيبِ على أسئلتنا واحصلي على باقة جمال مصممة لكِ — خصيصاً لكِ.',
       cta: 'ابدئي الاستبيان',
     },
     categories: {
-      title: 'تسوقي حسب الطقس',
+      title: 'تسوقي حسب الفئة',
+      makeup: 'المكياج',
       skincare: 'العناية بالبشرة',
       haircare: 'العناية بالشعر',
       fragrance: 'العطور',
@@ -260,7 +263,7 @@ export const translations = {
     },
     footer: {
       blurb:
-        'وجهتك الموثوقة للعناية الكورية الأصيلة. طقوس مختارة بعناية للمرأة التي تتألق بثقة.',
+        'وجهتك الموثوقة لمستلزمات الجمال ونمط الحياة. مختارة بعناية للمرأة التي تتألق بثقة.',
       explore: 'استكشفي',
       shopAll: 'كل المنتجات',
       serums: 'السيروم',
@@ -274,8 +277,9 @@ export const translations = {
     },
     shop: {
       title: 'المتجر',
-      guest: 'تصفحي مجموعتنا الكورية',
-      signedIn: 'عناية كورية أصيلة، مختارة لكِ',
+      eyebrow: 'الجمال ونمط الحياة',
+      guest: 'تصفحي مجموعتنا للجمال',
+      signedIn: 'مستلزمات جمال مختارة لكِ',
       region: 'منتجات للنساء في',
       signIn: 'سجّلي الدخول للدفع',
       add: 'أضيفي',
@@ -301,7 +305,7 @@ export const translations = {
     cart: {
       title: 'سلتكِ',
       empty: 'سلتكِ فارغة',
-      emptyHint: 'اكتشفي العناية الكورية الأصيلة',
+      emptyHint: 'اكتشفي مستلزمات الجمال',
       continue: 'تابعي التسوق',
       subtotal: 'المجموع الفرعي',
       delivery: 'التوصيل',
@@ -340,9 +344,9 @@ export const translations = {
     manifesto: {
       title: 'مانيفستو',
       script: 'جمال معاد تعريفه',
-      p1: 'Layali وجهة جمال للنساء متخصصة في العناية الكورية الأصيلة. اسمنا يعني «الليالي» بالعربية — تلك الطقوس الهادئة حين تصبح العناية بالبشرة حباً للذات.',
-      p2: 'نختار بعناية أشهر دور العناية الكورية — COSRX و Isntree و Torriden و TOCOBO — ترطيب، دعم الحاجز الجلدي، تقشير لطيف، وحماية من الشمس لتوهج حقيقي.',
-      p3: 'من الرياض إلى جدة وعبر الخليج، نجلب حكمة عناية سيول إلى بابكِ — مع إرشاد شخصي وتوصيل يمكن الوثوق به.',
+      p1: 'Layali وجهة جمال للنساء تشمل المكياج والعناية بالبشرة والشعر ومستلزمات الجمال. اسمنا يعني «الليالي» بالعربية — تلك الطقوس الهادئة حين تصبح العناية بالذات حباً للذات.',
+      p2: 'نختار بعناية علامات موثوقة عبر فئات الجمال — من المكياج اليومي إلى العناية بالبشرة والشعر والجسم والعطور — لتوهج حقيقي لا يعتمد على الفلاتر.',
+      p3: 'من الرياض إلى جدة وعبر الخليج، نجلب جمالاً يمكن الوثوق به إلى بابكِ — مع إرشاد شخصي وتوصيل يمكن الاعتماد عليه.',
       closing: 'تألقي بثقة، من أجلكِ أنتِ',
     },
     signup: {

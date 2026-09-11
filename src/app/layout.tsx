@@ -37,24 +37,24 @@ const notoArabic = Noto_Sans_Arabic({
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Layali | Authentic Korean Skincare',
+  title: 'Layali | Beauty Redefined',
   description:
-    'Your trusted destination for authentic Korean skincare in Saudi Arabia.',
+    'Your trusted destination for beauty essentials in Saudi Arabia — makeup, skincare, haircare, and more.',
   keywords: [
-    'korean skincare',
-    'k-beauty',
-    'COSRX',
-    'Isntree',
-    'Torriden',
-    'TOCOBO',
+    'beauty store',
+    'makeup',
+    'skincare',
+    'haircare',
+    'fragrance',
+    'body care',
     'layali',
     'saudi arabia',
-    'skincare',
+    'beauty shop',
   ],
   openGraph: {
-    title: 'Layali | Authentic Korean Skincare',
+    title: 'Layali | Beauty Redefined',
     description:
-      'Your trusted destination for authentic Korean skincare in Saudi Arabia.',
+      'Your trusted destination for beauty essentials in Saudi Arabia — makeup, skincare, haircare, and more.',
     url: SITE_URL,
     siteName: 'Layali',
     type: 'website',
@@ -70,9 +70,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Layali | Authentic Korean Skincare',
+    title: 'Layali | Beauty Redefined',
     description:
-      'Your trusted destination for authentic Korean skincare in Saudi Arabia.',
+      'Your trusted destination for beauty essentials in Saudi Arabia — makeup, skincare, haircare, and more.',
     images: ['/og-image.jpg'],
   },
   icons: {

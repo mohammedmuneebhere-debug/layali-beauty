@@ -29,11 +29,11 @@ export const CITIES: Record<string, { value: string; label: string }[]> = {
 };
 
 export const PRODUCT_CATEGORIES = [
+  { value: 'makeup', label: 'Makeup' },
   { value: 'skincare', label: 'Skincare' },
   { value: 'haircare', label: 'Haircare' },
-  { value: 'fragrance', label: 'Fragrance' },
   { value: 'bodycare', label: 'Body Care' },
-  { value: 'makeup', label: 'Makeup' },
+  { value: 'fragrance', label: 'Fragrance' },
   { value: 'combo', label: 'Combo' },
 ];
 

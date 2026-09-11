@@ -282,7 +282,7 @@ export default function ShopContent() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn className="mb-6">
           <p className="text-eyebrow tracking-[0.28em] uppercase text-layali-pink mb-2">
-            Authentic Korean Skincare
+            {t.shop.eyebrow}
           </p>
           <h1 className="font-serif text-heading-lg text-white mb-3">{t.shop.title}</h1>
           {userRegion ? (

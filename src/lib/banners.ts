@@ -23,11 +23,11 @@ export const BANNER_SIZES: Record<string, { w: number; h: number }> = {
   '/banners/torriden-hydration.png': { w: 2400, h: 246 },
 };
 
-/** Landing — K-beauty / skincare rituals (best brand fit) */
+/** Landing — hero campaign banners */
 export const LANDING_HERO_BANNERS: BannerSlide[] = [
   {
     src: '/banners/kbeauty-glow-confidence.png',
-    alt: 'Glow with Confidence — Korean Skincare Essentials',
+    alt: 'Glow with Confidence — Beauty Essentials',
     href: '/shop',
   },
   {
@@ -69,7 +69,7 @@ export const LANDING_FEATURE_BANNERS: BannerSlide[] = [
 export const SHOP_HERO_BANNERS: BannerSlide[] = [
   {
     src: '/banners/kbeauty-glow-confidence.png',
-    alt: 'Korean Skincare Essentials — Shop Now',
+    alt: 'Beauty Essentials — Shop Now',
     href: '/shop?category=skincare',
   },
   {
@@ -121,7 +121,7 @@ export const SHOP_PROMO_STRIP: BannerSlide[] = [
 export const BRAND_PROMO_GRID = [
   {
     src: '/banners/kbeauty-glow-confidence.png',
-    alt: 'Glow with Confidence — Korean Skincare',
+    alt: 'Glow with Confidence — Beauty Essentials',
     href: '/shop',
     span: 'full' as const,
   },

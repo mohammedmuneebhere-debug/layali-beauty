@@ -26,10 +26,11 @@ export default function HomePage() {
   ];
 
   const categories = [
+    { key: 'makeup', label: t.categories.makeup, href: 'makeup' },
     { key: 'skincare', label: t.categories.skincare, href: 'skincare' },
     { key: 'haircare', label: t.categories.haircare, href: 'haircare' },
-    { key: 'fragrance', label: t.categories.fragrance, href: 'fragrance' },
     { key: 'bodycare', label: t.categories.bodycare, href: 'bodycare' },
+    { key: 'fragrance', label: t.categories.fragrance, href: 'fragrance' },
   ];
 
   const marquee = `${t.glow.line1}  ✦  ${t.brand}  ✦  ${t.tagline}  ✦  `;
@@ -115,7 +116,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* K-beauty campaign banners */}
+      {/* Campaign banners */}
       <section className="py-10 sm:py-14 section-glide-soft">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn>

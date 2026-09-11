@@ -174,7 +174,7 @@ export default function ProductDetailPage() {
               )}
 
               <div className="flex flex-wrap items-center gap-3 mb-4 text-sm text-white/40">
-                <span>Authentic K-Beauty</span>
+                <span>Curated Quality</span>
                 <span>·</span>
                 <span>
                   {product.stock_quantity > 0

@@ -33,7 +33,7 @@ function buildHtml(payload: OrderEmailPayload) {
         <p style="letter-spacing:0.3em;color:#e07a8a;font-size:12px;text-transform:uppercase;">Layali Beauty Store</p>
         <h1 style="font-size:28px;margin:12px 0 8px;">Order Confirmed</h1>
         <p style="color:#f5b4be;font-style:italic;margin:0 0 20px;">thank you, ${payload.customerName}</p>
-        <p style="color:#ccc;line-height:1.6;">We've received your order <strong>#${shortId}</strong>. Our team will prepare your Korean skincare ritual for Cash on Delivery.</p>
+        <p style="color:#ccc;line-height:1.6;">We've received your order <strong>#${shortId}</strong>. Our team will prepare your beauty order for Cash on Delivery.</p>
         <table style="width:100%;margin:24px 0;border-collapse:collapse;">${itemsRows}</table>
         <p style="color:#aaa;margin:0;">Delivery: ${formatSar(payload.deliveryFee)}</p>
         <p style="font-size:18px;margin:8px 0 0;"><strong>Total: ${formatSar(payload.totalAmount)}</strong></p>
@@ -48,8 +48,8 @@ function buildHtml(payload: OrderEmailPayload) {
       <p style="letter-spacing:0.3em;color:#e07a8a;font-size:12px;text-transform:uppercase;">Layali Beauty Store</p>
       <h1 style="font-size:28px;margin:12px 0 8px;">Order Delivered</h1>
       <p style="color:#f5b4be;font-style:italic;margin:0 0 20px;">thank you for glowing with us</p>
-      <p style="color:#ccc;line-height:1.6;">Your order <strong>#${shortId}</strong> has been delivered. We hope your K-beauty ritual brings you the softest, dewiest glow.</p>
-      <p style="color:#ccc;line-height:1.6;margin-top:16px;">Thank you for choosing Layali — authentic Korean skincare, curated for you.</p>
+      <p style="color:#ccc;line-height:1.6;">Your order <strong>#${shortId}</strong> has been delivered. We hope your new beauty finds bring you confidence and glow.</p>
+      <p style="color:#ccc;line-height:1.6;margin-top:16px;">Thank you for choosing Layali — beauty essentials, curated for you.</p>
       <p style="color:#666;font-size:12px;margin-top:28px;">Need anything? ${CONTACT_EMAIL}</p>
     </div>
   `;
