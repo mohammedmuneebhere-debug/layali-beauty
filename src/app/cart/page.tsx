@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -18,11 +17,6 @@ export default function CartPage() {
   const { t } = useLanguage();
   const { items, updateQuantity, removeItem, total, itemCount, refresh } = useCartStore();
   const [checkingAuth, setCheckingAuth] = useState(false);
-  const mounted = useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false
-  );
 
   useEffect(() => {
     void refresh();
@@ -46,8 +40,6 @@ export default function CartPage() {
     router.push('/checkout');
     setCheckingAuth(false);
   };
-
-  if (!mounted) return null;
 
   if (items.length === 0) {
     return (
@@ -79,44 +71,54 @@ export default function CartPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex items-center gap-4 glass-panel rounded-2xl p-4"
+              className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 glass-panel rounded-2xl p-4"
             >
-              <div className="w-20 h-20 rounded-xl bg-layali-surface flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/8">
-                {item.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-2xl text-layali-pink/50">✦</span>
-                )}
+              <div className="flex items-start gap-3 min-w-0 flex-1">
+                <div className="w-20 h-20 rounded-xl bg-layali-surface flex items-center justify-center flex-shrink-0 overflow-hidden border border-white/8">
+                  {item.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl text-layali-pink/50">✦</span>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-white break-words">{item.name}</h3>
+                  <p className="text-price text-white mt-1">{formatPrice(item.price)}</p>
+                </div>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-white truncate">{item.name}</h3>
-                <p className="text-price text-white mt-1">{formatPrice(item.price)}</p>
-              </div>
+              <div className="flex items-center justify-between sm:justify-end gap-2 ps-0 sm:ps-0">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => void updateQuantity(item.id, item.quantity - 1)}
+                    className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-white/15 text-white/70 hover:border-layali-pink/40 hover:text-white transition-colors"
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="w-8 text-center font-medium text-white">{item.quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => void updateQuantity(item.id, item.quantity + 1)}
+                    className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-white/15 text-white/70 hover:border-layali-pink/40 hover:text-white transition-colors"
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
 
-              <div className="flex items-center gap-2">
                 <button
-                  onClick={() => void updateQuantity(item.id, item.quantity - 1)}
-                  className="p-1.5 rounded-full border border-white/15 text-white/70 hover:border-layali-pink/40 hover:text-white transition-colors"
+                  type="button"
+                  onClick={() => void removeItem(item.id)}
+                  className="inline-flex items-center justify-center min-h-11 min-w-11 text-red-400/70 hover:text-red-400 transition-colors"
+                  aria-label="Remove item"
                 >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="w-8 text-center font-medium text-white">{item.quantity}</span>
-                <button
-                  onClick={() => void updateQuantity(item.id, item.quantity + 1)}
-                  className="p-1.5 rounded-full border border-white/15 text-white/70 hover:border-layali-pink/40 hover:text-white transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
+                  <Trash2 className="w-5 h-5" />
                 </button>
               </div>
-
-              <button
-                onClick={() => void removeItem(item.id)}
-                className="p-2 text-red-400/70 hover:text-red-400 transition-colors"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
             </motion.div>
           ))}
         </div>

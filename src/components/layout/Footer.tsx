@@ -27,7 +27,11 @@ export function Footer() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
-            <h3 className="font-serif text-heading-md font-bold tracking-[0.12em] mb-2">{t.brand}</h3>
+            <Link href="/" prefetch className="inline-block group">
+              <h3 className="font-serif text-heading-md font-bold tracking-[0.12em] mb-2 group-hover:text-layali-pink-light transition-colors">
+                {t.brand}
+              </h3>
+            </Link>
             <p className="font-script text-heading-sm text-layali-pink-light mb-2">{t.tagline}</p>
             <p className="text-meta tracking-[0.14em] text-layali-pink/80 mb-4">{t.brandSub}</p>
             <p className="text-body text-white/65 max-w-md">{t.footer.blurb}</p>
@@ -86,8 +90,12 @@ export function Footer() {
                 className="flex-1 bg-transparent text-body text-white placeholder:text-white/35 outline-none"
                 required
               />
-              <button type="submit" className="text-layali-pink hover:text-layali-pink-light" aria-label="Subscribe">
-                <ArrowUpRight className="w-4 h-4 rtl:rotate-[-90deg]" />
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 text-layali-pink hover:text-layali-pink-light"
+                aria-label="Subscribe"
+              >
+                <ArrowUpRight className="w-5 h-5 rtl:rotate-[-90deg]" />
               </button>
             </form>
             <a

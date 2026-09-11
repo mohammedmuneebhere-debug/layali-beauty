@@ -63,6 +63,12 @@
   scroll-behavior: smooth;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+  }
+}
+
 html {
   background: #000000;
   color-scheme: dark;
@@ -370,6 +376,11 @@ html[dir='rtl'] .rtl-flip {
   .film-grain::before { display: none; }
   .animate-marquee { animation: none; }
   .glow-orb { animation: none; }
+
+  .motion-safe-fade {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }
 
 /* Soft magenta glow — never wash text areas */

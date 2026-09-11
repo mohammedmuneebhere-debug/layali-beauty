@@ -6,6 +6,12 @@ import { StageBackdrop } from '@/components/layout/StageBackdrop';
 import { CartHydrator } from '@/components/cart/CartHydrator';
 import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 import { SITE_URL } from '@/lib/constants';
+import {
+  HOME_DESCRIPTION,
+  HOME_OG_DESCRIPTION,
+  HOME_TITLE,
+  OG_IMAGE_PATH,
+} from '@/lib/seo';
 import './globals.css';
 
 const manrope = Manrope({
@@ -22,11 +28,18 @@ const ibmPlexArabic = IBM_Plex_Sans_Arabic({
   display: 'swap',
 });
 
+/**
+ * Site-wide defaults. Page-level metadata (/, /about, …) must set its own
+ * title, description, canonical, and openGraph.url — do not put a homepage
+ * canonical here or every route would inherit it.
+ */
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Layali | Beauty & Lifestyle',
-  description:
-    'Layali is a premium beauty, self-care and lifestyle destination for women across Saudi Arabia and the Gulf — makeup, skincare, haircare, fragrance, and more.',
+  title: {
+    default: HOME_TITLE,
+    template: '%s | Layali',
+  },
+  description: HOME_DESCRIPTION,
   keywords: [
     'beauty & lifestyle',
     'beauty store',
@@ -43,16 +56,12 @@ export const metadata: Metadata = {
     'gulf beauty',
   ],
   openGraph: {
-    title: 'Layali | Beauty & Lifestyle',
-    description:
-      'A premium beauty, self-care and lifestyle destination — curated essentials for women who glow with confidence.',
-    url: SITE_URL,
     siteName: 'Layali',
     type: 'website',
     locale: 'en_US',
     images: [
       {
-        url: '/og-image.jpg',
+        url: OG_IMAGE_PATH,
         width: 1200,
         height: 630,
         alt: 'Layali — Beauty & Lifestyle',
@@ -61,14 +70,17 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Layali | Beauty & Lifestyle',
-    description:
-      'A premium beauty, self-care and lifestyle destination — curated essentials for women who glow with confidence.',
-    images: ['/og-image.jpg'],
+    title: HOME_TITLE,
+    description: HOME_OG_DESCRIPTION,
+    images: [OG_IMAGE_PATH],
   },
   icons: {
     icon: [{ url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' }],
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 

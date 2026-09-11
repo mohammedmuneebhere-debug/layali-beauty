@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "audit:mobile": "node scripts/mobile-audit.mjs",
     "migrate:products:dry-run": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-products-to-shopify.mts --dry-run",
     "migrate:products:execute": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-products-to-shopify.mts --execute --confirm=MIGRATE_PRODUCTS",
     "migrate:products:publish-test": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/publish-test-products.mts --confirm=PUBLISH_TEST_PRODUCTS"
@@ -39,6 +40,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "playwright": "^1.51.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

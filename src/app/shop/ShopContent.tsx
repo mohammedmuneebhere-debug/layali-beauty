@@ -63,10 +63,10 @@ function ProductCard({
             {product.category}
           </p>
           <div className="flex items-start justify-between gap-2 mb-3">
-            <h3 className="text-product-name text-white leading-snug line-clamp-2">
+            <h3 className="text-product-name text-white leading-snug line-clamp-2 min-w-0">
               {product.name}
             </h3>
-            <span className="text-price text-white/90 shrink-0">
+            <span className="text-price text-white/90 shrink-0 tabular-nums">
               {formatPrice(Number(product.price))}
             </span>
           </div>
@@ -520,24 +520,25 @@ export default function ShopContent() {
             </div>
 
             {totalPages > 1 && (
-              <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="mt-12 flex flex-col items-center gap-4">
                 <p className="text-sm text-white/45">
                   {t.shop.page} {currentPage} {t.shop.of} {totalPages}
                 </p>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center justify-center gap-2 max-w-full">
                   <button
                     type="button"
                     disabled={currentPage <= 1}
                     onClick={() => goToPage(currentPage - 1)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-white/20 text-sm text-white disabled:opacity-35 disabled:cursor-not-allowed hover:border-layali-pink/50 transition-colors"
+                    className="inline-flex items-center justify-center gap-1.5 min-h-11 px-4 rounded-full border border-white/20 text-sm text-white disabled:opacity-35 disabled:cursor-not-allowed hover:border-layali-pink/50 transition-colors"
+                    aria-label={t.shop.previous}
                   >
                     <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
-                    {t.shop.previous}
+                    <span className="hidden sm:inline">{t.shop.previous}</span>
                   </button>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-[min(100%,18rem)]">
                     {Array.from({ length: totalPages }, (_, i) => i + 1)
                       .filter((n) => {
-                        if (totalPages <= 7) return true;
+                        if (totalPages <= 5) return true;
                         return n === 1 || n === totalPages || Math.abs(n - currentPage) <= 1;
                       })
                       .map((n, idx, arr) => {
@@ -550,7 +551,7 @@ export default function ShopContent() {
                               type="button"
                               onClick={() => goToPage(n)}
                               className={cn(
-                                'min-w-[36px] h-9 rounded-full text-sm transition-colors',
+                                'min-w-11 min-h-11 rounded-full text-sm transition-colors',
                                 n === currentPage
                                   ? 'bg-layali-pink-glow text-white'
                                   : 'text-white/60 hover:bg-white/10'
@@ -566,9 +567,10 @@ export default function ShopContent() {
                     type="button"
                     disabled={currentPage >= totalPages}
                     onClick={() => goToPage(currentPage + 1)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-full border border-white/20 text-sm text-white disabled:opacity-35 disabled:cursor-not-allowed hover:border-layali-pink/50 transition-colors"
+                    className="inline-flex items-center justify-center gap-1.5 min-h-11 px-4 rounded-full border border-white/20 text-sm text-white disabled:opacity-35 disabled:cursor-not-allowed hover:border-layali-pink/50 transition-colors"
+                    aria-label={t.shop.next}
                   >
-                    {t.shop.next}
+                    <span className="hidden sm:inline">{t.shop.next}</span>
                     <ChevronRight className="w-4 h-4 rtl:rotate-180" />
                   </button>
                 </div>

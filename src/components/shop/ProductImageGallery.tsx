@@ -72,7 +72,7 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
           <button
             type="button"
             onClick={() => setLightboxOpen(true)}
-            className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/60 text-white border border-white/15 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur"
+            className="absolute top-3 end-3 z-20 inline-flex items-center justify-center min-h-11 min-w-11 rounded-full bg-black/60 text-white border border-white/15 shadow-sm opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity backdrop-blur"
             aria-label="Open fullscreen"
           >
             <Expand className="w-4 h-4" />
@@ -86,10 +86,10 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
                   e.stopPropagation();
                   goPrev();
                 }}
-                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/60 text-white border border-white/15 shadow-md hover:border-layali-pink/50 backdrop-blur"
+                className="absolute start-3 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center min-h-11 min-w-11 rounded-full bg-black/60 text-white border border-white/15 shadow-md hover:border-layali-pink/50 backdrop-blur"
                 aria-label="Previous image"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-5 h-5 rtl:rotate-180" />
               </button>
               <button
                 type="button"
@@ -97,10 +97,10 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
                   e.stopPropagation();
                   goNext();
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-2 rounded-full bg-black/60 text-white border border-white/15 shadow-md hover:border-layali-pink/50 backdrop-blur"
+                className="absolute end-3 top-1/2 -translate-y-1/2 z-20 inline-flex items-center justify-center min-h-11 min-w-11 rounded-full bg-black/60 text-white border border-white/15 shadow-md hover:border-layali-pink/50 backdrop-blur"
                 aria-label="Next image"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-5 h-5 rtl:rotate-180" />
               </button>
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-full bg-black/50 text-white text-xs">
                 {index + 1} / {photos.length}

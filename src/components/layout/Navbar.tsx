@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ShoppingBag, User, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useCartStore } from '@/store/cart';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
@@ -15,6 +15,8 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const itemCount = useCartStore((s) => s.itemCount());
   const { t } = useLanguage();
+  const reduceMotion = useReducedMotion();
+  const menuId = useId();
 
   const navLinks = [
     { href: '/', label: t.nav.home },
@@ -24,17 +26,45 @@ export function Navbar() {
     { href: '/customer-care', label: t.nav.customerCare },
   ];
 
+  const [menuPathname, setMenuPathname] = useState(pathname);
+  if (pathname !== menuPathname) {
+    setMenuPathname(pathname);
+    if (mobileOpen) setMobileOpen(false);
+  }
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [mobileOpen]);
+
   if (pathname.startsWith('/admin') || pathname.startsWith('/auth')) return null;
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 glass-dark">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
-          <Link href="/" prefetch className="flex flex-col items-start group">
-            <span className="font-serif text-display-sm lg:text-display-md font-bold tracking-[0.12em] text-white group-hover:text-layali-pink-light transition-colors">
+        <div className="flex items-center justify-between h-16 lg:h-20 gap-2">
+          <Link
+            href="/"
+            prefetch
+            className="flex flex-col items-start group min-w-0 shrink"
+            onClick={() => setMobileOpen(false)}
+          >
+            <span className="font-serif text-display-sm lg:text-display-md font-bold tracking-[0.12em] text-white group-hover:text-layali-pink-light transition-colors truncate max-w-[42vw] sm:max-w-none">
               {t.brand}
             </span>
-            <span className="text-meta tracking-[0.18em] text-layali-pink -mt-1">
+            <span className="text-meta tracking-[0.14em] text-layali-pink -mt-1 truncate max-w-[46vw] sm:max-w-none">
               {t.brandSub}
             </span>
           </Link>
@@ -67,24 +97,26 @@ export function Navbar() {
             })}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <LanguageSwitcher />
             <Link
               href="/account"
-              className="p-2.5 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink hover:shadow-[0_0_14px_rgba(212,46,124,0.35)] transition-all"
+              className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink hover:shadow-[0_0_14px_rgba(212,46,124,0.35)] transition-all"
               aria-label={t.nav.account}
+              onClick={() => setMobileOpen(false)}
             >
               <User className="w-5 h-5" />
             </Link>
             <Link
               href="/cart"
-              className="relative p-2.5 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink hover:shadow-[0_0_14px_rgba(212,46,124,0.35)] transition-all"
+              className="relative inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink hover:shadow-[0_0_14px_rgba(212,46,124,0.35)] transition-all"
               aria-label={t.nav.cart}
+              onClick={() => setMobileOpen(false)}
             >
               <ShoppingBag className="w-5 h-5" />
               {itemCount > 0 && (
                 <motion.span
-                  initial={{ scale: 0 }}
+                  initial={reduceMotion ? false : { scale: 0 }}
                   animate={{ scale: 1 }}
                   className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 bg-layali-pink-glow text-white text-meta rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,46,124,0.7)]"
                 >
@@ -93,9 +125,12 @@ export function Navbar() {
               )}
             </Link>
             <button
-              className="md:hidden p-2 text-white"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              aria-label="Menu"
+              type="button"
+              className="md:hidden inline-flex items-center justify-center min-h-11 min-w-11 text-white"
+              onClick={() => setMobileOpen((open) => !open)}
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileOpen}
+              aria-controls={menuId}
             >
               {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -104,23 +139,39 @@ export function Navbar() {
 
         <AnimatePresence>
           {mobileOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="md:hidden border-t border-layali-pink/20 py-4 overflow-hidden"
-            >
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  className="block py-2.5 text-nav text-white/70 hover:text-layali-pink-light"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </motion.div>
+            <>
+              <motion.button
+                type="button"
+                key="mobile-nav-backdrop"
+                initial={reduceMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={reduceMotion ? undefined : { opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="md:hidden fixed inset-0 top-16 z-40 bg-black/55"
+                aria-label="Dismiss menu overlay"
+                onClick={() => setMobileOpen(false)}
+              />
+              <motion.div
+                id={menuId}
+                key="mobile-nav-panel"
+                initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={reduceMotion ? undefined : { opacity: 0, height: 0 }}
+                transition={{ duration: 0.25 }}
+                className="md:hidden relative z-50 border-t border-layali-pink/20 py-3 max-h-[min(70vh,calc(100dvh-4rem))] overflow-y-auto overscroll-contain"
+              >
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="block py-3 px-1 text-nav text-white/80 hover:text-layali-pink-light min-h-11"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </motion.div>
+            </>
           )}
         </AnimatePresence>
       </nav>

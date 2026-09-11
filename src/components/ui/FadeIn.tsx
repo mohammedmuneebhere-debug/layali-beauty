@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface FadeInProps {
   children: React.ReactNode;
@@ -10,6 +10,7 @@ interface FadeInProps {
 }
 
 export function FadeIn({ children, delay = 0, className, direction = 'up' }: FadeInProps) {
+  const reduceMotion = useReducedMotion();
   const directions = {
     up: { y: 30, x: 0 },
     down: { y: -30, x: 0 },
@@ -17,11 +18,15 @@ export function FadeIn({ children, delay = 0, className, direction = 'up' }: Fad
     right: { x: -30, y: 0 },
   };
 
+  if (reduceMotion) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, ...directions[direction] }}
       whileInView={{ opacity: 1, x: 0, y: 0 }}
-      viewport={{ once: true, margin: '-50px' }}
+      viewport={{ once: true, amount: 0.15, margin: '0px 0px -10% 0px' }}
       transition={{ duration: 0.6, delay, ease: [0.25, 0.1, 0.25, 1] }}
       className={className}
     >
@@ -40,6 +45,16 @@ export function StaggerContainer({
   /** Change this when content filters change so stagger re-animates cleanly */
   remountKey?: string | number;
 }) {
+  const reduceMotion = useReducedMotion();
+
+  if (reduceMotion) {
+    return (
+      <div key={remountKey} className={className}>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <motion.div
       key={remountKey}
@@ -57,6 +72,12 @@ export function StaggerContainer({
 }
 
 export function StaggerItem({ children, className }: { children: React.ReactNode; className?: string }) {
+  const reduceMotion = useReducedMotion();
+
+  if (reduceMotion) {
+    return <div className={className}>{children}</div>;
+  }
+
   return (
     <motion.div
       variants={{

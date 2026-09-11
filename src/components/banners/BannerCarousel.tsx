@@ -116,18 +116,18 @@ export function BannerCarousel({
           <button
             type="button"
             onClick={() => go(-1)}
-            className="absolute left-2 sm:left-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+            className="absolute start-2 sm:start-3 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center min-h-11 min-w-11 rounded-full bg-black/50 text-white border border-white/20 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-black/70"
             aria-label="Previous banner"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-4 h-4 rtl:rotate-180" />
           </button>
           <button
             type="button"
             onClick={() => go(1)}
-            className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white border border-white/20 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+            className="absolute end-2 sm:end-3 top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center min-h-11 min-w-11 rounded-full bg-black/50 text-white border border-white/20 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-black/70"
             aria-label="Next banner"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 rtl:rotate-180" />
           </button>
         </>
       )}
@@ -140,11 +140,18 @@ export function BannerCarousel({
               type="button"
               onClick={() => setIndex(i)}
               className={cn(
-                'h-1.5 rounded-full transition-all',
-                i === index ? 'w-6 bg-layali-pink' : 'w-1.5 bg-white/40 hover:bg-white/70'
+                'min-h-11 min-w-11 rounded-full transition-all inline-flex items-center justify-center',
+                i === index ? 'bg-layali-pink/25' : 'bg-transparent hover:bg-white/10'
               )}
               aria-label={`Go to slide ${i + 1}`}
-            />
+            >
+              <span
+                className={cn(
+                  'h-1.5 rounded-full transition-all',
+                  i === index ? 'w-6 bg-layali-pink' : 'w-1.5 bg-white/40'
+                )}
+              />
+            </button>
           ))}
         </div>
       )}

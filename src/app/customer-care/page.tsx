@@ -202,12 +202,12 @@ function CustomerCareContent() {
           </a>
         </FadeIn>
 
-        <div className="flex gap-2 mb-8 justify-center">
+        <div className="flex flex-wrap gap-2 mb-8 justify-center">
           {(['reviews', 'contact'] as Tab[]).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 border ${
+              className={`min-h-11 px-5 py-2.5 rounded-full text-sm font-medium transition-all inline-flex items-center gap-2 border ${
                 tab === t
                   ? 'bg-layali-pink-glow text-white border-layali-pink-glow shadow-[0_0_16px_rgba(212,46,124,0.35)]'
                   : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
@@ -240,7 +240,8 @@ function CustomerCareContent() {
                           key={n}
                           type="button"
                           onClick={() => setReviewForm({ ...reviewForm, rating: n })}
-                          className="p-1"
+                          className="inline-flex items-center justify-center min-h-11 min-w-11"
+                          aria-label={`Rate ${n} stars`}
                         >
                           <Star
                             className={`w-6 h-6 ${
