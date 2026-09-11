@@ -68,7 +68,8 @@ export interface Product {
 
 export interface TrendingProduct {
   id: string;
-  product_id: string;
+  product_id: string | null;
+  shopify_product_id?: string | null;
   sort_order: number;
   is_active: boolean;
   created_at: string;

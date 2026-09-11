@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,13 +11,12 @@ import { FadeIn } from '@/components/ui/FadeIn';
 import { useCartStore } from '@/store/cart';
 import { createClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/utils';
-import { DELIVERY_FEE } from '@/lib/constants';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 
 export default function CartPage() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { items, updateQuantity, removeItem, total, itemCount } = useCartStore();
+  const { items, updateQuantity, removeItem, total, itemCount, refresh } = useCartStore();
   const [checkingAuth, setCheckingAuth] = useState(false);
   const mounted = useSyncExternalStore(
     () => () => {},
@@ -25,13 +24,18 @@ export default function CartPage() {
     () => false
   );
 
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
   const subtotal = total();
-  const grandTotal = subtotal + DELIVERY_FEE;
 
   const proceedToCheckout = async () => {
     setCheckingAuth(true);
     const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
       router.push('/auth/signin?redirect=/checkout');
@@ -70,7 +74,7 @@ export default function CartPage() {
         <div className="space-y-4 mb-8">
           {items.map((item) => (
             <motion.div
-              key={`${item.type}-${item.id}`}
+              key={item.id}
               layout
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -88,20 +92,19 @@ export default function CartPage() {
 
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-white truncate">{item.name}</h3>
-                <p className="text-layali-pink text-sm capitalize">{item.type}</p>
                 <p className="font-serif text-lg text-white mt-1">{formatPrice(item.price)}</p>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                  onClick={() => void updateQuantity(item.id, item.quantity - 1)}
                   className="p-1.5 rounded-full border border-white/15 text-white/70 hover:border-layali-pink/40 hover:text-white transition-colors"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
                 <span className="w-8 text-center font-medium text-white">{item.quantity}</span>
                 <button
-                  onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                  onClick={() => void updateQuantity(item.id, item.quantity + 1)}
                   className="p-1.5 rounded-full border border-white/15 text-white/70 hover:border-layali-pink/40 hover:text-white transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -109,7 +112,7 @@ export default function CartPage() {
               </div>
 
               <button
-                onClick={() => removeItem(item.id)}
+                onClick={() => void removeItem(item.id)}
                 className="p-2 text-red-400/70 hover:text-red-400 transition-colors"
               >
                 <Trash2 className="w-5 h-5" />
@@ -125,16 +128,21 @@ export default function CartPage() {
           </div>
           <div className="flex justify-between items-center mb-2">
             <span className="text-white/50">{t.cart.delivery}</span>
-            <span className="font-serif text-lg text-white">{formatPrice(DELIVERY_FEE)}</span>
+            <span className="text-sm text-white/40">Calculated at checkout</span>
           </div>
           <div className="flex justify-between items-center mb-4 pt-3 border-t border-white/10">
             <span className="text-white font-medium">{t.cart.total}</span>
-            <span className="font-serif text-xl text-white">{formatPrice(grandTotal)}</span>
+            <span className="font-serif text-xl text-white">{formatPrice(subtotal)}</span>
           </div>
-          <p className="text-xs text-white/40 mb-2">{t.cart.deliveryNote}</p>
-          <p className="text-sm text-white/40 mb-2">{t.cart.payment}</p>
-          <p className="text-xs text-white/30 mb-6">{t.cart.guestNote}</p>
-          <Button className="w-full" size="lg" loading={checkingAuth} onClick={proceedToCheckout}>
+          <p className="text-xs text-white/40 mb-6">
+            You will complete payment and shipping on Shopify Checkout.
+          </p>
+          <Button
+            className="w-full"
+            size="lg"
+            loading={checkingAuth}
+            onClick={() => void proceedToCheckout()}
+          >
             {t.cart.checkout} <ArrowRight className="w-5 h-5" />
           </Button>
         </div>

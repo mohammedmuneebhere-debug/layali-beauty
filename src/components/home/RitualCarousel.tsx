@@ -3,21 +3,23 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { createClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
-import { fetchTrendingProducts } from '@/lib/trending';
-import type { Product } from '@/types/database';
+import type { TrendingCatalogProduct } from '@/lib/trending';
 
 export function RitualCarousel() {
   const { t } = useLanguage();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<TrendingCatalogProduct[]>([]);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
 
   useEffect(() => {
-    const supabase = createClient();
-    void fetchTrendingProducts(supabase).then(setProducts);
+    void fetch('/api/shopify/trending')
+      .then((res) => res.json())
+      .then((json: { products?: TrendingCatalogProduct[] }) => {
+        setProducts(json.products || []);
+      })
+      .catch(() => setProducts([]));
   }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -65,6 +67,7 @@ export function RitualCarousel() {
       >
         {products.map((product, i) => {
           const image = product.images?.[0] || product.image_url;
+          const href = `/shop/${product.handle || product.id}`;
           return (
             <motion.div
               key={product.id}
@@ -74,7 +77,7 @@ export function RitualCarousel() {
               transition={{ delay: Math.min(i * 0.05, 0.3) }}
               className="min-w-[240px] sm:min-w-[280px] max-w-[280px]"
             >
-              <Link href={`/shop/${product.id}`} prefetch className="block group">
+              <Link href={href} prefetch className="block group">
                 <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-layali-surface border border-white/8 mb-3">
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element

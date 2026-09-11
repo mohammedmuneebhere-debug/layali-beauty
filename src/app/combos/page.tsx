@@ -8,29 +8,43 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
+import type { ShopProduct } from '@/lib/catalog';
 import type { Combo } from '@/types/database';
 
+/**
+ * Hybrid combos:
+ * - Curated purchasable bundles → Shopify collection/product_type "combo"
+ * - AI recommendations → Supabase history UI (add requires Shopify variant GIDs in a later AI phase)
+ */
 export default function CombosPage() {
-  const [combos, setCombos] = useState<Combo[]>([]);
+  const [shopCombos, setShopCombos] = useState<ShopProduct[]>([]);
+  const [aiCombos, setAiCombos] = useState<Combo[]>([]);
   const [loading, setLoading] = useState(true);
   const addItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
+      const [shopRes, aiRes] = await Promise.all([
+        fetch('/api/shopify/products?category=combo'),
+        supabase
+          .from('combos')
+          .select('*')
+          .eq('is_active', true)
+          .eq('is_ai_generated', true)
+          .eq('gender', 'female')
+          .order('created_at', { ascending: false }),
+      ]);
 
-      const { data } = await supabase
-        .from('combos')
-        .select('*')
-        .eq('is_active', true)
-        .eq('gender', 'female')
-        .order('created_at', { ascending: false });
-
-      setCombos(data || []);
+      const shopJson = (await shopRes.json()) as { products?: ShopProduct[] };
+      setShopCombos(shopJson.products || []);
+      setAiCombos((aiRes.data as Combo[]) || []);
       setLoading(false);
     }
-    load();
+    void load();
   }, []);
+
+  const hasAny = shopCombos.length > 0 || aiCombos.length > 0;
 
   return (
     <div className="relative min-h-screen bg-transparent pt-24 pb-16 overflow-hidden">
@@ -49,14 +63,63 @@ export default function CombosPage() {
         {loading ? (
           <div className="grid md:grid-cols-3 gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-80 bg-layali-surface rounded-2xl animate-pulse border border-white/5" />
+              <div
+                key={i}
+                className="h-80 bg-layali-surface rounded-2xl animate-pulse border border-white/5"
+              />
             ))}
           </div>
-        ) : combos.length === 0 ? (
+        ) : !hasAny ? (
           <p className="text-center text-white/45 py-20">No combos available yet.</p>
         ) : (
           <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {combos.map((combo) => (
+            {shopCombos.map((combo) => (
+              <StaggerItem key={combo.id}>
+                <Card hover>
+                  <CardImage src={combo.image_url} alt={combo.name} />
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] tracking-wide uppercase bg-white/10 text-white/70 border border-white/15">
+                        Shopify bundle
+                      </span>
+                    </div>
+                    <h3 className="font-serif text-xl text-white mb-1">{combo.name}</h3>
+                    <p className="text-sm text-white/45 mb-3 line-clamp-2">{combo.description}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-serif text-lg text-white">
+                          {formatPrice(Number(combo.price))}
+                        </span>
+                        {combo.compare_at_price && (
+                          <span className="text-sm text-white/30 line-through ml-2">
+                            {formatPrice(Number(combo.compare_at_price))}
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!combo.defaultVariantId}
+                        onClick={() =>
+                          void addItem({
+                            id: combo.id,
+                            type: 'product',
+                            name: combo.name,
+                            price: Number(combo.price),
+                            image_url: combo.image_url,
+                            merchandiseId: combo.defaultVariantId || undefined,
+                          })
+                        }
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </StaggerItem>
+            ))}
+
+            {aiCombos.map((combo) => (
               <StaggerItem key={combo.id}>
                 <Card hover>
                   <CardImage src={combo.image_url} alt={combo.name} />
@@ -89,15 +152,11 @@ export default function CombosPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          addItem({
-                            id: combo.id,
-                            type: 'combo',
-                            name: combo.name,
-                            price: Number(combo.price),
-                            image_url: combo.image_url,
-                          })
-                        }
+                        onClick={() => {
+                          alert(
+                            'AI combo lines will add Shopify variants once recommendation GIDs are migrated. Curated Shopify bundles above are purchasable now.'
+                          );
+                        }}
                       >
                         <ShoppingBag className="w-4 h-4" />
                       </Button>

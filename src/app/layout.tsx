@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Outfit, Great_Vibes, Noto_Sans_Arabic } from 'next/
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { StageBackdrop } from '@/components/layout/StageBackdrop';
+import { CartHydrator } from '@/components/cart/CartHydrator';
 import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 import { SITE_URL } from '@/lib/constants';
 import './globals.css';
@@ -97,6 +98,7 @@ export default function RootLayout({
         <LanguageProvider>
           <StageBackdrop />
           <div className="relative z-10 flex min-h-full flex-1 flex-col">
+            <CartHydrator />
             <Navbar />
             <main className="flex-1 bg-transparent">{children}</main>
             <Footer />

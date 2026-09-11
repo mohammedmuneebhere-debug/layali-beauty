@@ -41,6 +41,9 @@ export default function AdminOrdersPage() {
     });
   }, []);
 
+  // NOTE: New checkouts go to Shopify. This page still shows legacy Supabase orders
+  // until shopify_order_links + Admin API history replace it. Do not use for new commerce.
+
   const updateStatus = async (orderId: string, status: OrderStatus) => {
     const supabase = createClient();
     const previous = orders.find((o) => o.id === orderId);
@@ -102,6 +105,19 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
+      <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <strong>Migration notice:</strong> New orders are created in Shopify Checkout. This screen
+        still lists legacy Supabase COD orders for reference. Manage fulfillment in{' '}
+        <a
+          href="https://admin.shopify.com"
+          target="_blank"
+          rel="noreferrer"
+          className="underline font-medium"
+        >
+          Shopify Admin
+        </a>
+        . A lightweight <code>shopify_order_links</code> mapping will power account order history next.
+      </div>
       <h1 className="text-2xl font-bold text-gray-900 mb-8">Order Management</h1>
 
       <div className="grid lg:grid-cols-3 gap-6">

@@ -8,11 +8,10 @@ import { Card, CardImage, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { createClient } from '@/lib/supabase/client';
-import { getProductsForRegion, getPublicProducts } from '@/lib/products';
 import { useCartStore } from '@/store/cart';
 import { formatPrice, cn } from '@/lib/utils';
 import { PRODUCT_CATEGORIES } from '@/lib/constants';
-import type { Product } from '@/types/database';
+import type { ShopProduct } from '@/lib/catalog';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { collectBrands, detectBrand, PAGE_SIZE } from '@/lib/shop-filters';
@@ -41,14 +40,15 @@ function ProductCard({
   addLabel,
   onAdd,
 }: {
-  product: Product;
+  product: ShopProduct;
   addLabel: string;
-  onAdd: (e: React.MouseEvent, product: Product) => void;
+  onAdd: (e: React.MouseEvent, product: ShopProduct) => void;
 }) {
   const cover = product.images?.[0] || product.image_url;
+  const href = `/shop/${product.handle || product.id}`;
 
   return (
-    <Link href={`/shop/${product.id}`} prefetch={false} className="block h-full">
+    <Link href={href} prefetch={false} className="block h-full">
       <Card hover className="h-full bg-transparent border-0 shadow-none">
         <div className="relative">
           <CardImage src={cover} alt={product.name} className="rounded-2xl border border-white/8" />
@@ -90,8 +90,9 @@ export default function ShopContent() {
 
   const categoryFromUrl = normalizeCategory(searchParams.get('category'));
   const [category, setCategory] = useState(categoryFromUrl);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [brand, setBrand] = useState('');
   const [minPrice, setMinPrice] = useState('');
@@ -142,24 +143,29 @@ export default function ShopContent() {
             setUserRegion({ gender, city, country });
           }
         }
-
-        const list =
-          city && country
-            ? await getProductsForRegion(supabase, { gender, country, city })
-            : await getPublicProducts(supabase, { gender });
-
-        if (!cancelled) {
-          setProducts(list);
-          setLoading(false);
-        }
-        return;
-      }
-
-      const publicProducts = await getPublicProducts(supabase, { gender });
-      if (!cancelled) {
+      } else if (!cancelled) {
         setIsGuest(true);
         setUserRegion(null);
-        setProducts(publicProducts);
+      }
+
+      const params = new URLSearchParams();
+      if (city) params.set('city', city);
+      if (country) params.set('country', country);
+
+      const res = await fetch(`/api/shopify/products?${params.toString()}`);
+      const json = (await res.json()) as {
+        products?: ShopProduct[];
+        configured?: boolean;
+        message?: string;
+      };
+
+      if (!cancelled) {
+        setProducts(json.products || []);
+        setCatalogMessage(
+          json.configured === false
+            ? json.message || 'Shopify catalog is not configured yet.'
+            : null
+        );
         setLoading(false);
       }
     }
@@ -229,16 +235,18 @@ export default function ShopContent() {
   const isEmptySearch = !loading && filtered.length === 0 && hasSearchOrExtraFilters;
 
   const handleAddToCart = useCallback(
-    (e: React.MouseEvent, product: Product) => {
+    (e: React.MouseEvent, product: ShopProduct) => {
       e.preventDefault();
       e.stopPropagation();
+      if (!product.defaultVariantId) return;
       const image = product.images?.[0] || product.image_url;
-      addItem({
+      void addItem({
         id: product.id,
         type: 'product',
         name: product.name,
         price: Number(product.price),
         image_url: image,
+        merchandiseId: product.defaultVariantId,
       });
     },
     [addItem]
@@ -472,6 +480,9 @@ export default function ShopContent() {
             <p className="font-serif text-heading-sm text-white mb-2">
               {isEmptySearch ? t.shop.noMatch : t.shop.comingSoon}
             </p>
+            {catalogMessage && (
+              <p className="text-sm text-amber-200/80 mb-4 max-w-2xl">{catalogMessage}</p>
+            )}
             {isEmptySection && (
               <p className="text-sm text-white/45 max-w-md mx-auto capitalize">
                 {PRODUCT_CATEGORIES.find((c) => c.value === category)?.label || category}

@@ -6,29 +6,36 @@ Premium beauty e-commerce website for Layali, featuring personalized AI-powered 
 
 - **Frontend**: Next.js 16 (App Router) + TypeScript + Tailwind CSS
 - **Animations**: Framer Motion
-- **Database & Auth**: Supabase (PostgreSQL + Row Level Security)
+- **Auth & Layali data**: Supabase (PostgreSQL + Row Level Security)
+- **Commerce**: Shopify (Storefront Cart/Checkout + Admin for catalog)
 - **Deployment**: Vercel (frontend) + GoDaddy DNS
-- **Payment**: Cash on Delivery (COD)
+
+## Architecture (commerce migration)
+
+| Concern | Source of truth |
+| --- | --- |
+| Products, prices, inventory, cart, checkout, orders | **Shopify** |
+| Auth, profiles, surveys, AI history, addresses, regions, trending config, Layali metadata/COGS/order links | **Supabase** |
+| UI + orchestration | **Next.js** |
+| Cart ID + optimistic UI only | **Zustand** |
+
+Additive Supabase migration: `supabase/migrations/20260326090000_shopify_integration.sql`  
+Do **not** drop legacy `products` / `orders` tables until a final dependency audit.
 
 ## Features
 
 ### User Features
 - Sign up with gender and region (city/country) selection
-- Products filtered by gender and regional outlet
+- Products from Shopify catalog with optional Layali regional filtering
 - Fun onboarding beauty survey (skin type, hair type, concerns)
 - AI-powered personalized combo recommendations
 - Dermatologist-verified product combos
-- Shopping cart and COD checkout
-- Order tracking and history
+- Shopify Cart API + Shopify Checkout
+- Order history via Shopify (with optional Supabase user↔order links)
 
 ### Admin Features
-- Dashboard with order stats and revenue
-- Order management with status updates and tracking numbers
-- Product CRUD (add, edit, delete, pricing, stock)
-- Combo creation and management
-- Region/outlet management
-- Gender-based product categorization
-
+- Shopify Admin for catalog, inventory, orders, fulfillment, discounts
+- Layali admin for users, survey analytics, AI, regions/outlets, trending config, regional availability, internal analytics/COGS
 ## Getting Started
 
 ### 1. Clone and Install
@@ -51,13 +58,16 @@ npm install
 cp .env.local.example .env.local
 ```
 
-Fill in your Supabase credentials:
+Fill in your Supabase and Shopify credentials:
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SHOPIFY_STORE_DOMAIN=your-store.myshopify.com
+SHOPIFY_STOREFRONT_ACCESS_TOKEN=your_storefront_token
 ```
 
+Then run the additive migration `supabase/migrations/20260326090000_shopify_integration.sql` in the Supabase SQL Editor.
 ### 4. Create Admin Account
 
 1. Sign up through the app at `/auth/signup`

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { CheckCircle, Package, Plus, MapPin } from 'lucide-react';
+import { Package, Plus, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { AddressForm, addressDisplayLabel, type AddressFormValues } from '@/components/address/AddressForm';
@@ -12,18 +11,15 @@ import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import { reverseGeocode } from '@/lib/geocode';
-import { DELIVERY_FEE } from '@/lib/constants';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { Address } from '@/types/database';
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { items, total, clearCart } = useCartStore();
+  const { items, total, checkoutUrl, refresh } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
-  const [orderPlaced, setOrderPlaced] = useState(false);
-  const [orderId, setOrderId] = useState('');
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
@@ -35,7 +31,6 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState('');
 
   const subtotal = total();
-  const grandTotal = subtotal + DELIVERY_FEE;
 
   const loadAddresses = async (uid: string) => {
     const supabase = createClient();
@@ -57,6 +52,10 @@ export default function CheckoutPage() {
       setShowNewAddress(true);
     }
   };
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     async function init() {
@@ -83,13 +82,13 @@ export default function CheckoutPage() {
       await loadAddresses(user.id);
     }
 
-    if (items.length === 0 && !orderPlaced) {
+    if (items.length === 0) {
       router.push('/cart');
       return;
     }
 
-    init();
-  }, [items, orderPlaced, router]);
+    void init();
+  }, [items.length, router, refresh]);
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || null;
 
@@ -178,161 +177,22 @@ export default function CheckoutPage() {
     setShowNewAddress(false);
   };
 
-  const placeOrder = async () => {
-    if (!userId || !selectedAddress) return;
+  const proceedToShopifyCheckout = async () => {
+    if (!userId) return;
 
     setLoading(true);
-    const supabase = createClient();
+    await refresh();
+    const url = useCartStore.getState().checkoutUrl;
 
-    const orderPayload: Record<string, unknown> = {
-      user_id: userId,
-      total_amount: grandTotal,
-      delivery_fee: DELIVERY_FEE,
-      payment_method: 'cod',
-      shipping_address: selectedAddress.address_line,
-      shipping_city: selectedAddress.city || profileCity,
-      shipping_country: selectedAddress.country || profileCountry,
-      phone: selectedAddress.receiver_phone,
-      address_id: selectedAddress.id,
-      receiver_name: selectedAddress.receiver_name,
-      receiver_phone: selectedAddress.receiver_phone,
-      latitude: selectedAddress.latitude,
-      longitude: selectedAddress.longitude,
-      notes: notes || null,
-      status: 'pending',
-    };
-
-    let { data: order, error } = await supabase
-      .from('orders')
-      .insert(orderPayload)
-      .select()
-      .single();
-
-    // Fallback if delivery_fee column not yet migrated
-    if (error && String(error.message).toLowerCase().includes('delivery_fee')) {
-      delete orderPayload.delivery_fee;
-      const retry = await supabase.from('orders').insert(orderPayload).select().single();
-      order = retry.data;
-      error = retry.error;
-    }
-
-    if (error || !order) {
-      alert(error?.message || 'Could not place order. Make sure addresses SQL has been applied.');
+    if (!url) {
+      alert('Checkout is unavailable. Please refresh your cart and try again.');
       setLoading(false);
       return;
     }
 
-    const productIds = items.filter((i) => i.type === 'product').map((i) => i.id);
-    const comboIds = items.filter((i) => i.type === 'combo').map((i) => i.id);
-    const costMap = new Map<string, number | null>();
-
-    if (productIds.length > 0) {
-      const { data: productCosts } = await supabase
-        .from('products')
-        .select('id, cost_price')
-        .in('id', productIds);
-      (productCosts || []).forEach((row) => {
-        costMap.set(
-          `product:${row.id}`,
-          row.cost_price != null ? Number(row.cost_price) : null
-        );
-      });
-    }
-
-    if (comboIds.length > 0) {
-      const { data: comboCosts } = await supabase
-        .from('combos')
-        .select('id, cost_price')
-        .in('id', comboIds);
-      (comboCosts || []).forEach((row) => {
-        costMap.set(`combo:${row.id}`, row.cost_price != null ? Number(row.cost_price) : null);
-      });
-    }
-
-    const orderItems = items.map((item) => ({
-      order_id: order.id,
-      product_id: item.type === 'product' ? item.id : null,
-      combo_id: item.type === 'combo' ? item.id : null,
-      name: item.name,
-      price: item.price,
-      cost_price: costMap.get(`${item.type}:${item.id}`) ?? null,
-      quantity: item.quantity,
-    }));
-
-    const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-    if (itemsError && String(itemsError.message).toLowerCase().includes('cost_price')) {
-      await supabase.from('order_items').insert(
-        items.map((item) => ({
-          order_id: order.id,
-          product_id: item.type === 'product' ? item.id : null,
-          combo_id: item.type === 'combo' ? item.id : null,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-        }))
-      );
-    }
-    await supabase.from('order_tracking').insert({
-      order_id: order.id,
-      status: 'pending',
-      message: 'Order placed successfully',
-    });
-
-    // Fire-and-forget confirmation email
-    try {
-      await fetch('/api/email/order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'confirmed',
-          to: userEmail,
-          customerName: selectedAddress.receiver_name || userName,
-          orderId: order.id,
-          totalAmount: grandTotal,
-          deliveryFee: DELIVERY_FEE,
-          shippingAddress: selectedAddress.address_line,
-          items: items.map((i) => ({
-            name: i.name,
-            quantity: i.quantity,
-            price: i.price,
-          })),
-        }),
-      });
-    } catch (emailErr) {
-      console.error('Order confirmation email failed', emailErr);
-    }
-
-    setOrderId(order.id.slice(0, 8).toUpperCase());
-    clearCart();
-    setOrderPlaced(true);
-    setLoading(false);
+    // Address book stays in Supabase for Layali; Shopify Checkout collects fulfillment address.
+    window.location.href = url;
   };
-
-  if (orderPlaced) {
-    return (
-      <div className="min-h-screen bg-transparent flex items-center justify-center py-12 px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center max-w-md"
-        >
-          <CheckCircle className="w-16 h-16 mx-auto text-green-600 mb-6" />
-          <h1 className="font-serif text-3xl font-bold text-white mb-2">{t.checkout.confirmedTitle}</h1>
-          <p className="font-script text-2xl text-white/70 mb-4">{t.checkout.confirmedThanks}</p>
-          <p className="text-white/60 mb-2">
-            {t.checkout.orderId}: <strong>#{orderId}</strong>
-          </p>
-          <p className="text-white/60 mb-8">{t.checkout.confirmedBody}</p>
-          <div className="flex gap-4 justify-center">
-            <Button onClick={() => router.push('/account/orders')}>{t.checkout.viewOrders}</Button>
-            <Button variant="outline" onClick={() => router.push('/shop')}>
-              {t.checkout.continueShopping}
-            </Button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-transparent pt-24 pb-12">
@@ -353,6 +213,11 @@ export default function CheckoutPage() {
                 </button>
               )}
             </div>
+
+            <p className="text-sm text-white/50">
+              Save preferred addresses in Layali. Final shipping address and payment are completed
+              securely on Shopify Checkout.
+            </p>
 
             {addresses.length > 0 && !showNewAddress && (
               <div className="space-y-3">
@@ -403,21 +268,23 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {!showNewAddress && selectedAddress && (
+            {!showNewAddress && (
               <>
-                {selectedAddress.latitude != null && selectedAddress.longitude != null && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-white">{t.checkout.adjustPin}</p>
-                    <p className="text-xs text-white/50">{t.checkout.pinHint}</p>
-                    <LocationMap
-                      latitude={Number(selectedAddress.latitude)}
-                      longitude={Number(selectedAddress.longitude)}
-                      editable
-                      height="240px"
-                      onLocationChange={updateSelectedPin}
-                    />
-                  </div>
-                )}
+                {selectedAddress &&
+                  selectedAddress.latitude != null &&
+                  selectedAddress.longitude != null && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-white">{t.checkout.adjustPin}</p>
+                      <p className="text-xs text-white/50">{t.checkout.pinHint}</p>
+                      <LocationMap
+                        latitude={Number(selectedAddress.latitude)}
+                        longitude={Number(selectedAddress.longitude)}
+                        editable
+                        height="240px"
+                        onLocationChange={updateSelectedPin}
+                      />
+                    </div>
+                  )}
                 <Input
                   label={t.checkout.notes}
                   value={notes}
@@ -428,9 +295,10 @@ export default function CheckoutPage() {
                   className="w-full"
                   size="lg"
                   loading={loading}
-                  onClick={placeOrder}
+                  onClick={() => void proceedToShopifyCheckout()}
+                  disabled={!checkoutUrl && items.length === 0}
                 >
-                  {t.checkout.placeOrder}
+                  Continue to secure checkout
                 </Button>
               </>
             )}
@@ -455,26 +323,31 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-white/60">{t.checkout.delivery}</span>
-                <span className="text-white">{formatPrice(DELIVERY_FEE)}</span>
+                <span className="text-white/50 text-xs">Calculated at Shopify Checkout</span>
               </div>
               <div className="flex justify-between pt-2">
                 <span className="font-bold text-white">{t.checkout.total}</span>
-                <span className="font-bold text-xl text-white">{formatPrice(grandTotal)}</span>
+                <span className="font-bold text-xl text-white">{formatPrice(subtotal)}</span>
               </div>
             </div>
             <div className="mt-4 p-3 rounded-xl bg-black flex items-center gap-2">
               <Package className="w-5 h-5 text-layali-pink" />
-              <span className="text-sm text-white/70">{t.checkout.cod}</span>
+              <span className="text-sm text-white/70">
+                Payment and shipping are completed on Shopify Checkout.
+              </span>
             </div>
             {selectedAddress && (
               <div className="mt-4 text-sm text-white/60">
-                <p className="font-medium text-white">{t.checkout.deliveringTo}</p>
-                <p>{selectedAddress.receiver_name} · {selectedAddress.receiver_phone}</p>
+                <p className="font-medium text-white">Saved address (reference)</p>
+                <p>
+                  {selectedAddress.receiver_name} · {selectedAddress.receiver_phone}
+                </p>
                 <p className="mt-1">{selectedAddress.address_line}</p>
                 {selectedAddress.latitude != null && selectedAddress.longitude != null && (
                   <p className="text-xs mt-2 flex items-center gap-1">
                     <MapPin className="w-3 h-3" />
-                    {t.checkout.pin}: {Number(selectedAddress.latitude).toFixed(5)}, {Number(selectedAddress.longitude).toFixed(5)}
+                    {t.checkout.pin}: {Number(selectedAddress.latitude).toFixed(5)},{' '}
+                    {Number(selectedAddress.longitude).toFixed(5)}
                   </p>
                 )}
               </div>

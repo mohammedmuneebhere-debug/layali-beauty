@@ -4,15 +4,18 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingBag, Check } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { ProductImageGallery } from '@/components/shop/ProductImageGallery';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
-import type { Product } from '@/types/database';
+import type { ShopProduct } from '@/lib/catalog';
 
-function productPhotos(product: Product): string[] {
+type DetailProduct = ShopProduct & {
+  shopifyVariants?: { id: string; available: boolean }[];
+};
+
+function productPhotos(product: DetailProduct): string[] {
   if (product.images?.length) return product.images;
   return product.image_url ? [product.image_url] : [];
 }
@@ -20,46 +23,45 @@ function productPhotos(product: Product): string[] {
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const productId = params.id as string;
+  const productParam = params.id as string;
   const addItem = useCartStore((s) => s.addItem);
 
-  const [product, setProduct] = useState<Product | null>(null);
+  const [product, setProduct] = useState<DetailProduct | null>(null);
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('id', productId)
-        .eq('is_active', true)
-        .single();
+      const qs = productParam.startsWith('gid://')
+        ? `id=${encodeURIComponent(productParam)}`
+        : `handle=${encodeURIComponent(productParam)}`;
+      const res = await fetch(`/api/shopify/products?${qs}`);
+      const json = (await res.json()) as { product?: DetailProduct | null };
 
-      if (error || !data) {
+      if (!res.ok || !json.product) {
         setProduct(null);
         setLoading(false);
         return;
       }
 
-      setProduct(data as Product);
+      setProduct(json.product);
       setLoading(false);
     }
 
-    if (productId) load();
-  }, [productId]);
+    if (productParam) void load();
+  }, [productParam]);
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product?.defaultVariantId) return;
     const image = productPhotos(product)[0] || null;
-    addItem({
+    void addItem({
       id: product.id,
       type: 'product',
       name: product.name,
       price: Number(product.price),
       image_url: image,
+      merchandiseId: product.defaultVariantId,
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -97,6 +99,7 @@ export default function ProductDetailPage() {
     !showFullDescription && isLongDescription
       ? `${description.slice(0, 220).trim()}...`
       : description;
+  const inStock = product.available || product.stock_quantity > 0;
 
   return (
     <div className="relative min-h-screen bg-transparent pt-24 pb-14 overflow-hidden">
@@ -176,11 +179,7 @@ export default function ProductDetailPage() {
               <div className="flex flex-wrap items-center gap-3 mb-4 text-sm text-white/40">
                 <span>Curated Quality</span>
                 <span>·</span>
-                <span>
-                  {product.stock_quantity > 0
-                    ? `${product.stock_quantity} in stock`
-                    : 'Out of stock'}
-                </span>
+                <span>{inStock ? 'In stock' : 'Out of stock'}</span>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3">
@@ -188,7 +187,7 @@ export default function ProductDetailPage() {
                   size="lg"
                   className="flex-1"
                   onClick={handleAddToCart}
-                  disabled={product.stock_quantity <= 0}
+                  disabled={!inStock || !product.defaultVariantId}
                 >
                   {added ? (
                     <>
