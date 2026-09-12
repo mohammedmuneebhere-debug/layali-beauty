@@ -77,7 +77,7 @@ export type ShopifyCart = {
   subtotal: Money;
   /** Shopify cart.cost.totalAmount — authoritative checkout total estimate */
   total: Money;
-  /** Shopify-applied discounts (from line allocations); empty when none. */
+  /** Shopify-applied discounts aggregated from line discountAllocations; empty when none. */
   discounts: ShopifyCartDiscount[];
   buyerCountryCode?: string | null;
   lines: ShopifyCartLine[];

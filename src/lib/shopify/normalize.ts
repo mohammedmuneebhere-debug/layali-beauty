@@ -112,24 +112,23 @@ export function normalizeProduct(raw: GqlProduct | null | undefined): ShopifyPro
   };
 }
 
+type GqlLineDiscountAllocation = {
+  discountedAmount?: GqlMoney;
+  title?: string | null;
+  code?: string | null;
+};
+
 type GqlCart = {
   id: string;
   checkoutUrl: string;
   totalQuantity: number;
   buyerIdentity?: { countryCode?: string | null } | null;
   cost?: { subtotalAmount?: GqlMoney; totalAmount?: GqlMoney };
-  discountApplications?: {
-    title?: string | null;
-    code?: string | null;
-    totalAllocatedAmount?: GqlMoney;
-  }[];
   lines?: {
     nodes: {
       id: string;
       quantity: number;
-      discountAllocations?: {
-        discountedAmount?: GqlMoney;
-      }[];
+      discountAllocations?: GqlLineDiscountAllocation[];
       merchandise: {
         id: string;
         title?: string;
@@ -203,18 +202,29 @@ export function normalizeCart(raw: GqlCart | null | undefined): ShopifyCart | nu
       'SAR'
   );
 
-  // Prefer cart.discountApplications.totalAllocatedAmount (Shopify money, not %).
-  const discounts = (raw.discountApplications || [])
-    .map((app) => {
-      const amt = Number(app.totalAllocatedAmount?.amount || 0);
-      if (!(amt > 0)) return null;
-      const title = app.code?.trim() || app.title?.trim() || 'Discount';
-      return {
-        title,
-        amount: parseMoney(amt, app.totalAllocatedAmount?.currencyCode || 'SAR'),
-      };
-    })
-    .filter((d): d is NonNullable<typeof d> => Boolean(d));
+  // Aggregate line discountAllocations (Shopify money + title/code). No hardcoded %.
+  const discountBuckets = new Map<
+    string,
+    { title: string; amount: number; currencyCode: string }
+  >();
+  for (const line of raw.lines?.nodes || []) {
+    for (const alloc of line.discountAllocations || []) {
+      const amt = Number(alloc.discountedAmount?.amount || 0);
+      if (!(amt > 0)) continue;
+      const title = alloc.code?.trim() || alloc.title?.trim() || 'Discount';
+      const currencyCode = alloc.discountedAmount?.currencyCode || 'SAR';
+      const prev = discountBuckets.get(title);
+      if (prev) {
+        prev.amount += amt;
+      } else {
+        discountBuckets.set(title, { title, amount: amt, currencyCode });
+      }
+    }
+  }
+  const discounts = Array.from(discountBuckets.values()).map((d) => ({
+    title: d.title,
+    amount: parseMoney(d.amount, d.currencyCode),
+  }));
 
   return {
     id: raw.id,

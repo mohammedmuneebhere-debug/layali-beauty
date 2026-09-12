@@ -219,28 +219,23 @@ export const CART_FRAGMENT = `#graphql
         currencyCode
       }
     }
-    # Shopify SOT for discounts — money from totalAllocatedAmount (not hardcoded %).
-    # Shipping is not on cart until Checkout; do not invent delivery fees here.
-    discountApplications {
-      totalAllocatedAmount {
-        amount
-        currencyCode
-      }
-      ... on CartAutomaticDiscountApplication {
-        title
-      }
-      ... on CartCodeDiscountApplication {
-        code
-      }
-    }
+    # Storefront 2025-01 (this shop): Cart has no discountApplications /
+    # discountAllocations. Line discountAllocations has no lineLevelOnly arg.
+    # Titles/codes come from allocation concrete types. Shipping is checkout-only.
     lines(first: 100) {
       nodes {
         id
         quantity
-        discountAllocations(lineLevelOnly: false) {
+        discountAllocations {
           discountedAmount {
             amount
             currencyCode
+          }
+          ... on CartAutomaticDiscountAllocation {
+            title
+          }
+          ... on CartCodeDiscountAllocation {
+            code
           }
         }
         merchandise {
