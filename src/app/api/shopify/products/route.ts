@@ -24,6 +24,13 @@ export async function GET(req: NextRequest) {
     const q = searchParams.get('q') || undefined;
     const country = searchParams.get('country') || undefined;
     const city = searchParams.get('city') || undefined;
+    // Optional bound for lightweight callers (e.g. PDP similar). Omit for full catalog.
+    const firstRaw = searchParams.get('first');
+    const firstParsed = firstRaw ? Number(firstRaw) : undefined;
+    const first =
+      typeof firstParsed === 'number' && !Number.isNaN(firstParsed) && firstParsed > 0
+        ? Math.min(Math.floor(firstParsed), 250)
+        : undefined;
 
     if (handle || id) {
       const product = await loadShopProductByParam(handle || id || '');
@@ -40,6 +47,7 @@ export async function GET(req: NextRequest) {
       query: q,
       country,
       city,
+      first,
     });
     return NextResponse.json({ products, configured: true, source });
   } catch (err) {

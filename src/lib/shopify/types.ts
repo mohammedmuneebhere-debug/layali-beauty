@@ -51,7 +51,23 @@ export type ShopifyCartLine = {
   title: string;
   variantTitle: string;
   price: Money;
+  /** Variant compare-at when Shopify provides it (may be null). */
+  compareAtPrice: Money | null;
   image: ShopifyImage | null;
+  /** Sum of Shopify line discountAllocations.discountedAmount (not a hardcoded %). */
+  discountAmount: Money | null;
+};
+
+/** Aggregated cart discount from Shopify allocations — title/code + money only. */
+export type ShopifyCartDiscount = {
+  title: string;
+  amount: Money;
+};
+
+export type CartWarning = {
+  code: string;
+  message: string;
+  target?: string | null;
 };
 
 export type ShopifyCart = {
@@ -59,7 +75,14 @@ export type ShopifyCart = {
   checkoutUrl: string;
   totalQuantity: number;
   subtotal: Money;
+  /** Shopify cart.cost.totalAmount — authoritative checkout total estimate */
+  total: Money;
+  /** Shopify-applied discounts (from line allocations); empty when none. */
+  discounts: ShopifyCartDiscount[];
+  buyerCountryCode?: string | null;
   lines: ShopifyCartLine[];
+  /** Non-blocking Shopify cart mutation warnings (e.g. MERCHANDISE_OUT_OF_STOCK) */
+  warnings?: CartWarning[];
 };
 
 export type ShopifyCollection = {

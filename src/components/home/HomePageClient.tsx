@@ -57,9 +57,11 @@ export default function HomePageClient() {
             transition={{ duration: 0.85 }}
             className="max-w-2xl"
           >
-            <p className="text-meta tracking-[0.18em] text-layali-pink mb-6 uppercase">
-              {t.hero.eyebrow}
-            </p>
+            {t.hero.eyebrow ? (
+              <p className="text-meta tracking-[0.18em] text-layali-pink mb-6 uppercase">
+                {t.hero.eyebrow}
+              </p>
+            ) : null}
             <h1 className="font-serif text-hero text-white mb-1">
               {t.hero.titleBeauty}
             </h1>

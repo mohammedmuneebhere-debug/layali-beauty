@@ -55,14 +55,17 @@ export function AddressForm({
     address_line: initial?.address_line || '',
     city: initial?.city || defaultCity,
     country: initial?.country || defaultCountry,
-    latitude: initial?.latitude ?? DEFAULT_MAP_CENTER.lat,
-    longitude: initial?.longitude ?? DEFAULT_MAP_CENTER.lng,
+    // Map view may center on Riyadh, but do not treat that as a saved pin.
+    latitude: initial?.latitude ?? null,
+    longitude: initial?.longitude ?? null,
     is_default: initial?.is_default ?? false,
   });
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
   const [updatingFromPin, setUpdatingFromPin] = useState(false);
+  const [accuracyHint, setAccuracyHint] = useState<string | null>(null);
   const [centerKey, setCenterKey] = useState(0);
+  const hasPinnedLocation = form.latitude != null && form.longitude != null;
 
   const update = <K extends keyof AddressFormValues>(key: K, value: AddressFormValues[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -76,8 +79,12 @@ export function AddressForm({
     const fillAddress = options?.fillAddress ?? true;
     const recenter = options?.recenter ?? false;
 
-    update('latitude', latitude);
-    update('longitude', longitude);
+    // Always pin the raw coordinates first — never replace them with geocoded approx.
+    setForm((prev) => ({
+      ...prev,
+      latitude,
+      longitude,
+    }));
     if (recenter) setCenterKey((k) => k + 1);
 
     if (!fillAddress) return;
@@ -87,6 +94,7 @@ export function AddressForm({
       const geo = await reverseGeocode(latitude, longitude);
       setForm((prev) => ({
         ...prev,
+        // Preserve device/pin coords; only fill textual address fields.
         latitude,
         longitude,
         address_line: geo.address_line || prev.address_line,
@@ -100,28 +108,59 @@ export function AddressForm({
     }
   };
 
-  const useLiveLocation = async () => {
-    if (!navigator.geolocation) {
-      setError('Location is not supported on this device.');
+  const useLiveLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setError('Location is not supported on this browser. Enter the address manually or drag the pin.');
       return;
     }
 
     setLocating(true);
     setError('');
+    setAccuracyHint(null);
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        await applyCoordinates(position.coords.latitude, position.coords.longitude, {
+        const { latitude, longitude, accuracy } = position.coords;
+        await applyCoordinates(latitude, longitude, {
           fillAddress: true,
           recenter: true,
         });
+        if (typeof accuracy === 'number' && accuracy > 80) {
+          setAccuracyHint(
+            `GPS accuracy is about ${Math.round(accuracy)}m — drag the pin to refine the exact drop-off.`
+          );
+        } else {
+          setAccuracyHint(null);
+        }
         setLocating(false);
       },
-      () => {
-        setError('Could not get your location. Drag the pin on the map instead.');
+      (geoError) => {
         setLocating(false);
+        switch (geoError.code) {
+          case geoError.PERMISSION_DENIED:
+            setError(
+              'Location permission denied. Allow location access, or drag the pin / type the address manually.'
+            );
+            break;
+          case geoError.POSITION_UNAVAILABLE:
+            setError(
+              'Location unavailable right now. Drag the pin on the map or enter the address manually.'
+            );
+            break;
+          case geoError.TIMEOUT:
+            setError(
+              'Location request timed out. Try again, or drag the pin / type the address manually.'
+            );
+            break;
+          default:
+            setError('Could not get your location. Drag the pin on the map instead.');
+        }
       },
-      { enableHighAccuracy: true, timeout: 15000 }
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 0,
+      }
     );
   };
 
@@ -146,7 +185,7 @@ export function AddressForm({
       return;
     }
     if (form.latitude == null || form.longitude == null) {
-      setError('Please place the delivery pin on the map.');
+      setError('Please place the delivery pin on the map (live location, drag, or tap).');
       return;
     }
 
@@ -208,7 +247,9 @@ export function AddressForm({
           <div>
             <p className="text-sm font-medium text-white">Pin delivery location</p>
             <p className="text-xs text-white/50">
-              Drag the pin or tap anywhere on the map to move it
+              {hasPinnedLocation
+                ? 'Drag the pin or tap anywhere on the map to move it'
+                : 'Use live location, or tap/drag the pin to set the exact drop-off'}
             </p>
           </div>
           <button
@@ -237,8 +278,13 @@ export function AddressForm({
           <MapPin className="w-3 h-3" />
           {updatingFromPin
             ? 'Updating address from pin...'
-            : `Pinned: ${mapLat.toFixed(5)}, ${mapLng.toFixed(5)}`}
+            : hasPinnedLocation
+              ? `Pinned: ${mapLat.toFixed(6)}, ${mapLng.toFixed(6)}`
+              : 'No pin set yet — map shows Riyadh as a starting view only'}
         </p>
+        {accuracyHint ? (
+          <p className="text-xs text-amber-200/90">{accuracyHint}</p>
+        ) : null}
       </div>
 
       <div>

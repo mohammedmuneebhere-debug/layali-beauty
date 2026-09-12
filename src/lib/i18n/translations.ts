@@ -7,7 +7,7 @@ type DeepStringify<T> = {
 export const translations = {
   en: {
     brand: 'LAYALI',
-    brandSub: 'BEAUTY & LIFESTYLE',
+    brandSub: 'BEAUTY REDEFINED',
     tagline: 'Beauty Redefined',
     nav: {
       home: 'Home',
@@ -20,7 +20,8 @@ export const translations = {
     },
     lang: { en: 'EN', ar: 'عربي' },
     hero: {
-      eyebrow: 'Beauty & Lifestyle',
+      /** Intentionally unused on homepage hero — Change 4 removes this eyebrow. */
+      eyebrow: '',
       titleBeauty: 'Beauty,',
       titleRedefined: 'Redefined.',
       subtitle:
@@ -88,10 +89,12 @@ export const translations = {
       madeWith: 'Made with',
       forYou: 'for you',
       rights: 'All rights reserved.',
+      crNumber: 'CR Number',
+      vatNumber: 'VAT Registration Number',
     },
     shop: {
       title: 'Shop',
-      eyebrow: 'Beauty & Lifestyle',
+      eyebrow: 'Beauty Redefined',
       guest: 'Browse our beauty collection',
       signedIn: 'Beauty essentials, curated for you',
       region: 'Showing products for women in',
@@ -124,7 +127,7 @@ export const translations = {
       subtotal: 'Subtotal',
       delivery: 'Delivery',
       total: 'Total',
-      deliveryNote: 'Fixed delivery fee of 20 SAR per order',
+      deliveryNote: 'Shipping is calculated at Shopify Checkout',
       payment: 'Payment: Cash on Delivery (COD)',
       guestNote: 'You can shop as a guest. Sign in is required to place your order.',
       checkout: 'Proceed to Checkout',
@@ -151,7 +154,7 @@ export const translations = {
       confirmedThanks: 'thank you',
       orderId: 'Order ID',
       confirmedBody:
-        'We’ve sent a confirmation email. Your order will be delivered with Cash on Delivery. Delivery: 20 SAR.',
+        'We’ve sent a confirmation email. Your order will be delivered with Cash on Delivery. Shipping is confirmed at checkout.',
       viewOrders: 'View Orders',
       continueShopping: 'Continue Shopping',
     },
@@ -193,7 +196,7 @@ export const translations = {
   },
   ar: {
     brand: 'LAYALI',
-    brandSub: 'الجمال ونمط الحياة',
+    brandSub: 'الجمال بمعناه الجديد',
     tagline: 'جمال معاد تعريفه',
     nav: {
       home: 'الرئيسية',
@@ -206,7 +209,7 @@ export const translations = {
     },
     lang: { en: 'EN', ar: 'عربي' },
     hero: {
-      eyebrow: 'الجمال ونمط الحياة',
+      eyebrow: '',
       titleBeauty: 'الجمال،',
       titleRedefined: 'بمعناه الجديد.',
       subtitle:
@@ -274,10 +277,12 @@ export const translations = {
       madeWith: 'صُنع بـ',
       forYou: 'من أجلكِ',
       rights: 'جميع الحقوق محفوظة.',
+      crNumber: 'رقم السجل التجاري',
+      vatNumber: 'الرقم الضريبي',
     },
     shop: {
       title: 'المتجر',
-      eyebrow: 'الجمال ونمط الحياة',
+      eyebrow: 'الجمال بمعناه الجديد',
       guest: 'تصفحي مجموعتنا للجمال',
       signedIn: 'مستلزمات جمال مختارة لكِ',
       region: 'منتجات للنساء في',
@@ -310,7 +315,7 @@ export const translations = {
       subtotal: 'المجموع الفرعي',
       delivery: 'التوصيل',
       total: 'الإجمالي',
-      deliveryNote: 'رسوم توصيل ثابتة 20 ريال لكل طلب',
+      deliveryNote: 'يتم حساب الشحن عند إتمام الطلب في Shopify',
       payment: 'الدفع: عند الاستلام (COD)',
       guestNote: 'يمكنكِ التسوق كزائرة. تسجيل الدخول مطلوب لإتمام الطلب.',
       checkout: 'إتمام الطلب',
@@ -337,7 +342,7 @@ export const translations = {
       confirmedThanks: 'شكراً لكِ',
       orderId: 'رقم الطلب',
       confirmedBody:
-        'أرسلنا رسالة تأكيد إلى بريدكِ. سيُسلَّم طلبكِ مع الدفع عند الاستلام. رسوم التوصيل: 20 ريال.',
+        'أرسلنا رسالة تأكيد إلى بريدكِ. سيُسلَّم طلبكِ مع الدفع عند الاستلام. يتم تأكيد الشحن عند إتمام الطلب.',
       viewOrders: 'عرض الطلبات',
       continueShopping: 'تابعي التسوق',
     },

@@ -29,7 +29,7 @@ export const metadata: Metadata = {
         url: OG_IMAGE_PATH,
         width: 1200,
         height: 630,
-        alt: 'Layali — Beauty & Lifestyle',
+        alt: 'Layali — Beauty Redefined',
       },
     ],
   },

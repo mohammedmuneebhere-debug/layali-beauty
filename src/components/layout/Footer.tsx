@@ -34,7 +34,21 @@ export function Footer() {
             </Link>
             <p className="font-script text-heading-sm text-layali-pink-light mb-2">{t.tagline}</p>
             <p className="text-meta tracking-[0.14em] text-layali-pink/80 mb-4">{t.brandSub}</p>
-            <p className="text-body text-white/65 max-w-md">{t.footer.blurb}</p>
+            <p className="text-body text-white/65 max-w-md mb-4">{t.footer.blurb}</p>
+            <div className="space-y-1.5 text-meta text-white/55 font-mono tracking-wide min-w-0">
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                <span className="text-white/40 shrink-0">{t.footer.crNumber}:</span>
+                <span dir="ltr" className="min-w-0 break-all">
+                  7036159924
+                </span>
+              </p>
+              <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
+                <span className="text-white/40 shrink-0">{t.footer.vatNumber}:</span>
+                <span dir="ltr" className="min-w-0 break-all">
+                  311925554900003
+                </span>
+              </p>
+            </div>
           </div>
 
           <div>

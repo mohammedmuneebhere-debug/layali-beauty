@@ -1,15 +1,28 @@
-import { isShopifyConfigured, shopifyFetch } from './client';
+import { buildCartBuyerIdentity } from './buyer-country';
+import { isShopifyConfigured, shopifyFetch, ShopifyThrottleError } from './client';
 import { normalizeCart } from './normalize';
 import {
+  CART_BUYER_IDENTITY_UPDATE,
   CART_CREATE,
   CART_LINES_ADD,
   CART_LINES_REMOVE,
   CART_LINES_UPDATE,
   CART_QUERY,
 } from './queries';
-import type { ShopifyCart } from './types';
+import type { CartWarning, ShopifyCart } from './types';
+
+export { ShopifyThrottleError };
 
 type UserErrors = { field?: string[] | null; message: string }[];
+
+type MutationWarnings = {
+  warnings?: CartWarning[] | null;
+  userErrors?: UserErrors;
+  cart?: unknown;
+};
+
+/** Cart mutations: never retry-storm Shopify (1 attempt). */
+const CART_FETCH = { cache: 'no-store' as const, revalidate: false as const, retries: 0 };
 
 function assertNoUserErrors(userErrors: UserErrors | undefined, action: string) {
   if (userErrors?.length) {
@@ -17,16 +30,48 @@ function assertNoUserErrors(userErrors: UserErrors | undefined, action: string) 
   }
 }
 
+function stockWarningMessage(warnings: CartWarning[] | undefined): string | null {
+  const stock = warnings?.find(
+    (w) =>
+      w.code === 'MERCHANDISE_OUT_OF_STOCK' || w.code === 'MERCHANDISE_NOT_ENOUGH_STOCK'
+  );
+  return stock?.message || null;
+}
+
+function normalizeMutationCart(action: string, payload: MutationWarnings): ShopifyCart {
+  assertNoUserErrors(payload.userErrors, action);
+  const cart = normalizeCart(payload.cart as Parameters<typeof normalizeCart>[0]);
+  if (!cart) throw new Error(`${action} returned empty cart`);
+
+  // Filter qty-0 OOS placeholders in normalizeCart only — do NOT call cartLinesRemove
+  // here (that doubled Storefront mutations on every +/- click).
+  cart.warnings = payload.warnings || [];
+
+  const stockMsg = stockWarningMessage(payload.warnings || undefined);
+  if (stockMsg && cart.totalQuantity === 0 && cart.lines.length === 0) {
+    throw new Error(stockMsg);
+  }
+  return cart;
+}
+
 export async function createCart(options?: {
   lines?: { merchandiseId: string; quantity: number }[];
   email?: string;
+  countryCode?: string;
+  countryLabel?: string;
 }): Promise<ShopifyCart> {
   if (!isShopifyConfigured()) {
     throw new Error('Shopify is not configured');
   }
 
+  const buyerIdentity = buildCartBuyerIdentity({
+    email: options?.email,
+    countryCode: options?.countryCode,
+    countryLabel: options?.countryLabel,
+  });
+
   const data = await shopifyFetch<{
-    cartCreate: { cart: unknown; userErrors: UserErrors };
+    cartCreate: MutationWarnings;
   }>(
     CART_CREATE,
     {
@@ -34,15 +79,12 @@ export async function createCart(options?: {
         merchandiseId: l.merchandiseId,
         quantity: l.quantity,
       })),
-      buyerIdentity: options?.email ? { email: options.email } : null,
+      buyerIdentity,
     },
-    { cache: 'no-store', revalidate: false }
+    CART_FETCH
   );
 
-  assertNoUserErrors(data.cartCreate.userErrors, 'cartCreate');
-  const cart = normalizeCart(data.cartCreate.cart as Parameters<typeof normalizeCart>[0]);
-  if (!cart) throw new Error('cartCreate returned empty cart');
-  return cart;
+  return normalizeMutationCart('cartCreate', data.cartCreate);
 }
 
 export async function getCart(cartId: string): Promise<ShopifyCart | null> {
@@ -50,9 +92,14 @@ export async function getCart(cartId: string): Promise<ShopifyCart | null> {
   const data = await shopifyFetch<{ cart: unknown }>(
     CART_QUERY,
     { id: cartId },
-    { cache: 'no-store', revalidate: false }
+    CART_FETCH
   );
-  return normalizeCart(data.cart as Parameters<typeof normalizeCart>[0]);
+  const cart = normalizeCart(data.cart as Parameters<typeof normalizeCart>[0]);
+  if (!cart) return null;
+
+  // Read-only: do not chain buyerIdentityUpdate / cartLinesRemove on GET.
+  // Those belong on explicit write paths and caused multi-request bursts.
+  return cart;
 }
 
 export async function addCartLines(
@@ -60,16 +107,9 @@ export async function addCartLines(
   lines: { merchandiseId: string; quantity: number }[]
 ): Promise<ShopifyCart> {
   const data = await shopifyFetch<{
-    cartLinesAdd: { cart: unknown; userErrors: UserErrors };
-  }>(
-    CART_LINES_ADD,
-    { cartId, lines },
-    { cache: 'no-store', revalidate: false }
-  );
-  assertNoUserErrors(data.cartLinesAdd.userErrors, 'cartLinesAdd');
-  const cart = normalizeCart(data.cartLinesAdd.cart as Parameters<typeof normalizeCart>[0]);
-  if (!cart) throw new Error('cartLinesAdd returned empty cart');
-  return cart;
+    cartLinesAdd: MutationWarnings;
+  }>(CART_LINES_ADD, { cartId, lines }, CART_FETCH);
+  return normalizeMutationCart('cartLinesAdd', data.cartLinesAdd);
 }
 
 export async function updateCartLines(
@@ -77,55 +117,82 @@ export async function updateCartLines(
   lines: { id: string; quantity: number }[]
 ): Promise<ShopifyCart> {
   const data = await shopifyFetch<{
-    cartLinesUpdate: { cart: unknown; userErrors: UserErrors };
-  }>(
-    CART_LINES_UPDATE,
-    { cartId, lines },
-    { cache: 'no-store', revalidate: false }
-  );
-  assertNoUserErrors(data.cartLinesUpdate.userErrors, 'cartLinesUpdate');
-  const cart = normalizeCart(data.cartLinesUpdate.cart as Parameters<typeof normalizeCart>[0]);
-  if (!cart) throw new Error('cartLinesUpdate returned empty cart');
-  return cart;
+    cartLinesUpdate: MutationWarnings;
+  }>(CART_LINES_UPDATE, { cartId, lines }, CART_FETCH);
+  return normalizeMutationCart('cartLinesUpdate', data.cartLinesUpdate);
 }
 
 export async function removeCartLines(cartId: string, lineIds: string[]): Promise<ShopifyCart> {
   const data = await shopifyFetch<{
-    cartLinesRemove: { cart: unknown; userErrors: UserErrors };
-  }>(
-    CART_LINES_REMOVE,
-    { cartId, lineIds },
-    { cache: 'no-store', revalidate: false }
-  );
+    cartLinesRemove: MutationWarnings;
+  }>(CART_LINES_REMOVE, { cartId, lineIds }, CART_FETCH);
   assertNoUserErrors(data.cartLinesRemove.userErrors, 'cartLinesRemove');
-  const cart = normalizeCart(data.cartLinesRemove.cart as Parameters<typeof normalizeCart>[0]);
+  const cart = normalizeCart(
+    data.cartLinesRemove.cart as Parameters<typeof normalizeCart>[0]
+  );
   if (!cart) throw new Error('cartLinesRemove returned empty cart');
+  cart.warnings = data.cartLinesRemove.warnings || [];
   return cart;
 }
 
-/** Ensure a cart exists, then add a variant line */
+export async function updateCartBuyerIdentity(
+  cartId: string,
+  options?: { email?: string; countryCode?: string; countryLabel?: string }
+): Promise<ShopifyCart> {
+  const buyerIdentity = buildCartBuyerIdentity(options);
+  const data = await shopifyFetch<{
+    cartBuyerIdentityUpdate: MutationWarnings;
+  }>(CART_BUYER_IDENTITY_UPDATE, { cartId, buyerIdentity }, CART_FETCH);
+  return normalizeMutationCart('cartBuyerIdentityUpdate', data.cartBuyerIdentityUpdate);
+}
+
+/** Ensure a cart exists, then add one or more variant lines in a single Storefront write. */
 export async function addToShopifyCart(options: {
   cartId: string | null;
-  merchandiseId: string;
+  merchandiseId?: string;
   quantity?: number;
+  /** Prefer this for combos — one cartCreate/cartLinesAdd for all lines. */
+  lines?: { merchandiseId: string; quantity: number }[];
   email?: string;
+  countryCode?: string;
+  countryLabel?: string;
 }): Promise<ShopifyCart> {
-  const quantity = options.quantity ?? 1;
+  const lines =
+    options.lines?.filter((l) => l.merchandiseId && l.quantity > 0) ||
+    (options.merchandiseId
+      ? [{ merchandiseId: options.merchandiseId, quantity: options.quantity ?? 1 }]
+      : []);
+
+  if (lines.length === 0) {
+    throw new Error('At least one merchandiseId is required');
+  }
+
+  const identity = {
+    email: options.email,
+    countryCode: options.countryCode,
+    countryLabel: options.countryLabel,
+  };
+
   if (!options.cartId) {
     return createCart({
-      lines: [{ merchandiseId: options.merchandiseId, quantity }],
-      email: options.email,
+      lines,
+      ...identity,
     });
   }
+
   try {
-    return await addCartLines(options.cartId, [
-      { merchandiseId: options.merchandiseId, quantity },
-    ]);
-  } catch {
-    // Cart may have expired — create a new one
-    return createCart({
-      lines: [{ merchandiseId: options.merchandiseId, quantity }],
-      email: options.email,
-    });
+    // Single mutation for all lines (combos must not partial-add via N POSTs).
+    return await addCartLines(options.cartId, lines);
+  } catch (err) {
+    if (err instanceof ShopifyThrottleError) throw err;
+    const message = err instanceof Error ? err.message : '';
+    // Only recreate when the cart id itself is unusable — not on stock/user errors.
+    if (/not found|does not exist|expired|cart.*unavailable/i.test(message)) {
+      return createCart({
+        lines,
+        ...identity,
+      });
+    }
+    throw err;
   }
 }

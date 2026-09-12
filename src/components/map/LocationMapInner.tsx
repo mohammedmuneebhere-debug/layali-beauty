@@ -5,6 +5,7 @@ import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-lea
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
+/** Standard Leaflet pin tip sits at bottom-center of the 25×41 icon. */
 const pinIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
@@ -30,7 +31,7 @@ function Recenter({
   useEffect(() => {
     if (lastKey.current === centerKey) return;
     lastKey.current = centerKey;
-    map.setView([lat, lng], Math.max(map.getZoom() || 15, 15));
+    map.setView([lat, lng], Math.max(map.getZoom() || 16, 16));
   }, [lat, lng, centerKey, map]);
 
   return null;
@@ -63,26 +64,33 @@ function DraggablePin({
   editable: boolean;
   onLocationChange?: (lat: number, lng: number) => void;
 }) {
-  const [position, setPosition] = useState<[number, number]>([latitude, longitude]);
+  // During drag, use local coords; otherwise use raw prop coords (full GPS precision).
+  const [dragging, setDragging] = useState(false);
+  const [dragPos, setDragPos] = useState<[number, number]>([latitude, longitude]);
+  const position: [number, number] = dragging ? dragPos : [latitude, longitude];
 
   return (
     <Marker
-      key={`${latitude.toFixed(5)}-${longitude.toFixed(5)}`}
       position={position}
       icon={pinIcon}
       draggable={editable}
       eventHandlers={
         editable
           ? {
+              dragstart: () => {
+                setDragging(true);
+                setDragPos([latitude, longitude]);
+              },
               drag: (e) => {
                 const marker = e.target as L.Marker;
                 const pos = marker.getLatLng();
-                setPosition([pos.lat, pos.lng]);
+                setDragPos([pos.lat, pos.lng]);
               },
               dragend: (e) => {
                 const marker = e.target as L.Marker;
                 const pos = marker.getLatLng();
-                setPosition([pos.lat, pos.lng]);
+                setDragPos([pos.lat, pos.lng]);
+                setDragging(false);
                 onLocationChange?.(pos.lat, pos.lng);
               },
             }
@@ -111,12 +119,12 @@ export default function LocationMapInner({
 }: LocationMapInnerProps) {
   return (
     <div
-      className={`rounded-xl overflow-hidden border border-layali-pink/30 z-0 ${editable ? 'touch-none' : ''}`}
+      className={`rounded-xl overflow-hidden border border-layali-pink/30 relative z-0 ${editable ? 'touch-manipulation' : ''}`}
       style={{ height }}
     >
       <MapContainer
         center={[latitude, longitude]}
-        zoom={15}
+        zoom={16}
         scrollWheelZoom={editable}
         dragging
         style={{ height: '100%', width: '100%' }}
@@ -131,7 +139,6 @@ export default function LocationMapInner({
           onPick={(lat, lng) => onLocationChange?.(lat, lng)}
         />
         <DraggablePin
-          key={`${latitude.toFixed(5)}-${longitude.toFixed(5)}`}
           latitude={latitude}
           longitude={longitude}
           editable={editable}

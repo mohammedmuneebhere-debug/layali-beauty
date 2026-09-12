@@ -2,6 +2,9 @@
  * Storefront catalog adapter.
  * Shopify is the authoritative product catalog when configured.
  * Regional filtering uses Supabase layali_product_regions (Shopify GIDs).
+ *
+ * Catalog fetches use shopifyFetch default revalidate (~60s). Omit `first`
+ * for a full cursor-paginated catalog (shop brand filters need all vendors).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';

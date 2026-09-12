@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const itemCount = useCartStore((s) => s.itemCount());
+  const itemCount = useCartStore((s) => s.totalQuantity);
   const { t } = useLanguage();
   const reduceMotion = useReducedMotion();
   const menuId = useId();
@@ -54,22 +54,22 @@ export function Navbar() {
   return (
     <header className="fixed top-0 inset-x-0 z-50 glass-dark">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20 gap-2">
+        <div className="flex items-center justify-between h-16 lg:h-20 gap-2 sm:gap-3">
           <Link
             href="/"
             prefetch
-            className="flex flex-col items-start group min-w-0 shrink"
+            className="flex flex-col items-start justify-center group min-w-0 flex-1 overflow-hidden me-1"
             onClick={() => setMobileOpen(false)}
           >
-            <span className="font-serif text-display-sm lg:text-display-md font-bold tracking-[0.12em] text-white group-hover:text-layali-pink-light transition-colors truncate max-w-[42vw] sm:max-w-none">
+            <span className="font-serif text-display-sm lg:text-display-md font-bold tracking-[0.12em] text-white group-hover:text-layali-pink-light transition-colors truncate w-full">
               {t.brand}
             </span>
-            <span className="text-meta tracking-[0.14em] text-layali-pink -mt-1 truncate max-w-[46vw] sm:max-w-none">
+            <span className="text-meta tracking-[0.08em] sm:tracking-[0.14em] text-layali-pink -mt-1 truncate w-full">
               {t.brandSub}
             </span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-6 lg:gap-8 rtl:gap-7">
+          <div className="hidden md:flex items-center gap-6 lg:gap-8 rtl:gap-7 shrink-0">
             {navLinks.map((link) => {
               const active =
                 link.href === '/'
@@ -97,7 +97,7 @@ export function Navbar() {
             })}
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             <LanguageSwitcher />
             <Link
               href="/account"
@@ -118,7 +118,7 @@ export function Navbar() {
                 <motion.span
                   initial={reduceMotion ? false : { scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute -top-1 -end-1 min-w-[18px] h-[18px] px-1 bg-layali-pink-glow text-white text-meta rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,46,124,0.7)]"
+                  className="absolute -top-1 -end-1 z-10 min-w-[18px] h-[18px] px-1 bg-layali-pink-glow text-white text-meta rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(212,46,124,0.7)]"
                 >
                   {itemCount}
                 </motion.span>

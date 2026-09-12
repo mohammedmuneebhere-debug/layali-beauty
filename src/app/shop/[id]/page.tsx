@@ -5,19 +5,64 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, ShoppingBag, Check } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Card, CardImage, CardContent } from '@/components/ui/Card';
 import { ProductImageGallery } from '@/components/shop/ProductImageGallery';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import type { ShopProduct } from '@/lib/catalog';
+import { pickSimilarProducts, vendorSearchQuery } from '@/lib/similar-products';
+import { shopifyImageUrl } from '@/lib/shopify/image';
 
 type DetailProduct = ShopProduct & {
   shopifyVariants?: { id: string; available: boolean }[];
 };
 
-function productPhotos(product: DetailProduct): string[] {
+function productPhotos(product: DetailProduct | ShopProduct): string[] {
   if (product.images?.length) return product.images;
   return product.image_url ? [product.image_url] : [];
+}
+
+function SimilarProductCard({
+  product,
+  onAdd,
+}: {
+  product: ShopProduct;
+  onAdd: (e: React.MouseEvent, product: ShopProduct) => void;
+}) {
+  const cover = shopifyImageUrl(product.images?.[0] || product.image_url, 480);
+  const href = `/shop/${product.handle || product.id}`;
+
+  return (
+    <Link href={href} prefetch={false} className="block h-full">
+      <Card hover className="h-full bg-transparent border-0 shadow-none">
+        <div className="relative">
+          <CardImage src={cover} alt={product.name} className="rounded-2xl border border-white/8" />
+        </div>
+        <CardContent className="px-1 pt-4 pb-2">
+          <p className="text-meta text-layali-pink uppercase tracking-[0.14em] mb-1.5">
+            {product.vendor || product.category}
+          </p>
+          <div className="flex items-start justify-between gap-2 mb-3">
+            <h3 className="text-product-name text-white leading-snug line-clamp-2 min-w-0">
+              {product.name}
+            </h3>
+            <span className="text-price text-white/90 shrink-0 tabular-nums">
+              {formatPrice(Number(product.price))}
+            </span>
+          </div>
+          {product.compare_at_price && (
+            <span className="text-meta text-white/30 line-through block mb-2">
+              {formatPrice(Number(product.compare_at_price))}
+            </span>
+          )}
+          <Button size="sm" variant="outline" className="w-full" onClick={(e) => onAdd(e, product)}>
+            <ShoppingBag className="w-3.5 h-3.5" /> Add
+          </Button>
+        </CardContent>
+      </Card>
+    </Link>
+  );
 }
 
 export default function ProductDetailPage() {
@@ -30,6 +75,8 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [added, setAdded] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [similar, setSimilar] = useState<ShopProduct[]>([]);
+  const [similarLoading, setSimilarLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -52,6 +99,60 @@ export default function ProductDetailPage() {
     if (productParam) void load();
   }, [productParam]);
 
+  // Similar products after main PDP is ready — bounded fetch, uses Storefront cache (revalidate ~60s).
+  useEffect(() => {
+    if (!product) return;
+
+    let cancelled = false;
+    const current = product;
+
+    async function loadSimilar() {
+      // Defer so setState is not synchronous inside the effect body.
+      await Promise.resolve();
+      if (cancelled) return;
+      setSimilarLoading(true);
+      try {
+        const candidates: ShopProduct[] = [];
+        const vendor = current.vendor?.trim();
+
+        if (vendor) {
+          const params = new URLSearchParams({
+            q: vendorSearchQuery(vendor),
+            first: '24',
+          });
+          const res = await fetch(`/api/shopify/products?${params}`);
+          const json = (await res.json()) as { products?: ShopProduct[] };
+          candidates.push(...(json.products || []));
+        }
+
+        let picked = pickSimilarProducts(candidates, current);
+        if (picked.length < 4 && current.category) {
+          const params = new URLSearchParams({
+            category: current.category,
+            first: '24',
+          });
+          const res = await fetch(`/api/shopify/products?${params}`);
+          const json = (await res.json()) as { products?: ShopProduct[] };
+          candidates.push(...(json.products || []));
+          picked = pickSimilarProducts(candidates, current);
+        }
+
+        if (!cancelled) {
+          setSimilar(picked);
+        }
+      } catch {
+        if (!cancelled) setSimilar([]);
+      } finally {
+        if (!cancelled) setSimilarLoading(false);
+      }
+    }
+
+    void loadSimilar();
+    return () => {
+      cancelled = true;
+    };
+  }, [product]);
+
   const handleAddToCart = () => {
     if (!product?.defaultVariantId) return;
     const image = productPhotos(product)[0] || null;
@@ -65,6 +166,21 @@ export default function ProductDetailPage() {
     });
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleAddSimilar = (e: React.MouseEvent, p: ShopProduct) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!p.defaultVariantId) return;
+    const image = productPhotos(p)[0] || null;
+    void addItem({
+      id: p.id,
+      type: 'product',
+      name: p.name,
+      price: Number(p.price),
+      image_url: image,
+      merchandiseId: p.defaultVariantId,
+    });
   };
 
   if (loading) {
@@ -118,7 +234,7 @@ export default function ProductDetailPage() {
 
             <div>
               <p className="text-meta uppercase tracking-[0.18em] text-layali-pink mb-3">
-                {product.category}
+                {product.vendor || product.category}
               </p>
               <h1 className="font-serif text-heading-lg text-white mb-4">
                 {product.name}
@@ -208,6 +324,36 @@ export default function ProductDetailPage() {
             </div>
           </div>
         </FadeIn>
+
+        {(similarLoading || similar.length > 0) && (
+          <section className="mt-16 lg:mt-20" aria-labelledby="similar-products-heading">
+            <h2
+              id="similar-products-heading"
+              className="font-serif text-heading-sm text-white mb-2"
+            >
+              You May Also Like
+            </h2>
+            <p className="text-body text-white/45 mb-8">
+              Similar picks from the same brand and category
+            </p>
+            {similarLoading && similar.length === 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
+                {[...Array(4)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="aspect-[4/5] rounded-2xl bg-layali-surface animate-pulse border border-white/5"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
+                {similar.map((p) => (
+                  <SimilarProductCard key={p.id} product={p} onAdd={handleAddSimilar} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </div>
     </div>
   );

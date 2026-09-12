@@ -25,11 +25,14 @@ export function CardImage({
   alt,
   className,
   priority = false,
+  sizes = '(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw',
 }: {
   src?: string | null;
   alt: string;
   className?: string;
   priority?: boolean;
+  /** Hint for responsive image selection when CDN serves multiple widths. */
+  sizes?: string;
 }) {
   return (
     <div className={cn('relative aspect-[4/5] bg-layali-elevated overflow-hidden group', className)}>
@@ -38,6 +41,7 @@ export function CardImage({
         <img
           src={src}
           alt={alt}
+          sizes={sizes}
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
           className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"

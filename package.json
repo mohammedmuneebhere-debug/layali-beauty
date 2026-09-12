@@ -9,9 +9,14 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "audit:mobile": "node scripts/mobile-audit.mjs",
+    "audit:cart": "node scripts/cart-ui-audit.mjs",
     "migrate:products:dry-run": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-products-to-shopify.mts --dry-run",
     "migrate:products:execute": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-products-to-shopify.mts --execute --confirm=MIGRATE_PRODUCTS",
-    "migrate:products:publish-test": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/publish-test-products.mts --confirm=PUBLISH_TEST_PRODUCTS"
+    "migrate:products:publish-test": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/publish-test-products.mts --confirm=PUBLISH_TEST_PRODUCTS",
+    "migrate:inventory:dry-run": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-inventory-to-riyadh.mts --dry-run",
+    "migrate:inventory:execute": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-inventory-to-riyadh.mts --execute --confirm=MOVE_INVENTORY_TO_RIYADH",
+    "migrate:inventory:set-50:dry-run": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-inventory-set-riyadh-50.mts --dry-run",
+    "migrate:inventory:set-50:execute": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-inventory-set-riyadh-50.mts --execute --confirm=SET_RIYADH_STOCK_TO_50"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

@@ -2,7 +2,16 @@ export const SITE_URL = 'https://www.layalibeautystore.com';
 
 export const CONTACT_EMAIL = 'layalibeautystore@gmail.com';
 
-/** Fixed delivery charge (SAR) per order — regardless of item count */
+/** Legacy fixed delivery fee (SAR) — used by email/order helpers only.
+ * Cart/checkout do NOT use this: Storefront cart has no shipping until Shopify Checkout. */
+/**
+ * Legacy COD/email delivery constant.
+ *
+ * Shopify Checkout is authoritative for customer-facing shipping.
+ * Cart UI shows "Calculated at checkout" and uses cart.cost from Storefront.
+ * DELIVERY_FEE is ONLY for Layali-side order confirmation emails / admin analytics
+ * on Supabase COD order rows — it must never be mixed into Shopify cart totals.
+ */
 export const DELIVERY_FEE = 20;
 
 export const COUNTRIES = [

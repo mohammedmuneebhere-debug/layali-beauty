@@ -17,7 +17,8 @@ import type { Address } from '@/types/database';
 export default function CheckoutPage() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { items, total, checkoutUrl, refresh } = useCartStore();
+  const { items, total, totalAmount, subtotal, checkoutUrl, refresh } = useCartStore();
+  const discounts = useCartStore((s) => s.discounts) ?? [];
   const [loading, setLoading] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export default function CheckoutPage() {
   const [showNewAddress, setShowNewAddress] = useState(false);
   const [notes, setNotes] = useState('');
 
-  const subtotal = total();
+  const summaryTotal = totalAmount || total() || subtotal;
 
   const loadAddresses = async (uid: string) => {
     const supabase = createClient();
@@ -321,13 +322,20 @@ export default function CheckoutPage() {
                 <span className="text-white/60">{t.cart.subtotal}</span>
                 <span className="text-white">{formatPrice(subtotal)}</span>
               </div>
+              {discounts.map((d) => (
+                <div key={d.title} className="flex justify-between text-sm">
+                  <span className="text-white/60">{d.title}</span>
+                  <span className="text-emerald-300/90">−{formatPrice(d.amount.amount)}</span>
+                </div>
+              ))}
+              {/* Shipping not on Storefront cart — Shopify Checkout is authoritative. */}
               <div className="flex justify-between text-sm">
                 <span className="text-white/60">{t.checkout.delivery}</span>
                 <span className="text-white/50 text-xs">Calculated at Shopify Checkout</span>
               </div>
               <div className="flex justify-between pt-2">
                 <span className="font-bold text-white">{t.checkout.total}</span>
-                <span className="font-bold text-xl text-white">{formatPrice(subtotal)}</span>
+                <span className="font-bold text-xl text-white">{formatPrice(summaryTotal)}</span>
               </div>
             </div>
             <div className="mt-4 p-3 rounded-xl bg-black flex items-center gap-2">

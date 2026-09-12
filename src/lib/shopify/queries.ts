@@ -70,8 +70,74 @@ export const PRODUCT_CARD_FRAGMENT = `#graphql
   }
 `;
 
+/**
+ * Lighter catalog/list shape: fewer images/variants, CDN-resized featured image.
+ * Used by PRODUCTS_QUERY + COLLECTION_PRODUCTS_QUERY (full catalog pagination).
+ * PDP / by-id keep PRODUCT_CARD_FRAGMENT.
+ */
+export const PRODUCT_LIST_FRAGMENT = `#graphql
+  fragment ProductListCard on Product {
+    id
+    handle
+    title
+    description
+    availableForSale
+    productType
+    tags
+    vendor
+    featuredImage {
+      url(transform: { maxWidth: 600 })
+      altText
+      width
+      height
+    }
+    images(first: 3) {
+      nodes {
+        url(transform: { maxWidth: 600 })
+        altText
+        width
+        height
+      }
+    }
+    priceRange {
+      minVariantPrice {
+        amount
+        currencyCode
+      }
+    }
+    compareAtPriceRange {
+      minVariantPrice {
+        amount
+        currencyCode
+      }
+    }
+    variants(first: 8) {
+      nodes {
+        id
+        title
+        availableForSale
+        price {
+          amount
+          currencyCode
+        }
+        compareAtPrice {
+          amount
+          currencyCode
+        }
+      }
+    }
+    collections(first: 3) {
+      nodes {
+        id
+        handle
+        title
+      }
+    }
+  }
+`;
+
 export const PRODUCTS_QUERY = `#graphql
-  ${PRODUCT_CARD_FRAGMENT}
+  ${PRODUCT_LIST_FRAGMENT}
   query Products($first: Int!, $after: String, $query: String) {
     products(first: $first, after: $after, query: $query) {
       pageInfo {
@@ -79,7 +145,7 @@ export const PRODUCTS_QUERY = `#graphql
         endCursor
       }
       nodes {
-        ...ProductCard
+        ...ProductListCard
       }
     }
   }
@@ -115,7 +181,7 @@ export const PRODUCTS_BY_IDS_QUERY = `#graphql
 `;
 
 export const COLLECTION_PRODUCTS_QUERY = `#graphql
-  ${PRODUCT_CARD_FRAGMENT}
+  ${PRODUCT_LIST_FRAGMENT}
   query CollectionProducts($handle: String!, $first: Int!, $after: String) {
     collection(handle: $handle) {
       id
@@ -128,7 +194,7 @@ export const COLLECTION_PRODUCTS_QUERY = `#graphql
           endCursor
         }
         nodes {
-          ...ProductCard
+          ...ProductListCard
         }
       }
     }
@@ -140,21 +206,52 @@ export const CART_FRAGMENT = `#graphql
     id
     checkoutUrl
     totalQuantity
+    buyerIdentity {
+      countryCode
+    }
     cost {
       subtotalAmount {
         amount
         currencyCode
+      }
+      totalAmount {
+        amount
+        currencyCode
+      }
+    }
+    # Shopify SOT for discounts — money from totalAllocatedAmount (not hardcoded %).
+    # Shipping is not on cart until Checkout; do not invent delivery fees here.
+    discountApplications {
+      totalAllocatedAmount {
+        amount
+        currencyCode
+      }
+      ... on CartAutomaticDiscountApplication {
+        title
+      }
+      ... on CartCodeDiscountApplication {
+        code
       }
     }
     lines(first: 100) {
       nodes {
         id
         quantity
+        discountAllocations(lineLevelOnly: false) {
+          discountedAmount {
+            amount
+            currencyCode
+          }
+        }
         merchandise {
           ... on ProductVariant {
             id
             title
             price {
+              amount
+              currencyCode
+            }
+            compareAtPrice {
               amount
               currencyCode
             }
@@ -191,6 +288,11 @@ export const CART_CREATE = `#graphql
         field
         message
       }
+      warnings {
+        code
+        message
+        target
+      }
     }
   }
 `;
@@ -215,6 +317,11 @@ export const CART_LINES_ADD = `#graphql
         field
         message
       }
+      warnings {
+        code
+        message
+        target
+      }
     }
   }
 `;
@@ -230,6 +337,11 @@ export const CART_LINES_UPDATE = `#graphql
         field
         message
       }
+      warnings {
+        code
+        message
+        target
+      }
     }
   }
 `;
@@ -244,6 +356,31 @@ export const CART_LINES_REMOVE = `#graphql
       userErrors {
         field
         message
+      }
+      warnings {
+        code
+        message
+        target
+      }
+    }
+  }
+`;
+
+export const CART_BUYER_IDENTITY_UPDATE = `#graphql
+  ${CART_FRAGMENT}
+  mutation CartBuyerIdentityUpdate($cartId: ID!, $buyerIdentity: CartBuyerIdentityInput!) {
+    cartBuyerIdentityUpdate(cartId: $cartId, buyerIdentity: $buyerIdentity) {
+      cart {
+        ...CartFields
+      }
+      userErrors {
+        field
+        message
+      }
+      warnings {
+        code
+        message
+        target
       }
     }
   }

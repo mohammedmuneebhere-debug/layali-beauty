@@ -9,7 +9,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        'flex items-center rounded-full border border-layali-pink/25 p-0.5 text-meta font-medium tracking-wide',
+        'flex items-center rounded-full border border-layali-pink/25 p-0.5 text-meta font-medium tracking-wide shrink-0',
         className
       )}
       role="group"
@@ -19,7 +19,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         type="button"
         onClick={() => setLocale('en')}
         className={cn(
-          'min-w-11 min-h-11 rounded-full px-3 py-2 transition-colors inline-flex items-center justify-center',
+          'min-h-11 min-w-9 sm:min-w-11 rounded-full px-2 sm:px-3 py-2 transition-colors inline-flex items-center justify-center',
           locale === 'en'
             ? 'bg-layali-pink-glow text-white shadow-[0_0_12px_rgba(212,46,124,0.45)]'
             : 'text-white/55 hover:text-white'
@@ -32,7 +32,7 @@ export function LanguageSwitcher({ className }: { className?: string }) {
         type="button"
         onClick={() => setLocale('ar')}
         className={cn(
-          'min-w-11 min-h-11 rounded-full px-3 py-2 transition-colors inline-flex items-center justify-center',
+          'min-h-11 min-w-9 sm:min-w-11 rounded-full px-2 sm:px-3 py-2 transition-colors inline-flex items-center justify-center',
           locale === 'ar'
             ? 'bg-layali-pink-glow text-white shadow-[0_0_12px_rgba(212,46,124,0.45)]'
             : 'text-white/55 hover:text-white'

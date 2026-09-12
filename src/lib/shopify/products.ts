@@ -178,7 +178,13 @@ export async function fetchCollectionProducts(
   return all;
 }
 
-/** Full catalog list for shop UI (cursor-paginated; not capped at 50). */
+/** Full catalog list for shop UI (cursor-paginated; not capped at 50).
+ *
+ * Caching: `shopifyFetch` defaults to Next.js Data Cache `revalidate: 60` per
+ * Storefront GraphQL page. There is no separate in-memory catalog cache — omitting
+ * `first` still returns the complete published catalog; repeat hits within 60s reuse
+ * cached page responses.
+ */
 export async function getCatalogProducts(options?: {
   category?: string;
   query?: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ShoppingBag, Filter, Search, X, ChevronLeft, ChevronRight, PackageOpen } from 'lucide-react';
@@ -14,7 +14,8 @@ import { PRODUCT_CATEGORIES } from '@/lib/constants';
 import type { ShopProduct } from '@/lib/catalog';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
-import { collectBrands, detectBrand, PAGE_SIZE } from '@/lib/shop-filters';
+import { collectVendors, PAGE_SIZE } from '@/lib/shop-filters';
+import { shopifyImageUrl, SHOP_CARD_IMAGE_WIDTH } from '@/lib/shopify/image';
 
 const VALID_CATEGORIES = new Set(
   PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((c) => c.value)
@@ -35,7 +36,7 @@ function writeCategoryToUrl(next: string) {
   window.history.replaceState(window.history.state, '', url);
 }
 
-function ProductCard({
+const ProductCard = memo(function ProductCard({
   product,
   addLabel,
   onAdd,
@@ -44,13 +45,17 @@ function ProductCard({
   addLabel: string;
   onAdd: (e: React.MouseEvent, product: ShopProduct) => void;
 }) {
-  const cover = product.images?.[0] || product.image_url;
+  // Prefer CDN-sized featured image from catalog; safety-size if raw URL slips through.
+  const cover = shopifyImageUrl(
+    product.image_url || product.images?.[0] || null,
+    SHOP_CARD_IMAGE_WIDTH
+  );
   const href = `/shop/${product.handle || product.id}`;
 
   return (
-    <Link href={href} prefetch={false} className="block h-full">
+    <Link href={href} prefetch={false} className="block h-full min-w-0">
       <Card hover className="h-full bg-transparent border-0 shadow-none">
-        <div className="relative">
+        <div className="relative min-w-0">
           <CardImage src={cover} alt={product.name} className="rounded-2xl border border-white/8" />
           {(product.images?.length || 0) > 1 && (
             <span className="absolute bottom-3 end-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-white text-meta border border-white/10">
@@ -59,10 +64,10 @@ function ProductCard({
           )}
         </div>
         <CardContent className="px-1 pt-4 pb-2">
-          <p className="text-meta text-layali-pink uppercase tracking-[0.14em] mb-1.5">
+          <p className="text-meta text-layali-pink uppercase tracking-[0.14em] mb-1.5 truncate">
             {product.category}
           </p>
-          <div className="flex items-start justify-between gap-2 mb-3">
+          <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
             <h3 className="text-product-name text-white leading-snug line-clamp-2 min-w-0">
               {product.name}
             </h3>
@@ -82,7 +87,7 @@ function ProductCard({
       </Card>
     </Link>
   );
-}
+});
 
 export default function ShopContent() {
   const searchParams = useSearchParams();
@@ -197,7 +202,7 @@ export default function ShopContent() {
 
   const brands = useMemo(() => {
     const inCategory = category ? products.filter((p) => p.category === category) : products;
-    return collectBrands(inCategory);
+    return collectVendors(inCategory);
   }, [products, category]);
 
   const filtered = useMemo(() => {
@@ -207,12 +212,13 @@ export default function ShopContent() {
 
     return products.filter((p) => {
       if (category && p.category !== category) return false;
-      if (brand && detectBrand(p.name) !== brand) return false;
+      if (brand && (p.vendor || '').trim() !== brand) return false;
       const price = Number(p.price);
       if (min != null && !Number.isNaN(min) && price < min) return false;
       if (max != null && !Number.isNaN(max) && price > max) return false;
       if (q) {
-        const hay = `${p.name} ${p.description || ''} ${p.category}`.toLowerCase();
+        const hay =
+          `${p.name} ${p.description || ''} ${p.category} ${p.vendor || ''}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
@@ -243,7 +249,7 @@ export default function ShopContent() {
       e.preventDefault();
       e.stopPropagation();
       if (!product.defaultVariantId) return;
-      const image = product.images?.[0] || product.image_url;
+      const image = product.image_url || product.images?.[0];
       void addItem({
         id: product.id,
         type: 'product',
@@ -470,12 +476,14 @@ export default function ShopContent() {
         )}
 
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
             {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="aspect-[4/5] rounded-2xl bg-layali-surface animate-pulse border border-white/5"
-              />
+              <div key={i} className="min-w-0 space-y-3">
+                <div className="aspect-[4/5] rounded-2xl bg-layali-surface animate-pulse border border-white/5" />
+                <div className="h-3 w-1/3 rounded bg-white/10 animate-pulse" />
+                <div className="h-4 w-4/5 rounded bg-white/10 animate-pulse" />
+                <div className="h-9 w-full rounded-full bg-white/5 animate-pulse" />
+              </div>
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -508,7 +516,7 @@ export default function ShopContent() {
         ) : (
           <>
             {/* Plain grid — no Framer remount/stagger (was causing section-switch lag) */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 lg:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
               {pageItems.map((product) => (
                 <ProductCard
                   key={product.id}

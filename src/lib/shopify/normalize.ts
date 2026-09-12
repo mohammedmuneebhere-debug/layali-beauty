@@ -1,4 +1,5 @@
 import { parseMoney } from './client';
+import { shopifyImageUrl, SHOP_CARD_IMAGE_WIDTH } from './image';
 import type {
   ShopifyCart,
   ShopifyCartLine,
@@ -115,15 +116,25 @@ type GqlCart = {
   id: string;
   checkoutUrl: string;
   totalQuantity: number;
-  cost?: { subtotalAmount?: GqlMoney };
+  buyerIdentity?: { countryCode?: string | null } | null;
+  cost?: { subtotalAmount?: GqlMoney; totalAmount?: GqlMoney };
+  discountApplications?: {
+    title?: string | null;
+    code?: string | null;
+    totalAllocatedAmount?: GqlMoney;
+  }[];
   lines?: {
     nodes: {
       id: string;
       quantity: number;
+      discountAllocations?: {
+        discountedAmount?: GqlMoney;
+      }[];
       merchandise: {
         id: string;
         title?: string;
         price?: GqlMoney;
+        compareAtPrice?: GqlMoney;
         image?: GqlImage;
         product?: {
           id: string;
@@ -139,12 +150,30 @@ type GqlCart = {
 export function normalizeCart(raw: GqlCart | null | undefined): ShopifyCart | null {
   if (!raw?.id) return null;
 
+  // Only sellable lines — qty 0 is Shopify's OOS placeholder and must not drive UI totals.
   const lines: ShopifyCartLine[] = (raw.lines?.nodes || [])
     .map((line) => {
       const m = line.merchandise;
       if (!m?.id || !m.product) return null;
+      if (!line.quantity || line.quantity <= 0) return null;
       const image =
         mapImage(m.image ?? null) || mapImage(m.product.featuredImage ?? null);
+
+      let discountSum = 0;
+      let discountCurrency = m.price?.currencyCode || 'SAR';
+      for (const alloc of line.discountAllocations || []) {
+        const amt = Number(alloc.discountedAmount?.amount || 0);
+        if (amt > 0) {
+          discountSum += amt;
+          discountCurrency = alloc.discountedAmount?.currencyCode || discountCurrency;
+        }
+      }
+
+      const compareAt = m.compareAtPrice
+        ? parseMoney(m.compareAtPrice.amount, m.compareAtPrice.currencyCode || 'SAR')
+        : null;
+      const price = parseMoney(m.price?.amount, m.price?.currencyCode || 'SAR');
+
       return {
         id: line.id,
         quantity: line.quantity,
@@ -153,20 +182,49 @@ export function normalizeCart(raw: GqlCart | null | undefined): ShopifyCart | nu
         productHandle: m.product.handle,
         title: m.product.title,
         variantTitle: m.title || '',
-        price: parseMoney(m.price?.amount, m.price?.currencyCode || 'SAR'),
+        price,
+        compareAtPrice:
+          compareAt && compareAt.amount > price.amount ? compareAt : null,
         image,
+        discountAmount:
+          discountSum > 0 ? parseMoney(discountSum, discountCurrency) : null,
       } satisfies ShopifyCartLine;
     })
     .filter((l): l is ShopifyCartLine => Boolean(l));
 
+  const subtotal = parseMoney(
+    raw.cost?.subtotalAmount?.amount,
+    raw.cost?.subtotalAmount?.currencyCode || 'SAR'
+  );
+  const total = parseMoney(
+    raw.cost?.totalAmount?.amount ?? raw.cost?.subtotalAmount?.amount,
+    raw.cost?.totalAmount?.currencyCode ||
+      raw.cost?.subtotalAmount?.currencyCode ||
+      'SAR'
+  );
+
+  // Prefer cart.discountApplications.totalAllocatedAmount (Shopify money, not %).
+  const discounts = (raw.discountApplications || [])
+    .map((app) => {
+      const amt = Number(app.totalAllocatedAmount?.amount || 0);
+      if (!(amt > 0)) return null;
+      const title = app.code?.trim() || app.title?.trim() || 'Discount';
+      return {
+        title,
+        amount: parseMoney(amt, app.totalAllocatedAmount?.currencyCode || 'SAR'),
+      };
+    })
+    .filter((d): d is NonNullable<typeof d> => Boolean(d));
+
   return {
     id: raw.id,
     checkoutUrl: raw.checkoutUrl,
-    totalQuantity: raw.totalQuantity,
-    subtotal: parseMoney(
-      raw.cost?.subtotalAmount?.amount,
-      raw.cost?.subtotalAmount?.currencyCode || 'SAR'
-    ),
+    // Authoritative sellable count = sum of kept lines (never count Shopify qty-0 OOS placeholders)
+    totalQuantity: lines.reduce((sum, l) => sum + l.quantity, 0),
+    subtotal,
+    total,
+    discounts,
+    buyerCountryCode: raw.buyerIdentity?.countryCode ?? null,
     lines,
   };
 }
@@ -211,8 +269,11 @@ export function toCatalogProduct(p: ShopifyProduct): CatalogProduct {
     price: p.price.amount,
     compare_at_price: p.compareAtPrice?.amount ?? null,
     category: category.toLowerCase(),
-    image_url: p.featuredImage?.url || null,
-    images: p.images.map((i) => i.url),
+    // Prefer featuredImage; CDN-size for cards (GraphQL list transform + query param safety net).
+    image_url: shopifyImageUrl(p.featuredImage?.url || null, SHOP_CARD_IMAGE_WIDTH),
+    images: p.images
+      .map((i) => shopifyImageUrl(i.url, SHOP_CARD_IMAGE_WIDTH))
+      .filter((u): u is string => Boolean(u)),
     available: p.availableForSale,
     defaultVariantId: p.defaultVariantId,
     shopifyProductId: p.id,
