@@ -27,6 +27,24 @@ import type { Address } from '@/types/database';
 
 type PaymentMethod = 'cod' | 'online';
 
+/** Shopify order-tag / SEO title-tag noise must never render on customer checkout. */
+const NON_CUSTOMER_CHECKOUT_ERROR =
+  /title\s*tag|title_tag|meta\s*description|\bseo\b|exceeds the maximum length of 40 characters/i;
+
+function customerCheckoutError(message: string): string {
+  const kept: string[] = [];
+  const seen = new Set<string>();
+  for (const part of message.split(/\s*;\s*/)) {
+    const text = part.trim();
+    if (!text || NON_CUSTOMER_CHECKOUT_ERROR.test(text)) continue;
+    const key = text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push(text);
+  }
+  return kept.join('; ');
+}
+
 function newSubmissionId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
@@ -344,7 +362,8 @@ export default function CheckoutPage() {
       if (json.retrySafe === true) {
         submissionIdRef.current = newSubmissionId();
       }
-      setError(json.error || 'Could not place your order. Please try again.');
+      const raw = json.error || 'Could not place your order. Please try again.';
+      setError(customerCheckoutError(raw) || 'Could not place your order. Please try again.');
     } catch {
       // Network/unknown — keep submissionId so a retry can hit server idempotency.
       setError('Could not place your order. Please try again.');
@@ -467,7 +486,10 @@ export default function CheckoutPage() {
                   <h3 className="font-serif text-lg font-bold text-white">Payment Method</h3>
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('cod')}
+                    onClick={() => {
+                      setError('');
+                      setPaymentMethod('cod');
+                    }}
                     className={`w-full text-left p-4 rounded-xl border transition-colors ${
                       paymentMethod === 'cod'
                         ? 'border-layali-pink bg-layali-pink-glow/15'
