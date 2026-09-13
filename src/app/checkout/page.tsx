@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Package, Plus, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -14,15 +14,32 @@ import { reverseGeocode } from '@/lib/geocode';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { Address } from '@/types/database';
 
+type PaymentMethod = 'cod' | 'online';
+
+function newSubmissionId() {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID();
+  }
+  return `sub_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { t } = useLanguage();
-  const { items, total, totalAmount, subtotal, checkoutUrl, refresh } = useCartStore();
+  const {
+    items,
+    total,
+    totalAmount,
+    subtotal,
+    cartId,
+    refresh,
+    clearLocalCart,
+  } = useCartStore();
   const discounts = useCartStore((s) => s.discounts) ?? [];
   const [loading, setLoading] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [, setUserEmail] = useState('');
+  const [userEmail, setUserEmail] = useState('');
   const [, setUserName] = useState('');
   const [profileCity, setProfileCity] = useState('');
   const [profileCountry, setProfileCountry] = useState('');
@@ -30,6 +47,10 @@ export default function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewAddress, setShowNewAddress] = useState(false);
   const [notes, setNotes] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
+  const [error, setError] = useState('');
+  const placingRef = useRef(false);
+  const submissionIdRef = useRef(newSubmissionId());
 
   const summaryTotal = totalAmount || total() || subtotal;
 
@@ -61,7 +82,9 @@ export default function CheckoutPage() {
   useEffect(() => {
     async function init() {
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         router.push('/auth/signin?redirect=/checkout');
         return;
@@ -148,7 +171,7 @@ export default function CheckoutPage() {
     setSavingAddress(true);
     const supabase = createClient();
 
-    const { data, error } = await supabase
+    const { data, error: saveError } = await supabase
       .from('addresses')
       .insert({
         user_id: userId,
@@ -158,7 +181,7 @@ export default function CheckoutPage() {
         receiver_phone: values.receiver_phone,
         address_line: values.address_line,
         city: values.city || profileCity,
-        country: values.country || profileCountry,
+        country: values.country || profileCountry || 'Saudi Arabia',
         latitude: values.latitude,
         longitude: values.longitude,
         is_default: values.is_default || addresses.length === 0,
@@ -168,8 +191,8 @@ export default function CheckoutPage() {
 
     setSavingAddress(false);
 
-    if (error || !data) {
-      alert(error?.message || 'Could not save address');
+    if (saveError || !data) {
+      alert(saveError?.message || 'Could not save address');
       return;
     }
 
@@ -178,21 +201,93 @@ export default function CheckoutPage() {
     setShowNewAddress(false);
   };
 
-  const proceedToShopifyCheckout = async () => {
-    if (!userId) return;
+  const placeOrder = async () => {
+    if (placingRef.current || loading) return;
+    setError('');
 
-    setLoading(true);
-    await refresh();
-    const url = useCartStore.getState().checkoutUrl;
-
-    if (!url) {
-      alert('Checkout is unavailable. Please refresh your cart and try again.');
-      setLoading(false);
+    if (!userId || !userEmail) {
+      router.push('/auth/signin?redirect=/checkout');
+      return;
+    }
+    if (!cartId || items.length === 0) {
+      setError('Your cart is empty.');
+      return;
+    }
+    if (!selectedAddressId || !selectedAddress) {
+      setError('Please select a delivery address.');
+      return;
+    }
+    if (paymentMethod !== 'cod') {
+      setError('Only Cash on Delivery is available right now.');
       return;
     }
 
-    // Address book stays in Supabase for Layali; Shopify Checkout collects fulfillment address.
-    window.location.href = url;
+    placingRef.current = true;
+    setLoading(true);
+
+    try {
+      await refresh();
+      const activeCartId = useCartStore.getState().cartId;
+      if (!activeCartId || useCartStore.getState().items.length === 0) {
+        setError('Your cart is empty.');
+        return;
+      }
+
+      const res = await fetch('/api/shopify/checkout/place-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cartId: activeCartId,
+          addressId: selectedAddressId,
+          notes,
+          paymentMethod: 'cod',
+          submissionId: submissionIdRef.current,
+        }),
+      });
+
+      const json = (await res.json()) as {
+        ok?: boolean;
+        error?: string;
+        code?: string;
+        retrySafe?: boolean;
+        order?: {
+          id: string;
+          name: string;
+          totalAmount: number;
+          currencyCode: string;
+          paymentLabel: string;
+          shippingAddress: {
+            receiverName: string;
+            phone: string;
+            addressLine: string;
+            city: string;
+            country: string;
+          };
+        };
+      };
+
+      // Success (including recovered / already-completed submissions).
+      if (json.ok && json.order) {
+        clearLocalCart();
+        submissionIdRef.current = newSubmissionId();
+        const payload = encodeURIComponent(JSON.stringify(json.order));
+        router.push(`/checkout/success?order=${payload}`);
+        return;
+      }
+
+      // Keep cart. Only rotate submissionId when the server says a retry cannot
+      // duplicate a Shopify order (pre-completion validation failures).
+      if (json.retrySafe === true) {
+        submissionIdRef.current = newSubmissionId();
+      }
+      setError(json.error || 'Could not place your order. Please try again.');
+    } catch {
+      // Network/unknown — keep submissionId so a retry can hit server idempotency.
+      setError('Could not place your order. Please try again.');
+    } finally {
+      placingRef.current = false;
+      setLoading(false);
+    }
   };
 
   return (
@@ -216,8 +311,7 @@ export default function CheckoutPage() {
             </div>
 
             <p className="text-sm text-white/50">
-              Save preferred addresses in Layali. Final shipping address and payment are completed
-              securely on Shopify Checkout.
+              Choose where we should deliver your order. Your pin helps our courier find you.
             </p>
 
             {addresses.length > 0 && !showNewAddress && (
@@ -260,7 +354,7 @@ export default function CheckoutPage() {
                 </h3>
                 <AddressForm
                   defaultCity={profileCity}
-                  defaultCountry={profileCountry}
+                  defaultCountry={profileCountry || 'Saudi Arabia'}
                   loading={savingAddress}
                   submitLabel="Save & Use This Address"
                   onCancel={addresses.length > 0 ? () => setShowNewAddress(false) : undefined}
@@ -292,14 +386,41 @@ export default function CheckoutPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={t.checkout.notesPlaceholder}
                 />
+
+                <div className="space-y-3 pt-2">
+                  <h3 className="font-serif text-lg font-bold text-white">Payment Method</h3>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('cod')}
+                    className={`w-full text-left p-4 rounded-xl border transition-colors ${
+                      paymentMethod === 'cod'
+                        ? 'border-layali-pink bg-layali-pink-glow/15'
+                        : 'border-layali-pink/20'
+                    }`}
+                  >
+                    <p className="font-medium text-white">{t.checkout.cod}</p>
+                    <p className="text-sm text-white/60 mt-1">Pay when your order is delivered.</p>
+                  </button>
+                  <div className="w-full text-left p-4 rounded-xl border border-white/10 opacity-60">
+                    <p className="font-medium text-white/80">Online Payment</p>
+                    <p className="text-sm text-white/45 mt-1">Coming soon</p>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm">
+                    {error}
+                  </div>
+                )}
+
                 <Button
                   className="w-full"
                   size="lg"
                   loading={loading}
-                  onClick={() => void proceedToShopifyCheckout()}
-                  disabled={!checkoutUrl && items.length === 0}
+                  onClick={() => void placeOrder()}
+                  disabled={loading || items.length === 0 || !selectedAddressId}
                 >
-                  Continue to secure checkout
+                  Place Order
                 </Button>
               </>
             )}
@@ -328,10 +449,13 @@ export default function CheckoutPage() {
                   <span className="text-emerald-300/90">−{formatPrice(d.amount.amount)}</span>
                 </div>
               ))}
-              {/* Shipping not on Storefront cart — Shopify Checkout is authoritative. */}
               <div className="flex justify-between text-sm">
                 <span className="text-white/60">{t.checkout.delivery}</span>
-                <span className="text-white/50 text-xs">Calculated at Shopify Checkout</span>
+                <span className="text-white/50 text-xs">Calculated by Shopify</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-white/60">Payment</span>
+                <span className="text-white">{t.checkout.cod}</span>
               </div>
               <div className="flex justify-between pt-2">
                 <span className="font-bold text-white">{t.checkout.total}</span>
@@ -341,12 +465,12 @@ export default function CheckoutPage() {
             <div className="mt-4 p-3 rounded-xl bg-black flex items-center gap-2">
               <Package className="w-5 h-5 text-layali-pink" />
               <span className="text-sm text-white/70">
-                Payment and shipping are completed on Shopify Checkout.
+                Place your order on Layali. Pay with Cash on Delivery when it arrives.
               </span>
             </div>
             {selectedAddress && (
               <div className="mt-4 text-sm text-white/60">
-                <p className="font-medium text-white">Saved address (reference)</p>
+                <p className="font-medium text-white">{t.checkout.deliveringTo}</p>
                 <p>
                   {selectedAddress.receiver_name} · {selectedAddress.receiver_phone}
                 </p>

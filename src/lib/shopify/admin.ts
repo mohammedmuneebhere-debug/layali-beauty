@@ -161,18 +161,24 @@ export function clearShopifyAdminTokenCache(): void {
 
 export type AdminFetchResult<T> = {
   data: T;
+  /** Present when allowPartialData=true and Shopify returned field-level GraphQL errors. */
+  errors?: { message: string; extensions?: Record<string, unknown> }[];
   throttleAvailable?: number;
 };
 
 /**
  * Server-side Admin GraphQL fetch. Never call from the browser.
+ *
+ * Set allowPartialData when a mutation may succeed while a nested field
+ * (e.g. DraftOrder.order) is denied by scopes — callers must inspect errors.
  */
 export async function shopifyAdminFetch<T>(
   query: string,
   variables?: Record<string, unknown>,
-  options?: { retries?: number }
+  options?: { retries?: number; allowPartialData?: boolean }
 ): Promise<AdminFetchResult<T>> {
   const retries = options?.retries ?? 3;
+  const allowPartialData = options?.allowPartialData === true;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -228,6 +234,13 @@ export async function shopifyAdminFetch<T>(
         lastError = new Error(msg);
         await sleep(1500 * (attempt + 1));
         continue;
+      }
+      if (allowPartialData && json.data) {
+        return {
+          data: json.data,
+          errors: json.errors,
+          throttleAvailable: json.extensions?.cost?.throttleStatus?.currentlyAvailable,
+        };
       }
       throw new Error(msg);
     }

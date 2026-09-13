@@ -1,8 +1,8 @@
 import { getCart } from './cart';
 
 /**
- * Checkout is owned by Shopify.
- * Retrieve the hosted checkout URL for the current Storefront cart.
+ * Hosted Shopify Checkout URL (legacy handoff).
+ * Layali COD uses Admin draft orders via /api/shopify/checkout/place-order instead.
  */
 export async function getCheckoutUrl(cartId: string): Promise<string | null> {
   const cart = await getCart(cartId);

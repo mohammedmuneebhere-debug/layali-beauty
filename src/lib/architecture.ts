@@ -3,7 +3,9 @@
  *
  * Shopify = SINGLE SOURCE OF TRUTH for commerce
  *   products, variants, prices, inventory, collections,
- *   cart, checkout, orders, fulfillment
+ *   cart, orders, fulfillment
+ *   (Layali custom COD checkout creates Shopify orders via Admin draft orders;
+ *    hosted Shopify web checkout is not used for COD)
  *
  * Supabase = SINGLE SOURCE OF TRUTH for Layali application data
  *   auth/profiles, surveys, AI recommendation history,
