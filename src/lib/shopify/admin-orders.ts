@@ -2,6 +2,7 @@
  * Server-only Shopify Admin draft-order helpers for Layali custom COD checkout.
  * Never import from Client Components. Never expose Admin tokens.
  */
+import { createHash } from 'node:crypto';
 import { shopifyAdminFetch } from './admin';
 
 export type DraftOrderShippingAddress = {
@@ -34,8 +35,28 @@ export type CreatedShopifyOrder = {
   orderUnresolved?: boolean;
 };
 
-export const SUBMISSION_TAG_PREFIX = 'layali-sub:';
-export const USER_TAG_PREFIX = 'layali-u:';
+/**
+ * Shopify order/draft-order tags are limited to 40 characters each and may only
+ * contain letters, numbers, and hyphens. (Product tags allow 255; do not mix.)
+ * Oversized tags make draftOrderCreate return userErrors such as
+ * "Title Tag exceeds the maximum length of 40 characters" — once per tag —
+ * which must never be shown as customer checkout validation.
+ */
+export const SHOPIFY_DRAFT_ORDER_TAG_MAX = 40;
+
+export const SUBMISSION_TAG_PREFIX = 'ls-';
+export const USER_TAG_PREFIX = 'lu-';
+export const USER_SUBMISSION_TAG_PREFIX = 'lus-';
+
+/** Colon + raw UUID prefixes that exceeded the 40-char order-tag limit. */
+export const LEGACY_SUBMISSION_TAG_PREFIX = 'layali-sub:';
+export const LEGACY_USER_TAG_PREFIX = 'layali-u:';
+
+const GENERIC_DRAFT_ORDER_ERROR = 'Could not place your order. Please try again.';
+
+/** Shopify SEO / order-tag limit messages — not customer checkout validation. */
+const NON_CUSTOMER_DRAFT_ERROR =
+  /title\s*tag|title_tag|meta\s*description|\bseo\b|exceeds the maximum length of 40 characters/i;
 
 /** Escape Shopify search-syntax specials inside a field value (`: \ ( )`). */
 export function escapeShopifySearchValue(value: string): string {
@@ -47,17 +68,111 @@ export function shopifyTagQuery(tag: string): string {
   return `tag:${escapeShopifySearchValue(tag)}`;
 }
 
+function compactTagToken(value: string, maxLen: number): string {
+  const compact = value.trim().replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  if (compact.length >= Math.min(16, maxLen)) {
+    return compact.slice(0, maxLen);
+  }
+  return createHash('sha256').update(value.trim()).digest('hex').slice(0, maxLen);
+}
+
+function isValidShopifyDraftOrderTag(tag: string): boolean {
+  return (
+    tag.length > 0 &&
+    tag.length <= SHOPIFY_DRAFT_ORDER_TAG_MAX &&
+    /^[A-Za-z0-9-]+$/.test(tag)
+  );
+}
+
+/** Drop tags Shopify would reject so tag-limit userErrors never reach checkout. */
+export function filterShopifyDraftOrderTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const tag = raw.trim();
+    if (!isValidShopifyDraftOrderTag(tag)) {
+      if (tag) {
+        console.error('Layali COD: dropped Shopify draft-order tag (invalid charset or >40 chars)', {
+          length: tag.length,
+          preview: tag.slice(0, 64),
+        });
+      }
+      continue;
+    }
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+  }
+  return out;
+}
+
 export function submissionTag(submissionId: string): string {
-  return `${SUBMISSION_TAG_PREFIX}${submissionId.trim()}`;
+  return `${SUBMISSION_TAG_PREFIX}${compactTagToken(submissionId, 32)}`;
 }
 
 export function userOwnershipTag(userId: string): string {
-  return `${USER_TAG_PREFIX}${userId.trim()}`;
+  return `${USER_TAG_PREFIX}${compactTagToken(userId, 32)}`;
 }
 
-/** User-scoped submission tag: layali-sub:<userId>:<submissionId> */
+/** User-scoped submission tag (fits Shopify's 40-char order-tag limit). */
 export function userSubmissionTag(userId: string, submissionId: string): string {
-  return `${SUBMISSION_TAG_PREFIX}${userId.trim()}:${submissionId.trim()}`;
+  const userTok = compactTagToken(userId, 16);
+  const subTok = compactTagToken(submissionId, 16);
+  return `${USER_SUBMISSION_TAG_PREFIX}${userTok}${subTok}`;
+}
+
+function legacySubmissionTag(submissionId: string): string {
+  return `${LEGACY_SUBMISSION_TAG_PREFIX}${submissionId.trim()}`;
+}
+
+function legacyUserOwnershipTag(userId: string): string {
+  return `${LEGACY_USER_TAG_PREFIX}${userId.trim()}`;
+}
+
+function legacyUserSubmissionTag(userId: string, submissionId: string): string {
+  return `${LEGACY_SUBMISSION_TAG_PREFIX}${userId.trim()}:${submissionId.trim()}`;
+}
+
+function isNonCustomerShopifyDraftError(err: {
+  field?: string[] | null;
+  message: string;
+}): boolean {
+  const field = (err.field || []).join('.').toLowerCase();
+  const msg = err.message || '';
+  if (NON_CUSTOMER_DRAFT_ERROR.test(msg)) return true;
+  if (/\btitle_tag\b|\bseo\b/.test(field)) return true;
+  if (/(^|\.)tags$/.test(field) && /maximum length|too long|40 character/i.test(msg)) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Map Shopify draft-order userErrors to customer-facing checkout text.
+ * Dedupes identical messages and omits SEO / title-tag / order-tag-limit noise.
+ */
+export function customerFacingDraftUserErrors(
+  userErrors: { field?: string[] | null; message: string }[]
+): string | null {
+  const seen = new Set<string>();
+  const messages: string[] = [];
+  for (const err of userErrors) {
+    if (isNonCustomerShopifyDraftError(err)) {
+      console.error('Layali COD: omitted non-customer Shopify userError', {
+        field: err.field,
+        message: err.message,
+      });
+      continue;
+    }
+    const msg = (err.message || '').trim();
+    if (!msg) continue;
+    const key = msg.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    messages.push(msg);
+  }
+  return messages.length ? messages.join('; ') : null;
 }
 
 const ORDER_FIELDS = `#graphql
@@ -282,7 +397,7 @@ function matchesSubmission(
   userId: string
 ): boolean {
   const scoped = userSubmissionTag(userId, submissionId);
-  const legacySub = submissionTag(submissionId);
+  const subTag = submissionTag(submissionId);
   const userTag = userOwnershipTag(userId);
   const tags = draft.tags || [];
   const note = draft.note2 || '';
@@ -290,8 +405,15 @@ function matchesSubmission(
   const tagEquals = (want: string) =>
     tags.some((t) => t === want || t.toLowerCase() === want.toLowerCase());
 
-  if (tagEquals(scoped)) return true;
-  if (tagEquals(userTag) && (tagEquals(legacySub) || note.includes(`Layali submission: ${submissionId}`))) {
+  if (tagEquals(scoped) || tagEquals(legacyUserSubmissionTag(userId, submissionId))) {
+    return true;
+  }
+  if (
+    (tagEquals(userTag) || tagEquals(legacyUserOwnershipTag(userId))) &&
+    (tagEquals(subTag) ||
+      tagEquals(legacySubmissionTag(submissionId)) ||
+      note.includes(`Layali submission: ${submissionId}`))
+  ) {
     return true;
   }
   if (
@@ -303,10 +425,17 @@ function matchesSubmission(
 
   // Legacy probe drafts: submission only (no user markers).
   const hasAnyUserMarker =
-    note.includes('Layali user:') || tags.some((t) => t.startsWith(USER_TAG_PREFIX));
+    note.includes('Layali user:') ||
+    tags.some(
+      (t) => t.startsWith(USER_TAG_PREFIX) || t.startsWith(LEGACY_USER_TAG_PREFIX)
+    );
   if (hasAnyUserMarker) return false;
 
-  return tagEquals(legacySub) || note.includes(`Layali submission: ${submissionId}`);
+  return (
+    tagEquals(subTag) ||
+    tagEquals(legacySubmissionTag(submissionId)) ||
+    note.includes(`Layali submission: ${submissionId}`)
+  );
 }
 
 /** True when this draft is owned by the authenticated Supabase user. */
@@ -316,19 +445,37 @@ function draftOwnedByUser(
   userEmail: string
 ): boolean {
   const userTag = userOwnershipTag(userId);
+  const legacyUserTag = legacyUserOwnershipTag(userId);
   const tags = draft.tags || [];
-  if (tags.some((t) => t === userTag || t.toLowerCase() === userTag.toLowerCase())) {
+  if (
+    tags.some(
+      (t) =>
+        t === userTag ||
+        t.toLowerCase() === userTag.toLowerCase() ||
+        t === legacyUserTag ||
+        t.toLowerCase() === legacyUserTag.toLowerCase()
+    )
+  ) {
     return true;
   }
   if ((draft.note2 || '').includes(`Layali user: ${userId}`)) {
     return true;
   }
-  if (tags.some((t) => t.startsWith(`${SUBMISSION_TAG_PREFIX}${userId}:`))) {
+  const userTok = compactTagToken(userId, 16);
+  if (
+    tags.some(
+      (t) =>
+        t.startsWith(`${LEGACY_SUBMISSION_TAG_PREFIX}${userId}:`) ||
+        t.startsWith(`${USER_SUBMISSION_TAG_PREFIX}${userTok}`)
+    )
+  ) {
     return true;
   }
   const hasUserMarker =
     (draft.note2 || '').includes('Layali user:') ||
-    tags.some((t) => t.startsWith(USER_TAG_PREFIX));
+    tags.some(
+      (t) => t.startsWith(USER_TAG_PREFIX) || t.startsWith(LEGACY_USER_TAG_PREFIX)
+    );
   if (hasUserMarker) return false;
 
   const email = (draft.email || '').trim().toLowerCase();
@@ -466,7 +613,9 @@ export async function createCodDraftOrder(options: {
     input: {
       email: options.email,
       note: options.note || null,
-      tags: options.tags || ['layali-cod', 'cash-on-delivery'],
+      tags: filterShopifyDraftOrderTags(
+        options.tags || ['layali-cod', 'cash-on-delivery']
+      ),
       taxExempt: false,
       shippingAddress: options.shippingAddress,
       billingAddress: options.shippingAddress,
@@ -479,7 +628,13 @@ export async function createCodDraftOrder(options: {
 
   const payload = data.draftOrderCreate;
   if (payload.userErrors?.length) {
-    throw new Error(payload.userErrors.map((e) => e.message).join('; '));
+    const customerMsg = customerFacingDraftUserErrors(payload.userErrors);
+    if (!payload.draftOrder?.id) {
+      throw new Error(customerMsg || GENERIC_DRAFT_ORDER_ERROR);
+    }
+    if (customerMsg) {
+      throw new Error(customerMsg);
+    }
   }
   if (!payload.draftOrder?.id) {
     throw new Error('Shopify did not return a draft order');
@@ -517,7 +672,13 @@ export async function completeCodDraftOrder(
 
   const payload = data.draftOrderComplete;
   if (payload.userErrors?.length) {
-    throw new Error(payload.userErrors.map((e) => e.message).join('; '));
+    const customerMsg = customerFacingDraftUserErrors(payload.userErrors);
+    if (!payload.draftOrder?.id) {
+      throw new Error(customerMsg || GENERIC_DRAFT_ORDER_ERROR);
+    }
+    if (customerMsg) {
+      throw new Error(customerMsg);
+    }
   }
   if (!payload.draftOrder?.id) {
     throw new Error('Shopify did not return a completed draft order');
@@ -552,4 +713,366 @@ export async function completeCodDraftOrder(
 
 export function isShopifyOrderGid(id: string | null | undefined): boolean {
   return Boolean(id && id.startsWith('gid://shopify/Order/'));
+}
+
+/** Customer account history — additive Order reads only. Does not affect COD mutations. */
+const CUSTOMER_ORDER_FIELDS = `#graphql
+  fragment LayaliCustomerOrderFields on Order {
+    id
+    name
+    createdAt
+    cancelledAt
+    displayFinancialStatus
+    displayFulfillmentStatus
+    tags
+    paymentGatewayNames
+    totalPriceSet {
+      shopMoney {
+        amount
+        currencyCode
+      }
+    }
+    subtotalPriceSet {
+      shopMoney {
+        amount
+        currencyCode
+      }
+    }
+    totalShippingPriceSet {
+      shopMoney {
+        amount
+        currencyCode
+      }
+    }
+    shippingAddress {
+      name
+      phone
+      address1
+      address2
+      city
+      province
+      zip
+      country
+    }
+    lineItems(first: 50) {
+      nodes {
+        title
+        variantTitle
+        quantity
+        image {
+          url
+          altText
+        }
+        discountedUnitPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        originalUnitPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+      }
+    }
+    fulfillments(first: 20) {
+      status
+      displayStatus
+      createdAt
+      deliveredAt
+      trackingInfo(first: 10) {
+        company
+        number
+        url
+      }
+    }
+  }
+`;
+
+const CUSTOMER_ORDERS_BY_IDS = `#graphql
+  ${CUSTOMER_ORDER_FIELDS}
+  query LayaliCustomerOrdersByIds($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Order {
+        ...LayaliCustomerOrderFields
+      }
+    }
+  }
+`;
+
+/** Fallback if a nested Order field is unavailable on this API version. */
+const CUSTOMER_ORDERS_BY_IDS_MINIMAL = `#graphql
+  query LayaliCustomerOrdersByIdsMinimal($ids: [ID!]!) {
+    nodes(ids: $ids) {
+      ... on Order {
+        id
+        name
+        createdAt
+        cancelledAt
+        displayFinancialStatus
+        displayFulfillmentStatus
+        tags
+        paymentGatewayNames
+        totalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        subtotalPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        totalShippingPriceSet {
+          shopMoney {
+            amount
+            currencyCode
+          }
+        }
+        shippingAddress {
+          name
+          phone
+          address1
+          address2
+          city
+          province
+          zip
+          country
+        }
+        lineItems(first: 50) {
+          nodes {
+            title
+            variantTitle
+            quantity
+            discountedUnitPriceSet {
+              shopMoney {
+                amount
+                currencyCode
+              }
+            }
+            originalUnitPriceSet {
+              shopMoney {
+                amount
+                currencyCode
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
+const ORDERS_BY_QUERY = `#graphql
+  query LayaliOrdersByQuery($query: String!) {
+    orders(first: 50, query: $query, sortKey: CREATED_AT, reverse: true) {
+      nodes {
+        id
+        name
+        tags
+      }
+    }
+  }
+`;
+
+const DRAFT_ORDERS_FOR_USER_HISTORY = `#graphql
+  query LayaliDraftOrdersForUserHistory($query: String!) {
+    draftOrders(first: 50, query: $query, sortKey: UPDATED_AT, reverse: true) {
+      nodes {
+        status
+        tags
+        order {
+          id
+          name
+          tags
+        }
+      }
+    }
+  }
+`;
+
+export type ShopifyOwnedOrderRef = {
+  id: string;
+  name: string;
+};
+
+export type ShopifyCustomerOrderNode = {
+  id?: string | null;
+  name?: string | null;
+  createdAt?: string | null;
+  cancelledAt?: string | null;
+  displayFinancialStatus?: string | null;
+  displayFulfillmentStatus?: string | null;
+  tags?: string[] | null;
+  paymentGatewayNames?: string[] | null;
+  totalPriceSet?: { shopMoney?: { amount: string; currencyCode: string } | null } | null;
+  subtotalPriceSet?: { shopMoney?: { amount: string; currencyCode: string } | null } | null;
+  totalShippingPriceSet?: { shopMoney?: { amount: string; currencyCode: string } | null } | null;
+  shippingAddress?: {
+    name?: string | null;
+    phone?: string | null;
+    address1?: string | null;
+    address2?: string | null;
+    city?: string | null;
+    province?: string | null;
+    zip?: string | null;
+    country?: string | null;
+  } | null;
+  lineItems?: {
+    nodes?: {
+      title?: string | null;
+      variantTitle?: string | null;
+      quantity?: number | null;
+      image?: { url?: string | null; altText?: string | null } | null;
+      discountedUnitPriceSet?: { shopMoney?: { amount: string; currencyCode: string } | null } | null;
+      originalUnitPriceSet?: { shopMoney?: { amount: string; currencyCode: string } | null } | null;
+    }[];
+  } | null;
+  fulfillments?: {
+    status?: string | null;
+    displayStatus?: string | null;
+    createdAt?: string | null;
+    deliveredAt?: string | null;
+    trackingInfo?: {
+      company?: string | null;
+      number?: string | null;
+      url?: string | null;
+    }[];
+  }[];
+};
+
+const NODES_BATCH = 40;
+
+function indexCustomerOrderNode(
+  byGid: Map<string, ShopifyCustomerOrderNode>,
+  node: ShopifyCustomerOrderNode | null | undefined
+) {
+  if (!node?.id || !isShopifyOrderGid(node.id) || !node.name) return;
+  byGid.set(node.id, node);
+}
+
+async function fetchCustomerOrderNodeBatch(
+  query: string,
+  batch: string[]
+): Promise<{
+  nodes: (ShopifyCustomerOrderNode | null)[];
+  errors?: { message: string }[];
+}> {
+  const { data, errors } = await shopifyAdminFetch<{
+    nodes: (ShopifyCustomerOrderNode | null)[];
+  }>(query, { ids: batch }, { allowPartialData: true });
+  return { nodes: data?.nodes || [], errors };
+}
+
+/**
+ * Fetch Shopify Order payloads for customer account views.
+ * Input GIDs must already be ownership-checked. Never returns GIDs to callers
+ * of the customer DTO mappers — this returns Admin nodes keyed internally.
+ */
+export async function fetchShopifyCustomerOrderNodes(
+  orderGids: string[]
+): Promise<Map<string, ShopifyCustomerOrderNode>> {
+  const unique = [...new Set(orderGids.filter((id) => isShopifyOrderGid(id)))];
+  const byGid = new Map<string, ShopifyCustomerOrderNode>();
+  if (!unique.length) return byGid;
+
+  for (let i = 0; i < unique.length; i += NODES_BATCH) {
+    const batch = unique.slice(i, i + NODES_BATCH);
+    let { nodes, errors } = await fetchCustomerOrderNodeBatch(CUSTOMER_ORDERS_BY_IDS, batch);
+
+    if (errors?.length) {
+      console.error('Layali customer orders: Shopify partial errors', {
+        messages: errors.map((e) => e.message),
+      });
+    }
+
+    const before = byGid.size;
+    for (const node of nodes) indexCustomerOrderNode(byGid, node);
+
+    if (byGid.size === before) {
+      ({ nodes, errors } = await fetchCustomerOrderNodeBatch(
+        CUSTOMER_ORDERS_BY_IDS_MINIMAL,
+        batch
+      ));
+      if (errors?.length) {
+        console.error('Layali customer orders: Shopify minimal-query errors', {
+          messages: errors.map((e) => e.message),
+        });
+      }
+      for (const node of nodes) indexCustomerOrderNode(byGid, node);
+    }
+  }
+
+  return byGid;
+}
+
+/**
+ * Server-side recovery for the authenticated user only.
+ * Finds Shopify orders tagged with this user's compact ownership tag.
+ * Does not list the shop's full order book and does not take IDs from the client.
+ */
+export async function fetchShopifyOrderRefsForUser(
+  userId: string
+): Promise<ShopifyOwnedOrderRef[]> {
+  const tag = userOwnershipTag(userId);
+  const { data, errors } = await shopifyAdminFetch<{
+    orders?: { nodes?: { id?: string | null; name?: string | null; tags?: string[] | null }[] };
+  }>(ORDERS_BY_QUERY, { query: shopifyTagQuery(tag) }, { allowPartialData: true });
+
+  if (errors?.length) {
+    console.error('Layali customer orders: ownership-tag query errors', {
+      messages: errors.map((e) => e.message),
+    });
+  }
+
+  const out: ShopifyOwnedOrderRef[] = [];
+  const seen = new Set<string>();
+  const remember = (id: string, name: string) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    out.push({ id, name });
+  };
+
+  for (const node of data?.orders?.nodes || []) {
+    if (!node?.id || !isShopifyOrderGid(node.id) || !node.name) continue;
+    const tags = node.tags || [];
+    const owned = tags.some((t) => t === tag || t.toLowerCase() === tag.toLowerCase());
+    if (!owned) continue;
+    remember(node.id, node.name);
+  }
+
+  // Draft tags are the ownership stamp written at COD checkout. They may not
+  // always copy onto the completed Order; still only this user's tag.
+  const drafts = await shopifyAdminFetch<{
+    draftOrders?: {
+      nodes?: {
+        status?: string | null;
+        tags?: string[] | null;
+        order?: { id?: string | null; name?: string | null; tags?: string[] | null } | null;
+      }[];
+    };
+  }>(DRAFT_ORDERS_FOR_USER_HISTORY, { query: shopifyTagQuery(tag) }, { allowPartialData: true });
+
+  if (drafts.errors?.length) {
+    console.error('Layali customer orders: draft ownership-tag query errors', {
+      messages: drafts.errors.map((e) => e.message),
+    });
+  }
+
+  for (const draft of drafts.data?.draftOrders?.nodes || []) {
+    if ((draft.status || '').toUpperCase() !== 'COMPLETED') continue;
+    const draftOwned = (draft.tags || []).some(
+      (t) => t === tag || t.toLowerCase() === tag.toLowerCase()
+    );
+    if (!draftOwned) continue;
+    const order = draft.order;
+    if (!order?.id || !isShopifyOrderGid(order.id) || !order.name) continue;
+    remember(order.id, order.name);
+  }
+
+  return out;
 }

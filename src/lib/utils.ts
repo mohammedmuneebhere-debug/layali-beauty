@@ -14,8 +14,9 @@ export function formatPrice(price: number, currency = 'SAR') {
   }).format(price);
 }
 
-export function formatDate(date: string) {
-  return new Intl.DateTimeFormat('en-US', {
+export function formatDate(date: string, locale: string = 'en-US') {
+  const resolved = locale.startsWith('ar') ? 'ar-SA-u-ca-gregory' : locale;
+  return new Intl.DateTimeFormat(resolved, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

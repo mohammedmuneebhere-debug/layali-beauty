@@ -7,10 +7,12 @@ import { User, Package, LogOut, Sparkles, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { FadeIn } from '@/components/ui/FadeIn';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { Profile } from '@/types/database';
 
 export default function AccountPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +47,7 @@ export default function AccountPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-transparent flex items-center justify-center pt-20">
-        <div className="animate-pulse text-layali-pink">Loading...</div>
+        <div className="animate-pulse text-layali-pink">{t.account.loading}</div>
       </div>
     );
   }
@@ -56,7 +58,7 @@ export default function AccountPage() {
     <div className="min-h-screen bg-transparent pt-24 pb-12">
       <div className="max-w-2xl mx-auto px-4">
         <FadeIn>
-          <h1 className="font-serif text-heading-lg font-bold text-white mb-8">My Account</h1>
+          <h1 className="font-serif text-heading-lg text-white mb-8">{t.account.title}</h1>
 
           <div className="bg-layali-surface rounded-2xl p-6 border border-layali-pink/25 mb-6">
             <div className="flex items-center gap-4 mb-6">
@@ -71,13 +73,13 @@ export default function AccountPage() {
 
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-white/50">Location</p>
+                <p className="text-white/50">{t.account.location}</p>
                 <p className="font-medium text-white">
                   {profile.city}, {profile.country}
                 </p>
               </div>
               <div>
-                <p className="text-white/50">Phone</p>
+                <p className="text-white/50">{t.account.phone}</p>
                 <p className="font-medium text-white">{profile.phone || '—'}</p>
               </div>
             </div>
@@ -88,8 +90,8 @@ export default function AccountPage() {
               <div className="bg-layali-surface rounded-2xl p-4 border border-layali-pink/25 flex items-center gap-4 card-hover">
                 <Package className="w-6 h-6 text-layali-pink" />
                 <div>
-                  <p className="font-medium text-white">My Orders</p>
-                  <p className="text-sm text-white/50">Track and view your orders</p>
+                  <p className="font-medium text-white">{t.account.myOrders}</p>
+                  <p className="text-sm text-white/50">{t.account.myOrdersHint}</p>
                 </div>
               </div>
             </Link>
@@ -98,8 +100,8 @@ export default function AccountPage() {
               <div className="bg-layali-surface rounded-2xl p-4 border border-layali-pink/25 flex items-center gap-4 card-hover">
                 <MapPin className="w-6 h-6 text-layali-pink" />
                 <div>
-                  <p className="font-medium text-white">Saved Addresses</p>
-                  <p className="text-sm text-white/50">Home, work & other delivery locations</p>
+                  <p className="font-medium text-white">{t.account.addresses}</p>
+                  <p className="text-sm text-white/50">{t.account.addressesHint}</p>
                 </div>
               </div>
             </Link>
@@ -108,15 +110,15 @@ export default function AccountPage() {
               <div className="bg-layali-surface rounded-2xl p-4 border border-layali-pink/25 flex items-center gap-4 card-hover">
                 <Sparkles className="w-6 h-6 text-layali-pink-light" />
                 <div>
-                  <p className="font-medium text-white">Beauty Profile</p>
-                  <p className="text-sm text-white/50">View your personalized recommendations</p>
+                  <p className="font-medium text-white">{t.account.beautyProfile}</p>
+                  <p className="text-sm text-white/50">{t.account.beautyProfileHint}</p>
                 </div>
               </div>
             </Link>
           </div>
 
           <Button variant="ghost" className="mt-8" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4" /> Sign Out
+            <LogOut className="w-4 h-4" /> {t.account.signOut}
           </Button>
         </FadeIn>
       </div>

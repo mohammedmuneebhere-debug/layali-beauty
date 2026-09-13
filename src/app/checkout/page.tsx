@@ -311,6 +311,7 @@ export default function CheckoutPage() {
           totalAmount: number;
           currencyCode: string;
           paymentLabel: string;
+          financialStatus?: string | null;
           shippingAddress: {
             receiverName: string;
             phone: string;
@@ -325,8 +326,16 @@ export default function CheckoutPage() {
       if (json.ok && json.order) {
         clearLocalCart();
         submissionIdRef.current = newSubmissionId();
-        const payload = encodeURIComponent(JSON.stringify(json.order));
-        router.push(`/checkout/success?order=${payload}`);
+        const q = new URLSearchParams();
+        if (json.order.name) q.set('name', json.order.name);
+        if (Number.isFinite(json.order.totalAmount)) {
+          q.set('total', String(json.order.totalAmount));
+        }
+        if (json.order.currencyCode) q.set('currency', json.order.currencyCode);
+        if (json.order.paymentLabel) q.set('payment', json.order.paymentLabel);
+        if (json.order.financialStatus) q.set('status', json.order.financialStatus);
+        q.set('date', new Date().toISOString());
+        router.push(`/checkout/success?${q.toString()}`);
         return;
       }
 
