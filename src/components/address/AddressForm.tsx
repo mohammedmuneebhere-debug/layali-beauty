@@ -1,12 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { MapPin, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { LocationMap } from '@/components/map/LocationMap';
 import { DEFAULT_MAP_CENTER, reverseGeocode } from '@/lib/geocode';
+import {
+  applyGeocodeToStructured,
+  composeStoredAddressLine,
+  emptyStructuredAddress,
+  formatAddressSummaryLines,
+  structuredFromStoredAddress,
+  type StructuredAddressFields,
+} from '@/lib/address/structured';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { cn } from '@/lib/utils';
 import type { AddressLabel } from '@/types/database';
 
 export interface AddressFormValues {
@@ -26,81 +36,114 @@ interface AddressFormProps {
   initial?: Partial<AddressFormValues>;
   defaultCity?: string;
   defaultCountry?: string;
+  /** When true, country is fixed to Saudi Arabia (COD checkout). */
+  lockCountryToSA?: boolean;
   submitLabel?: string;
   loading?: boolean;
   onSubmit: (values: AddressFormValues) => Promise<void> | void;
   onCancel?: () => void;
 }
 
-const LABEL_OPTIONS = [
-  { value: 'home', label: 'Home' },
-  { value: 'work', label: 'Work' },
-  { value: 'other', label: 'Other' },
-];
+type FieldErrors = Partial<
+  Record<
+    | 'receiver_name'
+    | 'receiver_phone'
+    | 'custom_label'
+    | 'street'
+    | 'area'
+    | 'city'
+    | 'country'
+    | 'pin',
+    string
+  >
+>;
 
 export function AddressForm({
   initial,
   defaultCity = '',
   defaultCountry = '',
-  submitLabel = 'Save Address',
+  lockCountryToSA = false,
+  submitLabel,
   loading = false,
   onSubmit,
   onCancel,
 }: AddressFormProps) {
-  const [form, setForm] = useState<AddressFormValues>({
-    label: initial?.label || 'home',
-    custom_label: initial?.custom_label || '',
-    receiver_name: initial?.receiver_name || '',
-    receiver_phone: initial?.receiver_phone || '',
-    address_line: initial?.address_line || '',
+  const { t } = useLanguage();
+  const a = t.checkout.address;
+  const formId = useId();
+
+  const initialStructured = structuredFromStoredAddress({
+    address_line: initial?.address_line,
     city: initial?.city || defaultCity,
-    country: initial?.country || defaultCountry,
-    // Map view may center on Riyadh, but do not treat that as a saved pin.
-    latitude: initial?.latitude ?? null,
-    longitude: initial?.longitude ?? null,
-    is_default: initial?.is_default ?? false,
+    country: lockCountryToSA
+      ? 'Saudi Arabia'
+      : initial?.country || defaultCountry,
   });
+
+  const [label, setLabel] = useState<AddressLabel>(initial?.label || 'home');
+  const [customLabel, setCustomLabel] = useState(initial?.custom_label || '');
+  const [receiverName, setReceiverName] = useState(initial?.receiver_name || '');
+  const [receiverPhone, setReceiverPhone] = useState(initial?.receiver_phone || '');
+  const [fields, setFields] = useState<StructuredAddressFields>(initialStructured);
+  const [latitude, setLatitude] = useState<number | null>(initial?.latitude ?? null);
+  const [longitude, setLongitude] = useState<number | null>(initial?.longitude ?? null);
+  const [isDefault, setIsDefault] = useState(initial?.is_default ?? false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [locating, setLocating] = useState(false);
   const [updatingFromPin, setUpdatingFromPin] = useState(false);
   const [accuracyHint, setAccuracyHint] = useState<string | null>(null);
   const [centerKey, setCenterKey] = useState(0);
-  const hasPinnedLocation = form.latitude != null && form.longitude != null;
+  const hasPinnedLocation = latitude != null && longitude != null;
 
-  const update = <K extends keyof AddressFormValues>(key: K, value: AddressFormValues[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const labelOptions = [
+    { value: 'home', label: a.labelHome },
+    { value: 'work', label: a.labelWork },
+    { value: 'other', label: a.labelOther },
+  ];
+
+  const updateField = <K extends keyof StructuredAddressFields>(
+    key: K,
+    value: StructuredAddressFields[K]
+  ) => {
+    setFields((prev) => ({ ...prev, [key]: value }));
+    setFieldErrors((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key as keyof FieldErrors];
+      return next;
+    });
   };
 
   const applyCoordinates = async (
-    latitude: number,
-    longitude: number,
+    nextLat: number,
+    nextLng: number,
     options?: { fillAddress?: boolean; recenter?: boolean }
   ) => {
     const fillAddress = options?.fillAddress ?? true;
     const recenter = options?.recenter ?? false;
 
-    // Always pin the raw coordinates first — never replace them with geocoded approx.
-    setForm((prev) => ({
-      ...prev,
-      latitude,
-      longitude,
-    }));
+    setLatitude(nextLat);
+    setLongitude(nextLng);
     if (recenter) setCenterKey((k) => k + 1);
-
     if (!fillAddress) return;
 
     setUpdatingFromPin(true);
     try {
-      const geo = await reverseGeocode(latitude, longitude);
-      setForm((prev) => ({
-        ...prev,
-        // Preserve device/pin coords; only fill textual address fields.
-        latitude,
-        longitude,
-        address_line: geo.address_line || prev.address_line,
-        city: geo.city || prev.city,
-        country: geo.country || prev.country,
-      }));
+      const geo = await reverseGeocode(nextLat, nextLng);
+      setFields((prev) =>
+        applyGeocodeToStructured(
+          prev,
+          {
+            street: geo.street,
+            area: geo.area,
+            city: geo.city,
+            postalCode: geo.postalCode,
+            country: lockCountryToSA ? 'Saudi Arabia' : geo.country,
+          },
+          { onlyEmpty: true }
+        )
+      );
     } catch {
       // Keep the pin even if reverse lookup fails
     } finally {
@@ -110,7 +153,7 @@ export function AddressForm({
 
   const useLiveLocation = () => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setError('Location is not supported on this browser. Enter the address manually or drag the pin.');
+      setError(a.locationUnsupported);
       return;
     }
 
@@ -120,15 +163,13 @@ export function AddressForm({
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        const { latitude, longitude, accuracy } = position.coords;
-        await applyCoordinates(latitude, longitude, {
+        const { latitude: lat, longitude: lng, accuracy } = position.coords;
+        await applyCoordinates(lat, lng, {
           fillAddress: true,
           recenter: true,
         });
         if (typeof accuracy === 'number' && accuracy > 80) {
-          setAccuracyHint(
-            `GPS accuracy is about ${Math.round(accuracy)}m — drag the pin to refine the exact drop-off.`
-          );
+          setAccuracyHint(a.accuracyHint.replace('{meters}', String(Math.round(accuracy))));
         } else {
           setAccuracyHint(null);
         }
@@ -138,22 +179,16 @@ export function AddressForm({
         setLocating(false);
         switch (geoError.code) {
           case geoError.PERMISSION_DENIED:
-            setError(
-              'Location permission denied. Allow location access, or drag the pin / type the address manually.'
-            );
+            setError(a.locationDenied);
             break;
           case geoError.POSITION_UNAVAILABLE:
-            setError(
-              'Location unavailable right now. Drag the pin on the map or enter the address manually.'
-            );
+            setError(a.locationUnavailable);
             break;
           case geoError.TIMEOUT:
-            setError(
-              'Location request timed out. Try again, or drag the pin / type the address manually.'
-            );
+            setError(a.locationTimeout);
             break;
           default:
-            setError('Could not get your location. Drag the pin on the map instead.');
+            setError(a.locationFailed);
         }
       },
       {
@@ -168,40 +203,75 @@ export function AddressForm({
     e.preventDefault();
     setError('');
 
-    if (!form.receiver_name.trim() || form.receiver_name.trim().length < 2) {
-      setError('Please enter the receiver name.');
-      return;
+    const nextErrors: FieldErrors = {};
+    const countryValue = lockCountryToSA ? 'Saudi Arabia' : fields.country.trim();
+
+    if (!receiverName.trim() || receiverName.trim().length < 2) {
+      nextErrors.receiver_name = a.requiredReceiverName;
     }
-    if (!form.receiver_phone.trim() || form.receiver_phone.trim().length < 8) {
-      setError('Please enter a valid receiver phone number.');
-      return;
+    if (!receiverPhone.trim() || receiverPhone.trim().length < 8) {
+      nextErrors.receiver_phone = a.requiredReceiverPhone;
     }
-    if (!form.address_line.trim() || form.address_line.trim().length < 5) {
-      setError('Please enter a full delivery address.');
-      return;
+    if (label === 'other' && !customLabel.trim()) {
+      nextErrors.custom_label = a.requiredOtherLabel;
     }
-    if (form.label === 'other' && !form.custom_label.trim()) {
-      setError('Please specify a label for “Other”.');
-      return;
+    if (!fields.street.trim()) {
+      nextErrors.street = a.requiredStreet;
     }
-    if (form.latitude == null || form.longitude == null) {
-      setError('Please place the delivery pin on the map (live location, drag, or tap).');
+    if (!fields.area.trim()) {
+      nextErrors.area = a.requiredArea;
+    }
+    if (!fields.city.trim()) {
+      nextErrors.city = a.requiredCity;
+    }
+    if (lockCountryToSA) {
+      // Country is fixed; no silent remap of other values.
+    } else if (!countryValue) {
+      nextErrors.country = a.requiredCountrySA;
+    }
+    if (latitude == null || longitude == null) {
+      nextErrors.pin = a.requiredPin;
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setFieldErrors(nextErrors);
+      setError(Object.values(nextErrors)[0] || '');
       return;
     }
 
+    const finalFields: StructuredAddressFields = {
+      ...fields,
+      street: fields.street.trim(),
+      area: fields.area.trim(),
+      city: fields.city.trim(),
+      building: fields.building.trim(),
+      apartment: fields.apartment.trim(),
+      postalCode: fields.postalCode.trim(),
+      directions: fields.directions.trim(),
+      country: countryValue,
+    };
+
     await onSubmit({
-      ...form,
-      receiver_name: form.receiver_name.trim(),
-      receiver_phone: form.receiver_phone.trim(),
-      address_line: form.address_line.trim(),
-      custom_label: form.label === 'other' ? form.custom_label.trim() : '',
-      city: form.city.trim(),
-      country: form.country.trim(),
+      label,
+      custom_label: label === 'other' ? customLabel.trim() : '',
+      receiver_name: receiverName.trim(),
+      receiver_phone: receiverPhone.trim(),
+      address_line: composeStoredAddressLine(finalFields),
+      city: finalFields.city,
+      country: finalFields.country,
+      latitude,
+      longitude,
+      is_default: isDefault,
     });
   };
 
-  const mapLat = form.latitude ?? DEFAULT_MAP_CENTER.lat;
-  const mapLng = form.longitude ?? DEFAULT_MAP_CENTER.lng;
+  const mapLat = latitude ?? DEFAULT_MAP_CENTER.lat;
+  const mapLng = longitude ?? DEFAULT_MAP_CENTER.lng;
+  const summaryLines = formatAddressSummaryLines({
+    ...fields,
+    country: lockCountryToSA ? 'Saudi Arabia' : fields.country,
+  });
+  const directionsId = `${formId}-directions`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -209,35 +279,57 @@ export function AddressForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
-          label="Receiver Name"
-          value={form.receiver_name}
-          onChange={(e) => update('receiver_name', e.target.value)}
-          placeholder="Full name of receiver"
+          id={`${formId}-receiver-name`}
+          label={a.receiverName}
+          value={receiverName}
+          onChange={(e) => {
+            setReceiverName(e.target.value);
+            setFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.receiver_name;
+              return next;
+            });
+          }}
+          placeholder={a.receiverNamePlaceholder}
+          autoComplete="name"
+          error={fieldErrors.receiver_name}
           required
         />
         <Input
-          label="Receiver Phone"
+          id={`${formId}-receiver-phone`}
+          label={a.receiverPhone}
           type="tel"
-          value={form.receiver_phone}
-          onChange={(e) => update('receiver_phone', e.target.value)}
-          placeholder="Phone number"
+          value={receiverPhone}
+          onChange={(e) => {
+            setReceiverPhone(e.target.value);
+            setFieldErrors((prev) => {
+              const next = { ...prev };
+              delete next.receiver_phone;
+              return next;
+            });
+          }}
+          placeholder={a.receiverPhonePlaceholder}
+          autoComplete="tel"
+          error={fieldErrors.receiver_phone}
           required
         />
       </div>
 
       <Select
-        label="Address Type"
-        options={LABEL_OPTIONS}
-        value={form.label}
-        onChange={(e) => update('label', e.target.value as AddressLabel)}
+        label={a.addressType}
+        options={labelOptions}
+        value={label}
+        onChange={(e) => setLabel(e.target.value as AddressLabel)}
       />
 
-      {form.label === 'other' && (
+      {label === 'other' && (
         <Input
-          label="Specify Label"
-          value={form.custom_label}
-          onChange={(e) => update('custom_label', e.target.value)}
-          placeholder="e.g. Parents' house, Gym"
+          id={`${formId}-custom-label`}
+          label={a.specifyLabel}
+          value={customLabel}
+          onChange={(e) => setCustomLabel(e.target.value)}
+          placeholder={a.specifyLabelPlaceholder}
+          error={fieldErrors.custom_label}
           required
         />
       )}
@@ -245,11 +337,9 @@ export function AddressForm({
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
-            <p className="text-sm font-medium text-white">Pin delivery location</p>
+            <p className="text-sm font-medium text-white">{a.pinTitle}</p>
             <p className="text-xs text-white/50">
-              {hasPinnedLocation
-                ? 'Drag the pin or tap anywhere on the map to move it'
-                : 'Use live location, or tap/drag the pin to set the exact drop-off'}
+              {hasPinnedLocation ? a.pinHintPinned : a.pinHintEmpty}
             </p>
           </div>
           <button
@@ -259,7 +349,7 @@ export function AddressForm({
             className="text-xs text-layali-pink font-medium hover:underline inline-flex items-center gap-1"
           >
             <Navigation className="w-3.5 h-3.5" />
-            {locating ? 'Detecting...' : 'Use my live location'}
+            {locating ? a.detecting : a.useLiveLocation}
           </button>
         </div>
 
@@ -270,71 +360,149 @@ export function AddressForm({
           height="300px"
           centerKey={centerKey}
           onLocationChange={(lat, lng) => {
-            applyCoordinates(lat, lng, { fillAddress: true, recenter: false });
+            void applyCoordinates(lat, lng, { fillAddress: true, recenter: false });
           }}
         />
 
         <p className="text-xs text-white/50 flex items-center gap-1">
           <MapPin className="w-3 h-3" />
           {updatingFromPin
-            ? 'Updating address from pin...'
+            ? a.updatingFromPin
             : hasPinnedLocation
-              ? `Pinned: ${mapLat.toFixed(6)}, ${mapLng.toFixed(6)}`
-              : 'No pin set yet — map shows Riyadh as a starting view only'}
+              ? `${a.pinnedAt}: ${mapLat.toFixed(6)}, ${mapLng.toFixed(6)}`
+              : a.noPinYet}
         </p>
-        {accuracyHint ? (
-          <p className="text-xs text-amber-200/90">{accuracyHint}</p>
-        ) : null}
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-white mb-1.5">Delivery Address</label>
-        <textarea
-          value={form.address_line}
-          onChange={(e) => update('address_line', e.target.value)}
-          rows={3}
-          required
-          placeholder="Street, building, landmark..."
-          className="w-full px-4 py-3 rounded-xl border border-layali-pink/30 bg-white/80 focus:outline-none focus:ring-2 focus:ring-layali-pink"
-        />
-        <p className="text-xs text-white/40 mt-1">
-          Auto-filled when you move the pin — you can still edit it manually
-        </p>
+        {fieldErrors.pin ? <p className="text-sm text-red-400">{fieldErrors.pin}</p> : null}
+        {accuracyHint ? <p className="text-xs text-amber-200/90">{accuracyHint}</p> : null}
+        <p className="text-xs text-white/40">{a.autofillHint}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
-          label="City"
-          value={form.city}
-          onChange={(e) => update('city', e.target.value)}
-          placeholder="City"
+          id={`${formId}-building`}
+          label={a.building}
+          value={fields.building}
+          onChange={(e) => updateField('building', e.target.value)}
+          placeholder={a.buildingPlaceholder}
         />
         <Input
-          label="Country"
-          value={form.country}
-          onChange={(e) => update('country', e.target.value)}
-          placeholder="Country"
+          id={`${formId}-apartment`}
+          label={a.apartment}
+          value={fields.apartment}
+          onChange={(e) => updateField('apartment', e.target.value)}
+          placeholder={a.apartmentPlaceholder}
         />
       </div>
+
+      <Input
+        id={`${formId}-street`}
+        label={a.street}
+        value={fields.street}
+        onChange={(e) => updateField('street', e.target.value)}
+        placeholder={a.streetPlaceholder}
+        autoComplete="address-line1"
+        error={fieldErrors.street}
+        required
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          id={`${formId}-area`}
+          label={a.area}
+          value={fields.area}
+          onChange={(e) => updateField('area', e.target.value)}
+          placeholder={a.areaPlaceholder}
+          error={fieldErrors.area}
+          required
+        />
+        <Input
+          id={`${formId}-city`}
+          label={a.city}
+          value={fields.city}
+          onChange={(e) => updateField('city', e.target.value)}
+          placeholder={a.cityPlaceholder}
+          autoComplete="address-level2"
+          error={fieldErrors.city}
+          required
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          id={`${formId}-postal`}
+          label={a.postal}
+          value={fields.postalCode}
+          onChange={(e) => updateField('postalCode', e.target.value)}
+          placeholder={a.postalPlaceholder}
+          autoComplete="postal-code"
+        />
+        {lockCountryToSA ? (
+          <Input
+            id={`${formId}-country`}
+            label={a.country}
+            value={a.countrySaudiArabia}
+            readOnly
+            autoComplete="country-name"
+          />
+        ) : (
+          <Input
+            id={`${formId}-country`}
+            label={a.country}
+            value={fields.country}
+            onChange={(e) => updateField('country', e.target.value)}
+            placeholder={a.countrySaudiArabia}
+            autoComplete="country-name"
+            error={fieldErrors.country}
+          />
+        )}
+      </div>
+
+      <div className="w-full">
+        <label htmlFor={directionsId} className="block text-sm font-medium text-white/70 mb-1.5">
+          {a.directions}
+        </label>
+        <textarea
+          id={directionsId}
+          value={fields.directions}
+          onChange={(e) => updateField('directions', e.target.value)}
+          rows={2}
+          placeholder={a.directionsPlaceholder}
+          className={cn(
+            'w-full px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2',
+            'border border-white/12 bg-white/5 text-white placeholder:text-white/30 focus:ring-layali-pink/50 focus:border-layali-pink/40'
+          )}
+        />
+      </div>
+
+      {summaryLines.length > 0 && (
+        <div className="rounded-xl border border-layali-pink/20 bg-black/20 p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-layali-pink mb-2">
+            {a.summaryTitle}
+          </p>
+          <div className="text-sm text-white/80 whitespace-pre-line leading-relaxed">
+            {summaryLines.join('\n')}
+          </div>
+        </div>
+      )}
 
       <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
         <input
           type="checkbox"
-          checked={form.is_default}
-          onChange={(e) => update('is_default', e.target.checked)}
+          checked={isDefault}
+          onChange={(e) => setIsDefault(e.target.checked)}
           className="rounded"
         />
-        Set as default delivery address
+        {a.setDefault}
       </label>
 
       <div className="flex gap-3">
         {onCancel && (
           <Button type="button" variant="outline" className="flex-1" onClick={onCancel}>
-            Cancel
+            {a.cancel}
           </Button>
         )}
         <Button type="submit" className="flex-1" loading={loading}>
-          {submitLabel}
+          {submitLabel || a.saveAddress}
         </Button>
       </div>
     </form>
@@ -347,4 +515,19 @@ export function addressDisplayLabel(address: {
 }) {
   if (address.label === 'other') return address.custom_label || 'Other';
   return address.label.charAt(0).toUpperCase() + address.label.slice(1);
+}
+
+/** Display helper for saved address cards / checkout summary. */
+export function addressDisplayLines(address: {
+  address_line: string;
+  city?: string | null;
+  country?: string | null;
+}): string[] {
+  return formatAddressSummaryLines(
+    structuredFromStoredAddress({
+      address_line: address.address_line,
+      city: address.city,
+      country: address.country,
+    })
+  );
 }

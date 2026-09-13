@@ -5,12 +5,23 @@ import { useRouter } from 'next/navigation';
 import { Package, Plus, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { AddressForm, addressDisplayLabel, type AddressFormValues } from '@/components/address/AddressForm';
+import {
+  AddressForm,
+  addressDisplayLabel,
+  addressDisplayLines,
+  type AddressFormValues,
+} from '@/components/address/AddressForm';
 import { LocationMap } from '@/components/map/LocationMap';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import { reverseGeocode } from '@/lib/geocode';
+import {
+  applyGeocodeToStructured,
+  composeStoredAddressLine,
+  isLabeledStructuredAddress,
+  structuredFromStoredAddress,
+} from '@/lib/address/structured';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { Address } from '@/types/database';
 
@@ -42,7 +53,7 @@ export default function CheckoutPage() {
   const [userEmail, setUserEmail] = useState('');
   const [, setUserName] = useState('');
   const [profileCity, setProfileCity] = useState('');
-  const [profileCountry, setProfileCountry] = useState('');
+  const [, setProfileCountry] = useState('');
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewAddress, setShowNewAddress] = useState(false);
@@ -132,9 +143,26 @@ export default function CheckoutPage() {
 
     try {
       const geo = await reverseGeocode(lat, lng);
-      addressLine = geo.address_line || undefined;
-      city = geo.city || undefined;
-      country = geo.country || undefined;
+      const selected = addresses.find((a) => a.id === selectedAddressId);
+      const current = structuredFromStoredAddress({
+        address_line: selected?.address_line,
+        city: selected?.city,
+        country: selected?.country || 'Saudi Arabia',
+      });
+      const filled = applyGeocodeToStructured(
+        current,
+        {
+          street: geo.street,
+          area: geo.area,
+          city: geo.city,
+          postalCode: geo.postalCode,
+          country: 'Saudi Arabia',
+        },
+        { onlyEmpty: true }
+      );
+      addressLine = composeStoredAddressLine(filled);
+      city = filled.city || undefined;
+      country = 'Saudi Arabia';
 
       setAddresses((prev) =>
         prev.map((a) =>
@@ -181,7 +209,7 @@ export default function CheckoutPage() {
         receiver_phone: values.receiver_phone,
         address_line: values.address_line,
         city: values.city || profileCity,
-        country: values.country || profileCountry || 'Saudi Arabia',
+        country: values.country.trim() || 'Saudi Arabia',
         latitude: values.latitude,
         longitude: values.longitude,
         is_default: values.is_default || addresses.length === 0,
@@ -217,6 +245,33 @@ export default function CheckoutPage() {
       setError('Please select a delivery address.');
       return;
     }
+
+    const structured = structuredFromStoredAddress(selectedAddress);
+    if (isLabeledStructuredAddress(selectedAddress.address_line)) {
+      if (!structured.street.trim()) {
+        setError(t.checkout.address.requiredStreet);
+        return;
+      }
+      if (!structured.area.trim()) {
+        setError(t.checkout.address.requiredArea);
+        return;
+      }
+      if (!structured.city.trim()) {
+        setError(t.checkout.address.requiredCity);
+        return;
+      }
+    } else {
+      // Legacy combined address_line — do not force structured area.
+      if (selectedAddress.address_line.trim().length < 5) {
+        setError(t.checkout.address.requiredStreet);
+        return;
+      }
+      if (!String(selectedAddress.city || '').trim()) {
+        setError(t.checkout.address.requiredCity);
+        return;
+      }
+    }
+
     if (paymentMethod !== 'cod') {
       setError('Only Cash on Delivery is available right now.');
       return;
@@ -336,12 +391,9 @@ export default function CheckoutPage() {
                     </div>
                     <p className="font-medium text-white">{address.receiver_name}</p>
                     <p className="text-sm text-white/60">{address.receiver_phone}</p>
-                    <p className="text-sm text-white/70 mt-1">{address.address_line}</p>
-                    {(address.city || address.country) && (
-                      <p className="text-xs text-white/50 mt-1">
-                        {[address.city, address.country].filter(Boolean).join(', ')}
-                      </p>
-                    )}
+                    <div className="text-sm text-white/70 mt-1 whitespace-pre-line leading-relaxed">
+                      {addressDisplayLines(address).join('\n')}
+                    </div>
                   </button>
                 ))}
               </div>
@@ -354,7 +406,8 @@ export default function CheckoutPage() {
                 </h3>
                 <AddressForm
                   defaultCity={profileCity}
-                  defaultCountry={profileCountry || 'Saudi Arabia'}
+                  defaultCountry="Saudi Arabia"
+                  lockCountryToSA
                   loading={savingAddress}
                   submitLabel="Save & Use This Address"
                   onCancel={addresses.length > 0 ? () => setShowNewAddress(false) : undefined}
@@ -386,6 +439,20 @@ export default function CheckoutPage() {
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={t.checkout.notesPlaceholder}
                 />
+
+                {selectedAddress && (
+                  <div className="rounded-xl border border-layali-pink/20 bg-black/20 p-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-layali-pink mb-2">
+                      {t.checkout.address.summaryTitle}
+                    </p>
+                    <p className="text-sm text-white font-medium">
+                      {selectedAddress.receiver_name} · {selectedAddress.receiver_phone}
+                    </p>
+                    <div className="text-sm text-white/80 mt-1 whitespace-pre-line leading-relaxed">
+                      {addressDisplayLines(selectedAddress).join('\n')}
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-3 pt-2">
                   <h3 className="font-serif text-lg font-bold text-white">Payment Method</h3>
@@ -474,7 +541,9 @@ export default function CheckoutPage() {
                 <p>
                   {selectedAddress.receiver_name} · {selectedAddress.receiver_phone}
                 </p>
-                <p className="mt-1">{selectedAddress.address_line}</p>
+                <div className="mt-1 whitespace-pre-line leading-relaxed">
+                  {addressDisplayLines(selectedAddress).join('\n')}
+                </div>
                 {selectedAddress.latitude != null && selectedAddress.longitude != null && (
                   <p className="text-xs mt-2 flex items-center gap-1">
                     <MapPin className="w-3 h-3" />

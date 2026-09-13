@@ -14,6 +14,7 @@ import {
   userSubmissionTag,
   type CreatedShopifyOrder,
 } from '@/lib/shopify/admin-orders';
+import { toShopifyAddressParts } from '@/lib/address/structured';
 
 export const runtime = 'nodejs';
 
@@ -375,12 +376,22 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const shippingParts = toShopifyAddressParts({ address_line: addressLine, city });
+      if (!shippingParts.address1 || shippingParts.address1.length < 5) {
+        throw Object.assign(
+          new Error('Delivery address is incomplete. Please update name, phone, address, and city.'),
+          { status: 400, code: 'incomplete_address', retrySafe: true }
+        );
+      }
+
       const shippingAddress = buildMailingAddress({
         receiverName,
         phone,
-        address1: addressLine,
+        address1: shippingParts.address1,
+        address2: shippingParts.address2,
         city,
         province: city,
+        zip: shippingParts.zip,
         countryCode: 'SA',
       });
 

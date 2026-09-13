@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
-import { AddressForm, addressDisplayLabel, type AddressFormValues } from '@/components/address/AddressForm';
+import { AddressForm, addressDisplayLabel, addressDisplayLines, type AddressFormValues } from '@/components/address/AddressForm';
 import { LocationMap } from '@/components/map/LocationMap';
 import { FadeIn } from '@/components/ui/FadeIn';
 import type { Address } from '@/types/database';
@@ -155,12 +155,9 @@ export default function AddressesPage() {
                       </p>
                       <p className="font-medium text-white">{address.receiver_name}</p>
                       <p className="text-sm text-white/60">{address.receiver_phone}</p>
-                      <p className="text-sm text-white/70 mt-2">{address.address_line}</p>
-                      {(address.city || address.country) && (
-                        <p className="text-xs text-white/50 mt-1">
-                          {[address.city, address.country].filter(Boolean).join(', ')}
-                        </p>
-                      )}
+                      <div className="text-sm text-white/70 mt-2 whitespace-pre-line leading-relaxed">
+                        {addressDisplayLines(address).join('\n')}
+                      </div>
                     </div>
                     <button
                       onClick={() => deleteAddress(address.id)}
