@@ -71,7 +71,7 @@ export default function CartPage() {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center py-20 pt-28 bg-transparent">
         <ShoppingBag className="w-14 h-14 text-layali-pink/60 mb-4" />
-        <h2 className="font-serif text-heading-md font-medium text-white mb-2">{t.cart.empty}</h2>
+        <h2 className="font-serif text-heading-md text-white mb-2">{t.cart.empty}</h2>
         <p className="text-white/45 mb-6">{t.cart.emptyHint}</p>
         {error ? (
           <p className="text-sm text-red-300/90 mb-4 max-w-md text-center px-4">{error}</p>
@@ -87,7 +87,7 @@ export default function CartPage() {
     <div className="min-h-screen bg-transparent pt-24 pb-16">
       <div className="max-w-4xl mx-auto px-4">
         <FadeIn>
-          <h1 className="font-serif text-heading-lg font-medium text-white mb-8">
+          <h1 className="font-serif text-heading-lg text-white mb-8">
             {t.cart.title} ({totalQuantity})
           </h1>
         </FadeIn>

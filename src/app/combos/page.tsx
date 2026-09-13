@@ -84,7 +84,7 @@ export default function CombosPage() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <FadeIn className="mb-12 text-center">
           <Sparkles className="w-8 h-8 mx-auto text-layali-pink mb-4" />
-          <h1 className="font-serif text-heading-lg font-bold text-white mb-2">Curated Combos</h1>
+          <h1 className="font-serif text-heading-lg text-white mb-2">Curated Combos</h1>
           <p className="text-body-lg text-white/60 max-w-xl mx-auto">
             Beautifully bundled products at special prices — including AI-personalized combos
             verified by our dermatologist.

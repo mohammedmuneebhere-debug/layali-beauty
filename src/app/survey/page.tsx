@@ -288,10 +288,10 @@ export default function SurveyPage() {
             {step === 0 && (
               <div className="text-center">
                 <Sparkles className="w-12 h-12 mx-auto text-white mb-6" />
-                <h1 className="font-serif text-4xl font-bold text-white mb-4">
+                <h1 className="font-serif text-heading-lg text-white mb-4">
                   Let&apos;s Get to Know You
                 </h1>
-                <p className="font-script text-3xl text-white/70 mb-6">your beauty profile</p>
+                <p className="font-script text-heading-md text-white/70 mb-6">your beauty profile</p>
                 <p className="text-white/60 mb-8 leading-relaxed">
                   Answer a few fun questions about your skin and hair,
                   and we&apos;ll create a personalized beauty combo just for you!
@@ -301,7 +301,7 @@ export default function SurveyPage() {
 
             {step === 1 && (
               <div>
-                <h2 className="font-serif text-3xl font-bold text-white mb-2">What&apos;s your skin type?</h2>
+                <h2 className="font-serif text-heading-md text-white mb-2">What&apos;s your skin type?</h2>
                 <p className="text-white/60 mb-6">Select the one that best describes your skin</p>
                 <div className="grid grid-cols-2 gap-3">
                   {SKIN_TYPES.map((type) => (
@@ -319,7 +319,7 @@ export default function SurveyPage() {
 
             {step === 2 && (
               <div>
-                <h2 className="font-serif text-3xl font-bold text-white mb-2">What&apos;s your hair type?</h2>
+                <h2 className="font-serif text-heading-md text-white mb-2">What&apos;s your hair type?</h2>
                 <p className="text-white/60 mb-6">Select the one that best describes your hair</p>
                 <div className="grid grid-cols-2 gap-3">
                   {HAIR_TYPES.map((type) => (
@@ -337,7 +337,7 @@ export default function SurveyPage() {
 
             {step === 3 && (
               <div>
-                <h2 className="font-serif text-3xl font-bold text-white mb-2">Your Concerns</h2>
+                <h2 className="font-serif text-heading-md text-white mb-2">Your Concerns</h2>
                 <p className="text-white/60 mb-6">Select all that apply</p>
 
                 <h3 className="font-medium text-white mb-3">Skin Concerns</h3>
@@ -370,7 +370,7 @@ export default function SurveyPage() {
 
             {step === 4 && (
               <div>
-                <h2 className="font-serif text-3xl font-bold text-white mb-2">A Bit More About You</h2>
+                <h2 className="font-serif text-heading-md text-white mb-2">A Bit More About You</h2>
                 <p className="text-white/60 mb-6">Help us personalize your experience</p>
 
                 <h3 className="font-medium text-white mb-3">Age Range</h3>
@@ -411,10 +411,10 @@ export default function SurveyPage() {
                   >
                     <Sparkles className="w-12 h-12 mx-auto text-layali-gold mb-4" />
                   </motion.div>
-                  <h2 className="font-serif text-3xl font-bold text-white mb-2">
+                  <h2 className="font-serif text-heading-md text-white mb-2">
                     Your Personalized Combo
                   </h2>
-                  <p className="font-script text-2xl text-white/70">crafted just for you</p>
+                  <p className="font-script text-heading-sm text-white/70">crafted just for you</p>
                 </div>
 
                 {catalogMessage && (
@@ -431,7 +431,7 @@ export default function SurveyPage() {
 
                   <p className="text-white/70 mb-6 leading-relaxed">{recommendation.summary}</p>
 
-                  <h3 className="font-serif text-lg font-bold text-white mb-3">Recommended Products</h3>
+                  <h3 className="text-ui-heading text-white mb-3">Recommended Products</h3>
                   <div className="space-y-3 mb-6">
                     {recommendation.products.map((product) => (
                       <div

@@ -61,10 +61,10 @@ export function Navbar() {
             className="flex flex-col items-start justify-center group min-w-0 flex-1 overflow-hidden me-1"
             onClick={() => setMobileOpen(false)}
           >
-            <span className="font-serif text-display-sm lg:text-display-md font-bold tracking-[0.12em] text-white group-hover:text-layali-pink-light transition-colors truncate w-full">
+            <span className="text-brand text-white group-hover:text-layali-pink-light transition-colors whitespace-nowrap">
               {t.brand}
             </span>
-            <span className="text-meta tracking-[0.08em] sm:tracking-[0.14em] text-layali-pink -mt-1 truncate w-full">
+            <span className="text-meta uppercase tracking-[0.14em] sm:tracking-[0.2em] text-layali-pink -mt-0.5 truncate w-full">
               {t.brandSub}
             </span>
           </Link>

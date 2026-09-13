@@ -271,7 +271,7 @@ export default function ProductDetailPage() {
 
               {product.benefits?.length > 0 && (
                 <div className="mb-8">
-                  <h2 className="font-medium text-white mb-3">Benefits</h2>
+                  <h2 className="text-ui-heading text-white mb-3">Benefits</h2>
                   <ul className="space-y-2">
                     {product.benefits.map((benefit) => (
                       <li key={benefit} className="flex items-start gap-2 text-sm text-white/55">
@@ -285,7 +285,7 @@ export default function ProductDetailPage() {
 
               {product.ingredients && (
                 <div className="mb-8">
-                  <h2 className="font-medium text-white mb-2">Ingredients</h2>
+                  <h2 className="text-ui-heading text-white mb-2">Ingredients</h2>
                   <p className="text-sm text-white/45 leading-relaxed">
                     {product.ingredients}
                   </p>

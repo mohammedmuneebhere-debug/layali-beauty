@@ -14,7 +14,7 @@ export default function AboutPageClient() {
       <div className="relative max-w-3xl mx-auto px-4">
         <FadeIn className="text-center mb-12">
           <h1 className="font-serif text-heading-lg text-white mb-4">{t.manifesto.title}</h1>
-          <p className="font-serif text-heading-md text-layali-pink-light">{t.manifesto.script}</p>
+          <p className="font-script text-heading-md text-layali-pink-light">{t.manifesto.script}</p>
         </FadeIn>
 
         <FadeIn delay={0.1}>
@@ -24,7 +24,7 @@ export default function AboutPageClient() {
             <p>{t.manifesto.p3}</p>
             <div className="text-center pt-6">
               <Heart className="w-6 h-6 mx-auto text-layali-pink fill-layali-pink mb-2" />
-              <p className="font-serif text-heading-sm text-layali-pink-light">{t.manifesto.closing}</p>
+              <p className="font-script text-heading-sm text-layali-pink-light">{t.manifesto.closing}</p>
             </div>
           </div>
         </FadeIn>

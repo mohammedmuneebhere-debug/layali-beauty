@@ -41,7 +41,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
         <div className="p-6 border-b border-white/10">
-          <h1 className="font-serif text-2xl font-bold tracking-widest">LAYALI</h1>
+          <h1 className="text-brand text-white">LAYALI</h1>
           <p className="text-xs text-layali-pink tracking-[0.2em]">ADMIN</p>
         </div>
 
@@ -86,7 +86,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <button onClick={() => setSidebarOpen(true)}>
             <Menu className="w-6 h-6" />
           </button>
-          <span className="font-serif font-bold tracking-widest">LAYALI ADMIN</span>
+          <span className="font-serif tracking-widest">LAYALI ADMIN</span>
         </header>
 
         <main className="flex-1 p-6 lg:p-8 overflow-auto text-gray-900">

@@ -66,7 +66,7 @@ export default function AccountPage() {
                 <User className="w-8 h-8 text-layali-pink-light" />
               </div>
               <div>
-                <h2 className="font-bold text-lg text-white">{profile.full_name}</h2>
+                <h2 className="text-lg font-medium text-white">{profile.full_name}</h2>
                 <p className="text-white/60 text-sm">{profile.email}</p>
               </div>
             </div>

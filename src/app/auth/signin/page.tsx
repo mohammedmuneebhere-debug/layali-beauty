@@ -76,13 +76,13 @@ function SignInForm() {
       >
         <div className="text-center mb-8">
           <Link href="/">
-            <h1 className="font-serif text-heading-lg font-semibold tracking-[0.16em] text-white">LAYALI</h1>
+            <h1 className="text-brand-lg text-white">LAYALI</h1>
           </Link>
-          <p className="font-serif text-heading-sm text-layali-pink mt-2">welcome back</p>
+          <p className="font-script text-heading-sm text-layali-pink mt-2">welcome back</p>
         </div>
 
         <div className="glass-panel rounded-3xl p-8">
-          <h2 className="font-serif text-heading-md font-medium text-white mb-6 text-center">Sign In</h2>
+          <h2 className="font-serif text-heading-md text-white mb-6 text-center">Sign In</h2>
 
           {redirectTo === '/checkout' && (
             <div className="mb-4 p-3 rounded-xl bg-layali-pink/10 border border-layali-pink/25 text-layali-pink-light text-sm text-center">

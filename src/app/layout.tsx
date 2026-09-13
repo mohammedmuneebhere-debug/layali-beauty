@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Manrope, IBM_Plex_Sans_Arabic } from 'next/font/google';
+import { Bodoni_Moda, IBM_Plex_Sans_Arabic, Manrope } from 'next/font/google';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { StageBackdrop } from '@/components/layout/StageBackdrop';
@@ -18,6 +18,14 @@ const manrope = Manrope({
   variable: '--font-manrope',
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
+  display: 'swap',
+});
+
+const bodoni = Bodoni_Moda({
+  variable: '--font-bodoni',
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  style: ['normal', 'italic'],
   display: 'swap',
 });
 
@@ -91,7 +99,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${manrope.variable} ${ibmPlexArabic.variable} h-full`}
+      className={`${manrope.variable} ${bodoni.variable} ${ibmPlexArabic.variable} h-full`}
       style={{ colorScheme: 'dark', background: '#000000' }}
       suppressHydrationWarning
     >

@@ -71,12 +71,12 @@ export default function AdminSignInPage() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <h1 className="font-serif text-4xl font-bold tracking-widest text-white">LAYALI</h1>
-          <p className="text-layali-pink text-sm tracking-[0.2em] mt-2">ADMIN PORTAL</p>
+          <h1 className="text-brand-lg text-white">LAYALI</h1>
+          <p className="text-layali-pink text-sm uppercase tracking-[0.2em] mt-2">ADMIN PORTAL</p>
         </div>
 
         <div className="bg-layali-black-soft rounded-3xl p-8 shadow-xl border border-layali-pink/20">
-          <h2 className="font-serif text-2xl font-bold text-white mb-6 text-center">Admin Sign In</h2>
+          <h2 className="font-serif text-2xl text-white mb-6 text-center">Admin Sign In</h2>
 
           {error && (
             <div className="mb-4 p-3 rounded-xl bg-red-900/30 text-red-300 text-sm">{error}</div>

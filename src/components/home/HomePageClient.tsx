@@ -138,7 +138,7 @@ export default function HomePageClient() {
         />
         <FadeIn className="relative z-10 px-4">
           <p className="font-serif text-heading-md text-white mb-3">{t.glow.line1}</p>
-          <p className="font-serif text-heading-lg text-layali-pink-light font-bold mb-8">
+          <p className="font-serif text-heading-lg text-layali-pink-light mb-8">
             {t.glow.line2}
           </p>
           <Link

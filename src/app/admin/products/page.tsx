@@ -103,7 +103,7 @@ export default function AdminProductsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="font-serif text-3xl font-bold text-white">Products</h1>
+          <h1 className="font-serif text-heading-lg text-white">Products</h1>
           <p className="text-white/50 text-sm mt-1 max-w-2xl">
             Catalog, pricing, inventory, and variants are managed in Shopify Admin. Use this page
             only for Layali regional availability (Shopify product GIDs).
@@ -155,7 +155,7 @@ export default function AdminProductsPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-serif text-white">{formatPrice(product.price)}</p>
+                      <p className="text-price text-white">{formatPrice(product.price)}</p>
                       <p className="text-xs text-white/40 mt-1 inline-flex items-center gap-1">
                         <MapPin className="w-3 h-3" />
                         {(regionMap[product.shopifyProductId] || []).length} regions

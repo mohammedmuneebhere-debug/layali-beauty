@@ -18,7 +18,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           <label
             htmlFor={id}
             className={cn(
-              'block text-sm font-medium mb-1.5',
+              'block text-meta font-medium tracking-[0.08em] mb-1.5',
               isLight ? 'text-gray-800' : 'text-white/70'
             )}
           >

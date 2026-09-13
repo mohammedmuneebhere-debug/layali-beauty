@@ -28,12 +28,11 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
             <Link href="/" prefetch className="inline-block group">
-              <h3 className="font-serif text-heading-md font-bold tracking-[0.12em] mb-2 group-hover:text-layali-pink-light transition-colors">
+              <h3 className="text-brand text-white mb-2 group-hover:text-layali-pink-light transition-colors">
                 {t.brand}
               </h3>
             </Link>
-            <p className="font-script text-heading-sm text-layali-pink-light mb-2">{t.tagline}</p>
-            <p className="text-meta tracking-[0.14em] text-layali-pink/80 mb-4">{t.brandSub}</p>
+            <p className="text-eyebrow text-layali-pink mb-4">{t.brandSub}</p>
             <p className="text-body text-white/65 max-w-md mb-4">{t.footer.blurb}</p>
             <div className="space-y-1.5 text-meta text-white/55 font-mono tracking-wide min-w-0">
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
