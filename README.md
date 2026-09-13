@@ -15,7 +15,7 @@ Premium beauty e-commerce website for Layali, featuring personalized AI-powered 
 | Concern | Source of truth |
 | --- | --- |
 | Products, prices, inventory, cart, checkout, orders | **Shopify** |
-| Auth, profiles, surveys, AI history, addresses, regions, trending config, Layali metadata/COGS/order links | **Supabase** |
+| Auth, profiles, surveys, AI history, addresses, regions, trending selection (Shopify GIDs + order), Layali metadata/COGS/order links | **Supabase** |
 | UI + orchestration | **Next.js** |
 | Cart ID + optimistic UI only | **Zustand** |
 

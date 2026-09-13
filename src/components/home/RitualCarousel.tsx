@@ -7,37 +7,114 @@ import { formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { TrendingCatalogProduct } from '@/lib/trending';
 
+const DRAG_THRESHOLD_PX = 8;
+const INTERACTIVE_SELECTOR = 'button, input, select, textarea, [data-no-nav]';
+
+type DragState = {
+  tracking: boolean;
+  dragging: boolean;
+  ignoreClick: boolean;
+  startX: number;
+  scrollLeft: number;
+};
+
+function createDragState(): DragState {
+  return {
+    tracking: false,
+    dragging: false,
+    ignoreClick: false,
+    startX: 0,
+    scrollLeft: 0,
+  };
+}
+
 export function RitualCarousel() {
   const { t } = useLanguage();
   const [products, setProducts] = useState<TrendingCatalogProduct[]>([]);
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
+  const drag = useRef<DragState>(createDragState());
+  const ignoreClickTimer = useRef<number | null>(null);
 
   useEffect(() => {
     void fetch('/api/shopify/trending')
       .then((res) => res.json())
       .then((json: { products?: TrendingCatalogProduct[] }) => {
-        setProducts(json.products || []);
+        setProducts((json.products || []).filter((p) => Boolean(p.handle)));
       })
       .catch(() => setProducts([]));
+
+    return () => {
+      if (ignoreClickTimer.current != null) {
+        window.clearTimeout(ignoreClickTimer.current);
+      }
+    };
   }, []);
 
-  const onPointerDown = (e: React.PointerEvent) => {
+  const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Touch keeps native overflow pan-x so a tap still reaches the product Link.
+    if (e.pointerType === 'touch') return;
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest(INTERACTIVE_SELECTOR)) return;
+
     const el = scrollerRef.current;
     if (!el) return;
-    drag.current = { active: true, startX: e.clientX, scrollLeft: el.scrollLeft };
-    el.setPointerCapture(e.pointerId);
+    drag.current = {
+      tracking: true,
+      dragging: false,
+      ignoreClick: false,
+      startX: e.clientX,
+      scrollLeft: el.scrollLeft,
+    };
   };
 
-  const onPointerMove = (e: React.PointerEvent) => {
+  const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'touch') return;
     const el = scrollerRef.current;
-    if (!el || !drag.current.active) return;
-    const dx = e.clientX - drag.current.startX;
-    el.scrollLeft = drag.current.scrollLeft - dx;
+    const state = drag.current;
+    if (!el || !state.tracking) return;
+
+    const dx = e.clientX - state.startX;
+    if (!state.dragging) {
+      if (Math.abs(dx) < DRAG_THRESHOLD_PX) return;
+      state.dragging = true;
+      el.setPointerCapture(e.pointerId);
+    }
+
+    el.scrollLeft = state.scrollLeft - dx;
   };
 
-  const endDrag = () => {
-    drag.current.active = false;
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = scrollerRef.current;
+    if (el && el.hasPointerCapture(e.pointerId)) {
+      el.releasePointerCapture(e.pointerId);
+    }
+
+    const state = drag.current;
+    if (state.dragging) {
+      state.ignoreClick = true;
+      if (ignoreClickTimer.current != null) {
+        window.clearTimeout(ignoreClickTimer.current);
+      }
+      ignoreClickTimer.current = window.setTimeout(() => {
+        drag.current.ignoreClick = false;
+        ignoreClickTimer.current = null;
+      }, 400);
+    }
+
+    state.tracking = false;
+    state.dragging = false;
+  };
+
+  const onClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!drag.current.ignoreClick) return;
+    e.preventDefault();
+    e.stopPropagation();
+    drag.current.ignoreClick = false;
+    if (ignoreClickTimer.current != null) {
+      window.clearTimeout(ignoreClickTimer.current);
+      ignoreClickTimer.current = null;
+    }
   };
 
   if (products.length === 0) return null;
@@ -62,12 +139,14 @@ export function RitualCarousel() {
         onPointerMove={onPointerMove}
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
-        className="flex gap-4 overflow-x-auto px-4 sm:px-6 lg:px-8 pb-4 cursor-grab active:cursor-grabbing scrollbar-hide select-none"
+        onClickCapture={onClickCapture}
+        onDragStart={(e) => e.preventDefault()}
+        className="flex gap-4 overflow-x-auto px-4 sm:px-6 lg:px-8 pb-4 cursor-grab active:cursor-grabbing scrollbar-hide select-none touch-pan-x"
         style={{ scrollbarWidth: 'none' }}
       >
         {products.map((product, i) => {
           const image = product.images?.[0] || product.image_url;
-          const href = `/shop/${product.handle || product.id}`;
+          const href = `/shop/${product.handle}`;
           return (
             <motion.div
               key={product.id}
@@ -77,7 +156,7 @@ export function RitualCarousel() {
               transition={{ delay: Math.min(i * 0.05, 0.3) }}
               className="min-w-[240px] sm:min-w-[280px] max-w-[280px]"
             >
-              <Link href={href} prefetch className="block group">
+              <Link href={href} prefetch={false} className="block group">
                 <div className="aspect-[4/5] rounded-2xl overflow-hidden bg-layali-surface border border-white/8 mb-3">
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element

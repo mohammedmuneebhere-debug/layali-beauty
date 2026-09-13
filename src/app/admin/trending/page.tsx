@@ -1,49 +1,84 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, ArrowUp, ArrowDown, Flame, Search } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
+import { Plus, Trash2, ArrowUp, ArrowDown, Flame, Search, Save } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { formatPrice } from '@/lib/utils';
 import { TRENDING_MAX } from '@/lib/trending';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
-import type { TrendingProduct } from '@/types/database';
 
-type TrendingRow = TrendingProduct & {
-  shopify_product_id: string | null;
+type TrendingRow = {
+  shopifyProductId: string;
+  rank: number;
   catalog?: CatalogProduct | null;
 };
 
+function productGid(product: CatalogProduct): string {
+  return product.shopifyProductId || product.id;
+}
+
+function ranksFromOrder(rows: TrendingRow[]): TrendingRow[] {
+  return rows.map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
 export default function AdminTrendingPage() {
   const [rows, setRows] = useState<TrendingRow[]>([]);
+  const [savedRows, setSavedRows] = useState<TrendingRow[]>([]);
   const [catalog, setCatalog] = useState<CatalogProduct[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const dirty = useMemo(
+    () =>
+      JSON.stringify(rows.map((r) => ({ id: r.shopifyProductId, rank: r.rank }))) !==
+      JSON.stringify(savedRows.map((r) => ({ id: r.shopifyProductId, rank: r.rank }))),
+    [rows, savedRows]
+  );
 
   const load = async () => {
     setLoading(true);
-    const supabase = createClient();
-    const [trendingRes, catalogRes] = await Promise.all([
-      supabase
-        .from('trending_products')
-        .select('*')
-        .order('sort_order', { ascending: true }),
-      fetch('/api/shopify/products'),
-    ]);
+    setError('');
+    try {
+      const [trendingRes, catalogRes] = await Promise.all([
+        fetch('/api/admin/trending'),
+        fetch('/api/shopify/products'),
+      ]);
 
-    const catalogJson = (await catalogRes.json()) as { products?: CatalogProduct[] };
-    const products = catalogJson.products || [];
-    setCatalog(products);
+      const trendingJson = (await trendingRes.json()) as {
+        products?: { shopifyProductId: string; rank: number }[];
+        error?: string;
+      };
 
-    const byId = new Map(products.map((p) => [p.shopifyProductId || p.id, p]));
-    const trending = (trendingRes.data || []) as TrendingRow[];
-    setRows(
-      trending.map((row) => ({
-        ...row,
-        catalog: row.shopify_product_id ? byId.get(row.shopify_product_id) || null : null,
-      }))
-    );
+      if (!trendingRes.ok) {
+        setError(trendingJson.error || 'Unable to load Trending');
+        setRows([]);
+        setSavedRows([]);
+        setLoading(false);
+        return;
+      }
+
+      const catalogJson = (await catalogRes.json()) as { products?: CatalogProduct[] };
+      const products = catalogJson.products || [];
+      setCatalog(products);
+
+      const byId = new Map(products.map((p) => [productGid(p), p]));
+      const next = ranksFromOrder(
+        (trendingJson.products || [])
+          .filter((row) => row.shopifyProductId)
+          .sort((a, b) => a.rank - b.rank)
+          .map((row) => ({
+            shopifyProductId: row.shopifyProductId,
+            rank: row.rank,
+            catalog: byId.get(row.shopifyProductId) || null,
+          }))
+      );
+      setRows(next);
+      setSavedRows(next);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load Trending');
+    }
     setLoading(false);
   };
 
@@ -54,73 +89,91 @@ export default function AdminTrendingPage() {
   }, []);
 
   const selectedIds = useMemo(
-    () => new Set(rows.map((r) => r.shopify_product_id).filter(Boolean)),
+    () => new Set(rows.map((r) => r.shopifyProductId)),
     [rows]
   );
 
   const available = useMemo(() => {
     const q = search.trim().toLowerCase();
     return catalog.filter((p) => {
-      if (selectedIds.has(p.shopifyProductId || p.id)) return false;
+      if (selectedIds.has(productGid(p))) return false;
       if (!q) return true;
       return `${p.name} ${p.category}`.toLowerCase().includes(q);
     });
   }, [catalog, selectedIds, search]);
 
-  const addProduct = async (product: CatalogProduct) => {
+  const addProduct = (product: CatalogProduct) => {
     if (rows.length >= TRENDING_MAX) {
-      alert(`Maximum ${TRENDING_MAX} trending products. Remove one first.`);
+      setError(`Maximum ${TRENDING_MAX} trending products. Remove one first.`);
       return;
     }
-    setSaving(true);
-    const supabase = createClient();
-    const nextOrder = rows.length === 0 ? 0 : Math.max(...rows.map((r) => r.sort_order)) + 1;
-    const { error } = await supabase.from('trending_products').insert({
-      shopify_product_id: product.shopifyProductId || product.id,
-      product_id: null,
-      sort_order: nextOrder,
-      is_active: true,
-    });
-    if (error) {
-      alert(
-        error.message.includes('relation') || error.message.includes('does not exist')
-          ? 'Run supabase/trending.sql and the Shopify integration migration first.'
-          : error.message
-      );
-      setSaving(false);
+    const gid = productGid(product);
+    if (!gid.startsWith('gid://shopify/Product/')) {
+      setError('This catalog row is missing a Shopify product GID.');
       return;
     }
-    await load();
-    setSaving(false);
+    setError('');
+    setRows(
+      ranksFromOrder([
+        ...rows,
+        {
+          shopifyProductId: gid,
+          rank: rows.length + 1,
+          catalog: product,
+        },
+      ])
+    );
   };
 
-  const removeRow = async (id: string) => {
+  const removeRow = (shopifyProductId: string) => {
     if (!confirm('Remove this product from trending?')) return;
-    const supabase = createClient();
-    await supabase.from('trending_products').delete().eq('id', id);
-    await load();
+    setError('');
+    setRows(ranksFromOrder(rows.filter((row) => row.shopifyProductId !== shopifyProductId)));
   };
 
-  const move = async (index: number, direction: -1 | 1) => {
+  const move = (index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= rows.length) return;
+    const next = [...rows];
+    [next[index], next[target]] = [next[target], next[index]];
+    setError('');
+    setRows(ranksFromOrder(next));
+  };
 
-    const a = rows[index];
-    const b = rows[target];
+  const save = async () => {
+    const ranks = rows.map((r) => r.rank);
+    if (new Set(ranks).size !== ranks.length) {
+      setError('Positions must be unique.');
+      return;
+    }
+    if (rows.some((r) => r.rank < 1 || r.rank > TRENDING_MAX)) {
+      setError(`Positions must be between 1 and ${TRENDING_MAX}.`);
+      return;
+    }
+
     setSaving(true);
-    const supabase = createClient();
-    await Promise.all([
-      supabase.from('trending_products').update({ sort_order: b.sort_order }).eq('id', a.id),
-      supabase.from('trending_products').update({ sort_order: a.sort_order }).eq('id', b.id),
-    ]);
-    const reordered = [...rows];
-    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
-    await Promise.all(
-      reordered.map((row, i) =>
-        supabase.from('trending_products').update({ sort_order: i }).eq('id', row.id)
-      )
-    );
-    await load();
+    setError('');
+    try {
+      const res = await fetch('/api/admin/trending', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          products: rows.map((row) => ({
+            shopifyProductId: row.shopifyProductId,
+            rank: row.rank,
+          })),
+        }),
+      });
+      const json = (await res.json()) as { error?: string };
+      if (!res.ok) {
+        setError(json.error || 'Unable to save trending');
+        setSaving(false);
+        return;
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to save trending');
+    }
     setSaving(false);
   };
 
@@ -136,14 +189,32 @@ export default function AdminTrendingPage() {
             Trending Products
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Curate up to {TRENDING_MAX} Shopify products for the home page carousel. Product
-            details come from Shopify; this list only stores Shopify product GIDs.
+            Select up to {TRENDING_MAX} Shopify products and assign unique positions 1–
+            {TRENDING_MAX}. This page stores only Shopify product IDs and order in
+            Supabase. Title, price, images, and inventory stay in Shopify.
           </p>
         </div>
-        <span className="shrink-0 rounded-full bg-layali-pink/10 text-layali-pink px-3 py-1 text-sm font-medium">
-          {rows.length} / {TRENDING_MAX}
-        </span>
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="rounded-full bg-layali-pink/10 text-layali-pink px-3 py-1 text-sm font-medium">
+            {rows.length} / {TRENDING_MAX}
+          </span>
+          <Button
+            size="sm"
+            disabled={saving || loading || !dirty}
+            onClick={() => void save()}
+            className="text-white"
+          >
+            <Save className="w-4 h-4" />
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        </div>
       </div>
+
+      {error ? (
+        <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+          {error}
+        </p>
+      ) : null}
 
       {loading ? (
         <p className="text-gray-500">Loading…</p>
@@ -151,12 +222,15 @@ export default function AdminTrendingPage() {
         <div className="grid lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-900">On home page</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Order with up/down arrows</p>
+              <h2 className="font-semibold text-gray-900">Trending on home page</h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Position 1 appears first. Reorder, then save.
+              </p>
             </div>
             {rows.length === 0 ? (
               <div className="p-10 text-center text-gray-500 text-sm">
-                No trending products yet. Add from the Shopify catalog on the right.
+                No trending products yet. Add from the Shopify catalog on the right,
+                then save.
               </div>
             ) : (
               <ul className="divide-y divide-gray-100">
@@ -164,8 +238,10 @@ export default function AdminTrendingPage() {
                   const product = row.catalog;
                   const image = productCover(product);
                   return (
-                    <li key={row.id} className="flex items-center gap-3 px-4 py-3">
-                      <span className="text-xs font-medium text-gray-400 w-5">{index + 1}</span>
+                    <li key={row.shopifyProductId} className="flex items-center gap-3 px-4 py-3">
+                      <span className="text-xs font-semibold text-layali-pink w-8">
+                        #{row.rank}
+                      </span>
                       {image ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -178,10 +254,10 @@ export default function AdminTrendingPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">
-                          {product?.name || row.shopify_product_id || 'Missing Shopify product'}
+                          {product?.name || row.shopifyProductId}
                         </p>
                         <p className="text-xs text-gray-500 capitalize">
-                          {product?.category}
+                          Trending
                           {product ? ` · ${formatPrice(Number(product.price))}` : ''}
                         </p>
                       </div>
@@ -189,7 +265,7 @@ export default function AdminTrendingPage() {
                         <button
                           type="button"
                           disabled={saving || index === 0}
-                          onClick={() => void move(index, -1)}
+                          onClick={() => move(index, -1)}
                           className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-30"
                           aria-label="Move up"
                         >
@@ -198,7 +274,7 @@ export default function AdminTrendingPage() {
                         <button
                           type="button"
                           disabled={saving || index === rows.length - 1}
-                          onClick={() => void move(index, 1)}
+                          onClick={() => move(index, 1)}
                           className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 disabled:opacity-30"
                           aria-label="Move down"
                         >
@@ -206,7 +282,7 @@ export default function AdminTrendingPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => void removeRow(row.id)}
+                          onClick={() => removeRow(row.shopifyProductId)}
                           className="p-2 rounded-lg hover:bg-red-50 text-red-500"
                           aria-label="Remove"
                         >
@@ -222,7 +298,7 @@ export default function AdminTrendingPage() {
 
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-100 space-y-3">
-              <h2 className="font-semibold text-gray-900">Add from Shopify catalog</h2>
+              <h2 className="font-semibold text-gray-900">Shopify catalog</h2>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -259,13 +335,13 @@ export default function AdminTrendingPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">{product.name}</p>
                         <p className="text-xs text-gray-500 capitalize">
-                          {product.category} · {formatPrice(Number(product.price))}
+                          Not trending · {formatPrice(Number(product.price))}
                         </p>
                       </div>
                       <Button
                         size="sm"
                         disabled={saving || rows.length >= TRENDING_MAX}
-                        onClick={() => void addProduct(product)}
+                        onClick={() => addProduct(product)}
                       >
                         <Plus className="w-4 h-4" /> Add
                       </Button>

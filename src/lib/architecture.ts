@@ -9,9 +9,13 @@
  *
  * Supabase = SINGLE SOURCE OF TRUTH for Layali application data
  *   auth/profiles, surveys, AI recommendation history,
- *   regions/outlets, addresses, banners, trending config,
+ *   regions/outlets, addresses, banners,
+ *   trending selection/order (Shopify product GIDs + sort_order only),
  *   layali_product_metadata / regions / costs, shopify_order_links,
  *   shopify_product_links (legacy products.id → Shopify GID mapping)
+ *
+ * Trending product title/images/price/inventory remain Shopify-owned.
+ * Supabase does not duplicate those commerce fields.
  *
  * Next.js = UI + orchestration (Shopify + Supabase clients)
  * Zustand = Shopify cart ID + UI/optimistic state only (not authoritative cart)
