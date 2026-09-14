@@ -54,7 +54,7 @@ function newSubmissionId() {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const {
     items,
     total,
@@ -80,6 +80,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState('');
   const placingRef = useRef(false);
   const submissionIdRef = useRef(newSubmissionId());
+  const lastCheckoutPinKey = useRef('');
 
   const summaryTotal = totalAmount || total() || subtotal;
 
@@ -147,6 +148,9 @@ export default function CheckoutPage() {
 
   const updateSelectedPin = async (lat: number, lng: number) => {
     if (!selectedAddressId) return;
+    const pinKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+    if (lastCheckoutPinKey.current === pinKey) return;
+    lastCheckoutPinKey.current = pinKey;
 
     setAddresses((prev) =>
       prev.map((a) =>
@@ -160,7 +164,7 @@ export default function CheckoutPage() {
     let country: string | undefined;
 
     try {
-      const geo = await reverseGeocode(lat, lng);
+      const geo = await reverseGeocode(lat, lng, locale === 'ar' ? 'ar' : 'en');
       const selected = addresses.find((a) => a.id === selectedAddressId);
       const current = structuredFromStoredAddress({
         address_line: selected?.address_line,
@@ -170,6 +174,7 @@ export default function CheckoutPage() {
       const filled = applyGeocodeToStructured(
         current,
         {
+          building: geo.building,
           street: geo.street,
           area: geo.area,
           city: geo.city,
@@ -420,7 +425,7 @@ export default function CheckoutPage() {
                     <p className="font-medium text-white">{address.receiver_name}</p>
                     <p className="text-sm text-white/60">{address.receiver_phone}</p>
                     <div className="text-sm text-white/70 mt-1 whitespace-pre-line leading-relaxed">
-                      {addressDisplayLines(address).join('\n')}
+                      {addressDisplayLines(address, t.checkout.address.additionalNumber).join('\n')}
                     </div>
                   </button>
                 ))}
@@ -437,7 +442,6 @@ export default function CheckoutPage() {
                   defaultCountry="Saudi Arabia"
                   lockCountryToSA
                   loading={savingAddress}
-                  submitLabel="Save & Use This Address"
                   onCancel={addresses.length > 0 ? () => setShowNewAddress(false) : undefined}
                   onSubmit={saveAddress}
                 />
@@ -477,7 +481,7 @@ export default function CheckoutPage() {
                       {selectedAddress.receiver_name} · {selectedAddress.receiver_phone}
                     </p>
                     <div className="text-sm text-white/80 mt-1 whitespace-pre-line leading-relaxed">
-                      {addressDisplayLines(selectedAddress).join('\n')}
+                      {addressDisplayLines(selectedAddress, t.checkout.address.additionalNumber).join('\n')}
                     </div>
                   </div>
                 )}
@@ -573,7 +577,7 @@ export default function CheckoutPage() {
                   {selectedAddress.receiver_name} · {selectedAddress.receiver_phone}
                 </p>
                 <div className="mt-1 whitespace-pre-line leading-relaxed">
-                  {addressDisplayLines(selectedAddress).join('\n')}
+                  {addressDisplayLines(selectedAddress, t.checkout.address.additionalNumber).join('\n')}
                 </div>
                 {selectedAddress.latitude != null && selectedAddress.longitude != null && (
                   <p className="text-xs mt-2 flex items-center gap-1">

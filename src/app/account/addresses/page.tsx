@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/Button';
 import { AddressForm, addressDisplayLabel, addressDisplayLines, type AddressFormValues } from '@/components/address/AddressForm';
 import { LocationMap } from '@/components/map/LocationMap';
 import { FadeIn } from '@/components/ui/FadeIn';
+import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { Address } from '@/types/database';
 
 export default function AddressesPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [userId, setUserId] = useState<string | null>(null);
   const [profileCity, setProfileCity] = useState('');
   const [profileCountry, setProfileCountry] = useState('');
@@ -156,7 +158,7 @@ export default function AddressesPage() {
                       <p className="font-medium text-white">{address.receiver_name}</p>
                       <p className="text-sm text-white/60">{address.receiver_phone}</p>
                       <div className="text-sm text-white/70 mt-2 whitespace-pre-line leading-relaxed">
-                        {addressDisplayLines(address).join('\n')}
+                        {addressDisplayLines(address, t.checkout.address.additionalNumber).join('\n')}
                       </div>
                     </div>
                     <button
