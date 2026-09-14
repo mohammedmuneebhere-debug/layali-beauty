@@ -13,6 +13,15 @@ import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
 
+const CATEGORY_IMAGES: Record<string, string> = {
+  makeup: '/categories/makeup.jpg',
+  skincare: '/categories/skincare.jpg',
+  haircare: '/categories/haircare.jpg',
+  bodycare: '/categories/body-care.jpg',
+  fragrance: '/categories/fragrance.jpg',
+  lenses: '/categories/lenses.jpg',
+};
+
 export default function HomePageClient({
   heroProducts = [],
   categoryCovers = {},
@@ -225,6 +234,7 @@ export default function HomePageClient({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categories.map((cat, i) => {
               const cover =
+                CATEGORY_IMAGES[cat.href] ||
                 categoryCovers[cat.href] ||
                 heroProducts.find((p) => p.category === cat.href && p.image_url)?.image_url;
               return (
