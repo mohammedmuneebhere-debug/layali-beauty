@@ -68,6 +68,25 @@ export function isPresentText(value: string): boolean {
   return String(value || '').trim().length > 0;
 }
 
+/** Combined Building / Unit for the form and customer-facing summaries. */
+export function buildingUnitDetails(fields: StructuredAddressFields): string {
+  return [fields.building, fields.apartment]
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .join(', ');
+}
+
+export function withBuildingUnitDetails(
+  fields: StructuredAddressFields,
+  value: string
+): StructuredAddressFields {
+  return {
+    ...fields,
+    building: value.trim(),
+    apartment: '',
+  };
+}
+
 /** Compose a human-readable multi-line address_line for storage / Shopify address1. */
 export function composeAddressLine(fields: StructuredAddressFields): string {
   const line1 = [fields.building, fields.street].map((v) => v.trim()).filter(Boolean).join(' ');
@@ -87,14 +106,17 @@ export function formatAddressSummaryLines(
   fields: StructuredAddressFields,
   labels?: AddressSummaryLabels
 ): string[] {
-  const line1 = [fields.building, fields.street].map((v) => v.trim()).filter(Boolean).join(' ');
+  const line1 = [buildingUnitDetails(fields), fields.street]
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .join(' ');
   const line3 = [fields.city, fields.postalCode].map((v) => v.trim()).filter(Boolean).join(' ');
   const additionalLabel = labels?.additional || 'Additional Number';
   const additional = fields.additional.trim()
     ? `${additionalLabel}: ${fields.additional.trim()}`
     : '';
 
-  return [line1, fields.area, line3, fields.apartment, additional, fields.directions]
+  return [line1, fields.area, line3, additional, fields.directions]
     .map((v) => v.trim())
     .filter(Boolean);
 }
@@ -250,9 +272,8 @@ export function toShopifyAddressParts(input: {
   });
 
   const address1Parts = [
-    structured.building,
+    buildingUnitDetails(structured),
     structured.street,
-    structured.apartment,
     structured.area,
   ]
     .map((v) => v.trim())

@@ -2,12 +2,11 @@
 
 import { Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle2, Package } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { OrderTimeline } from '@/components/account/OrderTimeline';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
-import { displayOrderNumber, toCustomerOrderRef } from '@/lib/account/order-ref';
+import { displayOrderNumber } from '@/lib/account/order-ref';
 
 type LegacyConfirmedOrder = {
   name?: string;
@@ -18,7 +17,7 @@ type LegacyConfirmedOrder = {
 };
 
 function ConfirmationContent() {
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -28,7 +27,6 @@ function ConfirmationContent() {
     const currency = searchParams.get('currency') || 'SAR';
     const payment = searchParams.get('payment');
     const status = searchParams.get('status');
-    const date = searchParams.get('date');
 
     if (nameParam) {
       return {
@@ -37,7 +35,6 @@ function ConfirmationContent() {
         currencyCode: currency,
         paymentLabel: payment,
         financialStatus: status,
-        createdAt: date,
       };
     }
 
@@ -54,17 +51,13 @@ function ConfirmationContent() {
         currencyCode: parsed.currencyCode || 'SAR',
         paymentLabel: parsed.paymentLabel,
         financialStatus: parsed.financialStatus,
-        createdAt: null as string | null,
       };
     } catch {
       return null;
     }
   }, [searchParams]);
 
-  const orderRef = confirmation ? toCustomerOrderRef(confirmation.name) : '';
   const orderNumber = confirmation ? displayOrderNumber(confirmation.name) : '';
-  const financial = (confirmation?.financialStatus || '').toUpperCase();
-  const paymentDue = !['PAID', 'PARTIALLY_PAID', 'REFUNDED'].includes(financial);
 
   if (!confirmation || !orderNumber) {
     return (
@@ -73,11 +66,11 @@ function ConfirmationContent() {
           <h1 className="font-serif text-heading-md text-white">{t.checkout.confirmedTitle}</h1>
           <p className="text-white/60">{t.checkout.confirmationUnavailable}</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button className="w-full sm:w-auto" onClick={() => router.push('/account/orders')}>
-              {t.checkout.viewOrders}
+            <Button className="w-full sm:w-auto" onClick={() => router.push('/shop')}>
+              {t.checkout.exploreMore}
             </Button>
-            <Button variant="outline" className="w-full sm:w-auto" onClick={() => router.push('/shop')}>
-              {t.checkout.continueShopping}
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => router.push('/account/orders')}>
+              {t.checkout.viewOrders}
             </Button>
           </div>
         </div>
@@ -88,103 +81,44 @@ function ConfirmationContent() {
   return (
     <div className="min-h-screen bg-transparent pt-24 pb-12">
       <div className="max-w-lg mx-auto px-4 min-w-0">
-        <div className="bg-layali-surface rounded-2xl p-6 sm:p-8 border border-layali-pink/20 text-center space-y-5">
-          <div className="mx-auto w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
-            <CheckCircle2 className="w-8 h-8 text-emerald-300" />
+        <div className="bg-layali-surface rounded-2xl p-6 sm:p-10 border border-layali-pink/20 text-center space-y-6">
+          <div className="mx-auto w-16 h-16 rounded-full bg-layali-pink-glow/20 border border-layali-pink/30 flex items-center justify-center animate-[pulse_2.4s_ease-in-out_infinite]">
+            <Sparkles className="w-7 h-7 text-layali-pink" />
           </div>
-          <div>
-            <p className="text-meta uppercase tracking-[0.16em] text-layali-pink mb-1">
-              {t.checkout.confirmedThanks}
+          <div className="space-y-2">
+            <p className="text-meta uppercase tracking-[0.18em] text-layali-pink">
+              {t.checkout.congratulations}
             </p>
-            <h1 className="font-serif text-heading-md text-white">{t.checkout.confirmedTitle}</h1>
-            <p className="text-white font-medium mt-2 break-words">{orderNumber}</p>
+            <h1 className="font-serif text-heading-md text-white leading-tight">
+              {t.checkout.orderPlacedSuccessfully}
+            </h1>
+            <p className="text-white/75 pt-1">{t.checkout.thankYouShopping}</p>
+            <p className="text-sm text-white/55">{t.checkout.orderReceived}</p>
           </div>
 
-          <p className="text-sm text-white/65">{t.checkout.confirmedBody}</p>
-
-          <div className="text-start space-y-3 rounded-xl border border-white/10 p-4 bg-black/20">
-            <div className="flex justify-between gap-3 text-sm">
-              <span className="text-white/55">{t.checkout.orderId}</span>
-              <span className="text-white font-medium break-all">{orderNumber}</span>
-            </div>
-            {confirmation.createdAt ? (
-              <div className="flex justify-between gap-3 text-sm">
-                <span className="text-white/55">{t.checkout.orderDate}</span>
-                <span className="text-white font-medium">
-                  {formatDate(confirmation.createdAt, locale)}
-                </span>
-              </div>
-            ) : null}
+          <div className="rounded-xl border border-white/10 bg-black/25 px-4 py-4 space-y-2">
+            <p className="text-xs uppercase tracking-[0.14em] text-layali-pink">
+              {t.checkout.orderConfirmed}
+            </p>
+            <p className="text-white font-medium break-words">{orderNumber}</p>
             {confirmation.totalAmount != null ? (
-              <div className="flex justify-between gap-3 text-sm">
-                <span className="text-white/55">{t.checkout.total}</span>
-                <span className="text-white font-medium">
-                  {formatPrice(confirmation.totalAmount, confirmation.currencyCode)}
-                </span>
-              </div>
+              <p className="text-sm text-white/70">
+                {t.checkout.total}: {formatPrice(confirmation.totalAmount, confirmation.currencyCode)}
+              </p>
             ) : null}
-            <div className="flex justify-between gap-3 text-sm">
-              <span className="text-white/55">{t.checkout.payment}</span>
-              <span className="text-white font-medium text-end">
-                {t.checkout.cod}
-                {paymentDue ? (
-                  <span className="block text-xs text-white/50 font-normal mt-0.5">
-                    {t.checkout.paymentDue}
-                  </span>
-                ) : null}
-              </span>
-            </div>
-            <div className="flex justify-between gap-3 text-sm">
-              <span className="text-white/55">{t.checkout.currentStatus}</span>
-              <span className="text-white font-medium">{t.orders.processing}</span>
-            </div>
+            <p className="text-xs text-white/50">{t.checkout.cod}</p>
           </div>
 
-          <div className="text-start rounded-xl border border-white/10 p-4 bg-black/20">
-            <OrderTimeline
-              compact
-              steps={[
-                { id: 'placed', state: 'complete' },
-                { id: 'processing', state: 'current' },
-                { id: 'shipped', state: 'upcoming' },
-                { id: 'delivered', state: 'upcoming' },
-              ]}
-            />
-          </div>
-
-          {paymentDue ? (
-            <div className="flex items-start gap-2 text-start text-sm text-white/65 rounded-xl bg-black/30 p-3">
-              <Package className="w-4 h-4 mt-0.5 text-layali-pink shrink-0" />
-              <p>{t.checkout.paymentDue}</p>
-            </div>
-          ) : null}
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
-            {orderRef ? (
-              <Button
-                className="w-full sm:flex-1"
-                onClick={() => router.push(`/account/orders/${encodeURIComponent(orderRef)}`)}
-              >
-                {t.checkout.viewOrder}
-              </Button>
-            ) : (
-              <Button className="w-full sm:flex-1" onClick={() => router.push('/account/orders')}>
-                {t.checkout.viewOrders}
-              </Button>
-            )}
+          <div className="flex flex-col gap-3 pt-1">
+            <Button className="w-full min-h-12" onClick={() => router.push('/shop')}>
+              {t.checkout.exploreMore}
+            </Button>
             <Button
               variant="outline"
-              className="w-full sm:flex-1"
+              className="w-full min-h-12"
               onClick={() => router.push('/account/orders')}
             >
               {t.checkout.viewOrders}
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full sm:flex-1"
-              onClick={() => router.push('/shop')}
-            >
-              {t.checkout.continueShopping}
             </Button>
           </div>
         </div>

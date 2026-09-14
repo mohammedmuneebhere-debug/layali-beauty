@@ -11,14 +11,12 @@ import {
   addressDisplayLines,
   type AddressFormValues,
 } from '@/components/address/AddressForm';
+import { OrderSummaryCard } from '@/components/checkout/OrderSummaryCard';
 import { LocationMap } from '@/components/map/LocationMap';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
-import { formatPrice } from '@/lib/utils';
-import { reverseGeocode } from '@/lib/geocode';
+import { formatSaudiPhoneDisplay } from '@/lib/address/saudi-phone';
 import {
-  applyGeocodeToStructured,
-  composeStoredAddressLine,
   isLabeledStructuredAddress,
   structuredFromStoredAddress,
 } from '@/lib/address/structured';
@@ -54,24 +52,22 @@ function newSubmissionId() {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { t, locale } = useLanguage();
+  const { t } = useLanguage();
   const {
     items,
-    total,
+    lines,
     totalAmount,
     subtotal,
     cartId,
+    discounts,
+    currencyCode,
     refresh,
     clearLocalCart,
   } = useCartStore();
-  const discounts = useCartStore((s) => s.discounts) ?? [];
   const [loading, setLoading] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState('');
-  const [, setUserName] = useState('');
-  const [profileCity, setProfileCity] = useState('');
-  const [, setProfileCountry] = useState('');
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewAddress, setShowNewAddress] = useState(false);
@@ -82,9 +78,7 @@ export default function CheckoutPage() {
   const submissionIdRef = useRef(newSubmissionId());
   const lastCheckoutPinKey = useRef('');
 
-  const summaryTotal = totalAmount || total() || subtotal;
-
-  const loadAddresses = async (uid: string) => {
+  const loadAddresses = async (uid: string, selectId?: string) => {
     const supabase = createClient();
     const { data } = await supabase
       .from('addresses')
@@ -96,13 +90,13 @@ export default function CheckoutPage() {
     const list = (data as Address[]) || [];
     setAddresses(list);
 
-    const defaultAddr = list.find((a) => a.is_default) || list[0];
-    if (defaultAddr) {
-      setSelectedAddressId(defaultAddr.id);
-      setShowNewAddress(false);
-    } else {
-      setShowNewAddress(true);
-    }
+    setSelectedAddressId((current) => {
+      if (selectId && list.some((a) => a.id === selectId)) return selectId;
+      if (current && list.some((a) => a.id === current)) return current;
+      return list.find((a) => a.is_default)?.id || list[0]?.id || null;
+    });
+    if (list.length === 0) setShowNewAddress(true);
+    else if (selectId) setShowNewAddress(false);
   };
 
   useEffect(() => {
@@ -125,13 +119,10 @@ export default function CheckoutPage() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('city, country, full_name, email')
+        .select('email')
         .eq('id', user.id)
         .single();
 
-      setProfileCity(profile?.city || '');
-      setProfileCountry(profile?.country || '');
-      setUserName(profile?.full_name || 'Customer');
       if (profile?.email) setUserEmail(profile.email);
       await loadAddresses(user.id);
     }
@@ -146,9 +137,13 @@ export default function CheckoutPage() {
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || null;
 
+  useEffect(() => {
+    lastCheckoutPinKey.current = '';
+  }, [selectedAddressId]);
+
   const updateSelectedPin = async (lat: number, lng: number) => {
     if (!selectedAddressId) return;
-    const pinKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+    const pinKey = `${selectedAddressId}:${lat.toFixed(5)},${lng.toFixed(5)}`;
     if (lastCheckoutPinKey.current === pinKey) return;
     lastCheckoutPinKey.current = pinKey;
 
@@ -159,60 +154,11 @@ export default function CheckoutPage() {
     );
 
     const supabase = createClient();
-    let addressLine: string | undefined;
-    let city: string | undefined;
-    let country: string | undefined;
-
-    try {
-      const geo = await reverseGeocode(lat, lng, locale === 'ar' ? 'ar' : 'en');
-      const selected = addresses.find((a) => a.id === selectedAddressId);
-      const current = structuredFromStoredAddress({
-        address_line: selected?.address_line,
-        city: selected?.city,
-        country: selected?.country || 'Saudi Arabia',
-      });
-      const filled = applyGeocodeToStructured(
-        current,
-        {
-          building: geo.building,
-          street: geo.street,
-          area: geo.area,
-          city: geo.city,
-          postalCode: geo.postalCode,
-          country: 'Saudi Arabia',
-        },
-        { onlyEmpty: true }
-      );
-      addressLine = composeStoredAddressLine(filled);
-      city = filled.city || undefined;
-      country = 'Saudi Arabia';
-
-      setAddresses((prev) =>
-        prev.map((a) =>
-          a.id === selectedAddressId
-            ? {
-                ...a,
-                latitude: lat,
-                longitude: lng,
-                address_line: addressLine || a.address_line,
-                city: city || a.city,
-                country: country || a.country,
-              }
-            : a
-        )
-      );
-    } catch {
-      // keep pin coords even if reverse geocode fails
-    }
-
     await supabase
       .from('addresses')
       .update({
         latitude: lat,
         longitude: lng,
-        ...(addressLine ? { address_line: addressLine } : {}),
-        ...(city ? { city } : {}),
-        ...(country ? { country } : {}),
       })
       .eq('id', selectedAddressId);
   };
@@ -231,7 +177,7 @@ export default function CheckoutPage() {
         receiver_name: values.receiver_name,
         receiver_phone: values.receiver_phone,
         address_line: values.address_line,
-        city: values.city || profileCity,
+        city: values.city.trim(),
         country: values.country.trim() || 'Saudi Arabia',
         latitude: values.latitude,
         longitude: values.longitude,
@@ -247,8 +193,7 @@ export default function CheckoutPage() {
       return;
     }
 
-    await loadAddresses(userId);
-    setSelectedAddressId(data.id);
+    await loadAddresses(userId, data.id);
     setShowNewAddress(false);
   };
 
@@ -398,9 +343,7 @@ export default function CheckoutPage() {
               )}
             </div>
 
-            <p className="text-sm text-white/50">
-              Choose where we should deliver your order. Your pin helps our courier find you.
-            </p>
+            <p className="text-sm text-white/50">{t.checkout.chooseWhere}</p>
 
             {addresses.length > 0 && !showNewAddress && (
               <div className="space-y-3">
@@ -423,7 +366,9 @@ export default function CheckoutPage() {
                       <MapPin className="w-4 h-4 text-white/40" />
                     </div>
                     <p className="font-medium text-white">{address.receiver_name}</p>
-                    <p className="text-sm text-white/60">{address.receiver_phone}</p>
+                    <p className="text-sm text-white/60">
+                      {formatSaudiPhoneDisplay(address.receiver_phone) || address.receiver_phone}
+                    </p>
                     <div className="text-sm text-white/70 mt-1 whitespace-pre-line leading-relaxed">
                       {addressDisplayLines(address, t.checkout.address.additionalNumber).join('\n')}
                     </div>
@@ -438,7 +383,6 @@ export default function CheckoutPage() {
                   {addresses.length === 0 ? t.checkout.addAddress : t.checkout.newAddress}
                 </h3>
                 <AddressForm
-                  defaultCity={profileCity}
                   defaultCountry="Saudi Arabia"
                   lockCountryToSA
                   loading={savingAddress}
@@ -457,10 +401,12 @@ export default function CheckoutPage() {
                       <p className="text-sm font-medium text-white">{t.checkout.adjustPin}</p>
                       <p className="text-xs text-white/50">{t.checkout.pinHint}</p>
                       <LocationMap
+                        key={selectedAddress.id}
                         latitude={Number(selectedAddress.latitude)}
                         longitude={Number(selectedAddress.longitude)}
                         editable
                         height="240px"
+                        showMarker
                         onLocationChange={updateSelectedPin}
                       />
                     </div>
@@ -478,7 +424,9 @@ export default function CheckoutPage() {
                       {t.checkout.address.summaryTitle}
                     </p>
                     <p className="text-sm text-white font-medium">
-                      {selectedAddress.receiver_name} · {selectedAddress.receiver_phone}
+                      {selectedAddress.receiver_name} ·{' '}
+                      {formatSaudiPhoneDisplay(selectedAddress.receiver_phone) ||
+                        selectedAddress.receiver_phone}
                     </p>
                     <div className="text-sm text-white/80 mt-1 whitespace-pre-line leading-relaxed">
                       {addressDisplayLines(selectedAddress, t.checkout.address.additionalNumber).join('\n')}
@@ -487,7 +435,7 @@ export default function CheckoutPage() {
                 )}
 
                 <div className="space-y-3 pt-2">
-                  <h3 className="text-ui-heading text-white">Payment Method</h3>
+                  <h3 className="text-ui-heading text-white">{t.checkout.payment}</h3>
                   <button
                     type="button"
                     onClick={() => {
@@ -522,7 +470,7 @@ export default function CheckoutPage() {
                   onClick={() => void placeOrder()}
                   disabled={loading || items.length === 0 || !selectedAddressId}
                 >
-                  Place Order
+                  {t.checkout.placeOrder}
                 </Button>
               </>
             )}
@@ -530,54 +478,29 @@ export default function CheckoutPage() {
 
           <div className="bg-layali-surface rounded-2xl p-6 border border-layali-pink/20 h-fit">
             <h2 className="text-ui-heading text-white mb-4">{t.checkout.summary}</h2>
-            <div className="space-y-3 mb-4">
-              {items.map((item) => (
-                <div key={item.id} className="flex justify-between text-sm">
-                  <span className="text-white/70">
-                    {item.name} x{item.quantity}
-                  </span>
-                  <span className="font-medium">{formatPrice(item.price * item.quantity)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="border-t border-layali-pink/20 pt-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-white/60">{t.cart.subtotal}</span>
-                <span className="text-white">{formatPrice(subtotal)}</span>
-              </div>
-              {discounts.map((d) => (
-                <div key={d.title} className="flex justify-between text-sm">
-                  <span className="text-white/60">{d.title}</span>
-                  <span className="text-emerald-300/90">−{formatPrice(d.amount.amount)}</span>
-                </div>
-              ))}
-              <div className="flex justify-between text-sm">
-                <span className="text-white/60">{t.checkout.delivery}</span>
-                <span className="text-white/50 text-xs">Calculated by Shopify</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-white/60">Payment</span>
-                <span className="text-white">{t.checkout.cod}</span>
-              </div>
-              <div className="flex justify-between pt-2">
-                <span className="font-bold text-white">{t.checkout.total}</span>
-                <span className="font-bold text-xl text-white">{formatPrice(summaryTotal)}</span>
-              </div>
-            </div>
+            <OrderSummaryCard
+              lines={lines}
+              subtotal={subtotal}
+              totalAmount={totalAmount}
+              discounts={discounts}
+              currencyCode={currencyCode}
+            />
             <div className="mt-4 p-3 rounded-xl bg-black flex items-center gap-2">
-              <Package className="w-5 h-5 text-layali-pink" />
-              <span className="text-sm text-white/70">
-                Place your order on Layali. Pay with Cash on Delivery when it arrives.
-              </span>
+              <Package className="w-5 h-5 text-layali-pink shrink-0" />
+              <span className="text-sm text-white/70">{t.checkout.confirmedBody}</span>
             </div>
             {selectedAddress && (
               <div className="mt-4 text-sm text-white/60">
                 <p className="font-medium text-white">{t.checkout.deliveringTo}</p>
                 <p>
-                  {selectedAddress.receiver_name} · {selectedAddress.receiver_phone}
+                  {selectedAddress.receiver_name} ·{' '}
+                  {formatSaudiPhoneDisplay(selectedAddress.receiver_phone) ||
+                    selectedAddress.receiver_phone}
                 </p>
                 <div className="mt-1 whitespace-pre-line leading-relaxed">
-                  {addressDisplayLines(selectedAddress, t.checkout.address.additionalNumber).join('\n')}
+                  {addressDisplayLines(selectedAddress, t.checkout.address.additionalNumber).join(
+                    '\n'
+                  )}
                 </div>
                 {selectedAddress.latitude != null && selectedAddress.longitude != null && (
                   <p className="text-xs mt-2 flex items-center gap-1">

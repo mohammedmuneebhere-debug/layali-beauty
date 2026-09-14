@@ -26,11 +26,17 @@ function Recenter({
   centerKey: number;
 }) {
   const map = useMap();
-  const lastKey = useRef<number | null>(null);
+  const last = useRef<{ lat: number; lng: number; centerKey: number } | null>(null);
 
   useEffect(() => {
-    if (lastKey.current === centerKey) return;
-    lastKey.current = centerKey;
+    const prev = last.current;
+    const moved =
+      !prev ||
+      prev.centerKey !== centerKey ||
+      Math.abs(prev.lat - lat) > 1e-7 ||
+      Math.abs(prev.lng - lng) > 1e-7;
+    last.current = { lat, lng, centerKey };
+    if (!moved) return;
     map.setView([lat, lng], Math.max(map.getZoom() || 16, 16));
   }, [lat, lng, centerKey, map]);
 
@@ -106,6 +112,7 @@ interface LocationMapInnerProps {
   editable?: boolean;
   height?: string;
   centerKey?: number;
+  showMarker?: boolean;
   onLocationChange?: (lat: number, lng: number) => void;
 }
 
@@ -115,6 +122,7 @@ export default function LocationMapInner({
   editable = false,
   height = '260px',
   centerKey = 0,
+  showMarker = true,
   onLocationChange,
 }: LocationMapInnerProps) {
   return (
@@ -138,12 +146,14 @@ export default function LocationMapInner({
           editable={editable}
           onPick={(lat, lng) => onLocationChange?.(lat, lng)}
         />
-        <DraggablePin
-          latitude={latitude}
-          longitude={longitude}
-          editable={editable}
-          onLocationChange={onLocationChange}
-        />
+        {showMarker ? (
+          <DraggablePin
+            latitude={latitude}
+            longitude={longitude}
+            editable={editable}
+            onLocationChange={onLocationChange}
+          />
+        ) : null}
       </MapContainer>
     </div>
   );

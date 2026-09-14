@@ -18,6 +18,8 @@ interface LocationMapProps {
   height?: string;
   /** Increment to force the map to re-center (e.g. after live location) */
   centerKey?: number;
+  /** When false, the map is a chooser — no pin is treated as a saved location. */
+  showMarker?: boolean;
   onLocationChange?: (lat: number, lng: number) => void;
 }
 

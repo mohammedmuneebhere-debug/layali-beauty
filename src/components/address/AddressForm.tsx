@@ -5,16 +5,20 @@ import { MapPin, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { SaudiPhoneField } from '@/components/address/SaudiPhoneField';
 import { LocationMap } from '@/components/map/LocationMap';
 import { DEFAULT_MAP_CENTER, reverseGeocode } from '@/lib/geocode';
+import { isValidSaudiMobile, toStoredSaudiMobile } from '@/lib/address/saudi-phone';
 import {
   applyGeocodeToStructured,
+  buildingUnitDetails,
   composeStoredAddressLine,
   formatAddressSummaryLines,
   isPresentText,
   isSaudiPostalCode,
   structuredFromStoredAddress,
   toAsciiDigits,
+  withBuildingUnitDetails,
   type StructuredAddressFields,
   type StructuredFieldKey,
 } from '@/lib/address/structured';
@@ -72,9 +76,16 @@ function coordKey(lat: number, lng: number) {
   return `${lat.toFixed(5)},${lng.toFixed(5)}`;
 }
 
+function SectionTitle({ children }: { children: string }) {
+  return (
+    <h3 className="text-meta font-medium tracking-[0.14em] uppercase text-layali-pink">
+      {children}
+    </h3>
+  );
+}
+
 export function AddressForm({
   initial,
-  defaultCity = '',
   defaultCountry = '',
   lockCountryToSA = false,
   submitLabel,
@@ -88,7 +99,7 @@ export function AddressForm({
 
   const initialStructured = structuredFromStoredAddress({
     address_line: initial?.address_line,
-    city: initial?.city || defaultCity,
+    city: initial?.city || '',
     country: lockCountryToSA ? 'Saudi Arabia' : initial?.country || defaultCountry,
   });
 
@@ -139,9 +150,24 @@ export function AddressForm({
     userTouched.current.add(key);
     setConfirmed(false);
     setFields((prev) => ({ ...prev, [key]: value }));
-    if (key === 'building' || key === 'street' || key === 'area' || key === 'city' || key === 'postalCode' || key === 'country') {
+    if (
+      key === 'building' ||
+      key === 'street' ||
+      key === 'area' ||
+      key === 'city' ||
+      key === 'postalCode' ||
+      key === 'country'
+    ) {
       clearFieldError(key);
     }
+  };
+
+  const updateBuildingUnit = (value: string) => {
+    userTouched.current.add('building');
+    userTouched.current.add('apartment');
+    setConfirmed(false);
+    setFields((prev) => withBuildingUnitDetails(prev, value));
+    clearFieldError('building');
   };
 
   const runReverseGeocode = async (nextLat: number, nextLng: number) => {
@@ -168,7 +194,10 @@ export function AddressForm({
         )
       );
     } catch (err) {
-      const code = err && typeof err === 'object' && 'code' in err ? String((err as { code?: string }).code) : '';
+      const code =
+        err && typeof err === 'object' && 'code' in err
+          ? String((err as { code?: string }).code)
+          : '';
       if (code === 'rate_limited') setGeocodeHint(a.geocodeRateLimit);
       else if (code === 'timeout') setGeocodeHint(a.geocodeTimeout);
       else if (code === 'no_result') setGeocodeHint(a.geocodeNoResult);
@@ -252,17 +281,18 @@ export function AddressForm({
 
     const nextErrors: FieldErrors = {};
     const countryValue = lockCountryToSA ? 'Saudi Arabia' : fields.country.trim();
+    const buildingUnit = buildingUnitDetails(fields);
 
     if (!receiverName.trim() || receiverName.trim().length < 2) {
       nextErrors.receiver_name = a.requiredReceiverName;
     }
-    if (!receiverPhone.trim() || receiverPhone.trim().length < 8) {
+    if (!isValidSaudiMobile(receiverPhone)) {
       nextErrors.receiver_phone = a.requiredReceiverPhone;
     }
     if (label === 'other' && !customLabel.trim()) {
       nextErrors.custom_label = a.requiredOtherLabel;
     }
-    if (!isPresentText(fields.building)) {
+    if (!isPresentText(buildingUnit)) {
       nextErrors.building = a.requiredBuilding;
     }
     if (!isPresentText(fields.street)) {
@@ -277,9 +307,7 @@ export function AddressForm({
     if (!isSaudiPostalCode(fields.postalCode)) {
       nextErrors.postalCode = a.requiredPostal;
     }
-    if (lockCountryToSA) {
-      // Country is fixed.
-    } else if (!countryValue) {
+    if (!lockCountryToSA && !countryValue) {
       nextErrors.country = a.requiredCountrySA;
     }
     if (latitude == null || longitude == null) {
@@ -295,24 +323,25 @@ export function AddressForm({
       return;
     }
 
-    const finalFields: StructuredAddressFields = {
-      ...fields,
-      street: fields.street.trim(),
-      area: fields.area.trim(),
-      city: fields.city.trim(),
-      building: fields.building.trim(),
-      additional: fields.additional.trim(),
-      apartment: fields.apartment.trim(),
-      postalCode: toAsciiDigits(fields.postalCode).trim(),
-      directions: fields.directions.trim(),
-      country: countryValue,
-    };
+    const finalFields = withBuildingUnitDetails(
+      {
+        ...fields,
+        street: fields.street.trim(),
+        area: fields.area.trim(),
+        city: fields.city.trim(),
+        additional: fields.additional.trim(),
+        postalCode: toAsciiDigits(fields.postalCode).trim(),
+        directions: fields.directions.trim(),
+        country: countryValue,
+      },
+      buildingUnit
+    );
 
     await onSubmit({
       label,
       custom_label: label === 'other' ? customLabel.trim() : '',
       receiver_name: receiverName.trim(),
-      receiver_phone: receiverPhone.trim(),
+      receiver_phone: toStoredSaudiMobile(receiverPhone),
       address_line: composeStoredAddressLine(finalFields),
       city: finalFields.city,
       country: finalFields.country,
@@ -334,107 +363,75 @@ export function AddressForm({
   const directionsId = `${formId}-directions`;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {error && <div className="p-3 rounded-xl bg-red-50 text-red-600 text-sm">{error}</div>}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input
-          id={`${formId}-receiver-name`}
-          label={a.receiverName}
-          value={receiverName}
-          onChange={(e) => {
-            setReceiverName(e.target.value);
-            clearFieldError('receiver_name');
-          }}
-          placeholder={a.receiverNamePlaceholder}
-          autoComplete="name"
-          error={fieldErrors.receiver_name}
-          required
-        />
-        <Input
-          id={`${formId}-receiver-phone`}
-          label={a.receiverPhone}
-          type="tel"
-          value={receiverPhone}
-          onChange={(e) => {
-            setReceiverPhone(e.target.value);
-            clearFieldError('receiver_phone');
-          }}
-          placeholder={a.receiverPhonePlaceholder}
-          autoComplete="tel"
-          error={fieldErrors.receiver_phone}
-          required
-        />
-      </div>
-
-      <Select
-        label={a.addressType}
-        options={labelOptions}
-        value={label}
-        onChange={(e) => setLabel(e.target.value as AddressLabel)}
-      />
-
-      {label === 'other' && (
-        <Input
-          id={`${formId}-custom-label`}
-          label={a.specifyLabel}
-          value={customLabel}
-          onChange={(e) => setCustomLabel(e.target.value)}
-          placeholder={a.specifyLabelPlaceholder}
-          error={fieldErrors.custom_label}
-          required
-        />
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {error && (
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm">
+          {error}
+        </div>
       )}
 
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-white">{a.pinTitle}</p>
-            <p className="text-xs text-white/50 mt-0.5">
-              {hasPinnedLocation ? a.pinHintPinned : a.pinHintEmpty}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={useLiveLocation}
-            disabled={locating}
-            className="min-h-11 shrink-0"
-          >
-            <Navigation className="w-4 h-4" />
-            {locating ? a.detecting : a.useLiveLocation}
-          </Button>
+      <section className="space-y-4">
+        <div className="space-y-1">
+          <SectionTitle>{a.sectionLocation}</SectionTitle>
+          <p className="text-sm text-white/55 leading-relaxed">{a.locationIntro}</p>
         </div>
 
-        <LocationMap
-          latitude={mapLat}
-          longitude={mapLng}
-          editable
-          height="300px"
-          centerKey={centerKey}
-          onLocationChange={(lat, lng) => {
-            applyCoordinates(lat, lng, { fillAddress: true, recenter: false });
-          }}
-        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={useLiveLocation}
+          disabled={locating}
+          className="w-full min-h-12"
+        >
+          <Navigation className="w-4 h-4" />
+          {locating ? a.detecting : a.useLiveLocation}
+        </Button>
 
-        <p className="text-xs text-white/50 flex items-center gap-1.5">
-          <MapPin className="w-3.5 h-3.5 shrink-0" />
-          {updatingFromPin ? a.updatingFromPin : hasPinnedLocation ? a.pinSet : a.noPinYet}
+        <div className="relative">
+          <LocationMap
+            latitude={mapLat}
+            longitude={mapLng}
+            editable
+            height="280px"
+            centerKey={centerKey}
+            showMarker={hasPinnedLocation}
+            onLocationChange={(lat, lng) => {
+              applyCoordinates(lat, lng, { fillAddress: true, recenter: false });
+            }}
+          />
+          {!hasPinnedLocation ? (
+            <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center px-3">
+              <p className="pointer-events-none rounded-full bg-black/70 border border-white/10 px-3 py-1.5 text-xs text-white/90">
+                {a.chooseLocation}
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <p className="text-xs text-white/50 flex items-start gap-1.5 leading-relaxed">
+          <MapPin className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+          <span>
+            {updatingFromPin
+              ? a.updatingFromPin
+              : hasPinnedLocation
+                ? a.pinHintPinned
+                : a.pinHintEmpty}
+          </span>
         </p>
         {fieldErrors.pin ? <p className="text-sm text-red-400">{fieldErrors.pin}</p> : null}
         {accuracyHint ? <p className="text-xs text-amber-200/90">{accuracyHint}</p> : null}
         {geocodeHint ? <p className="text-xs text-amber-200/90">{geocodeHint}</p> : null}
-        <p className="text-xs text-white/40">{a.autofillHint}</p>
-      </div>
+        <p className="text-xs text-white/40 leading-relaxed">{a.autofillHint}</p>
+      </section>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <section className="space-y-4">
+        <SectionTitle>{a.sectionAddress}</SectionTitle>
         <Input
           id={`${formId}-building`}
-          label={a.building}
-          value={fields.building}
-          onChange={(e) => updateField('building', e.target.value)}
-          placeholder={a.buildingPlaceholder}
+          label={a.buildingUnit}
+          value={buildingUnitDetails(fields)}
+          onChange={(e) => updateBuildingUnit(e.target.value)}
+          placeholder={a.buildingUnitPlaceholder}
           error={fieldErrors.building}
           required
         />
@@ -448,9 +445,6 @@ export function AddressForm({
           error={fieldErrors.street}
           required
         />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           id={`${formId}-area`}
           label={a.area}
@@ -470,9 +464,6 @@ export function AddressForm({
           error={fieldErrors.city}
           required
         />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input
           id={`${formId}-postal`}
           label={a.postal}
@@ -490,16 +481,6 @@ export function AddressForm({
           value={fields.additional}
           onChange={(e) => updateField('additional', e.target.value)}
           placeholder={a.additionalPlaceholder}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input
-          id={`${formId}-apartment`}
-          label={a.apartment}
-          value={fields.apartment}
-          onChange={(e) => updateField('apartment', e.target.value)}
-          placeholder={a.apartmentPlaceholder}
         />
         {lockCountryToSA ? (
           <Input
@@ -520,29 +501,91 @@ export function AddressForm({
             error={fieldErrors.country}
           />
         )}
-      </div>
+      </section>
 
-      <div className="w-full">
-        <label htmlFor={directionsId} className="block text-sm font-medium text-white/70 mb-1.5">
-          {a.directions}
-        </label>
-        <textarea
-          id={directionsId}
-          value={fields.directions}
-          onChange={(e) => updateField('directions', e.target.value)}
-          rows={2}
-          placeholder={a.directionsPlaceholder}
-          className={cn(
-            'w-full min-h-[44px] px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2',
-            'border border-white/12 bg-white/5 text-white placeholder:text-white/30 focus:ring-layali-pink/50 focus:border-layali-pink/40'
-          )}
+      <section className="space-y-4">
+        <SectionTitle>{a.sectionRecipient}</SectionTitle>
+        <Input
+          id={`${formId}-receiver-name`}
+          label={a.receiverName}
+          value={receiverName}
+          onChange={(e) => {
+            setReceiverName(e.target.value);
+            clearFieldError('receiver_name');
+          }}
+          placeholder={a.receiverNamePlaceholder}
+          autoComplete="name"
+          error={fieldErrors.receiver_name}
+          required
         />
-      </div>
+        <SaudiPhoneField
+          id={`${formId}-receiver-phone`}
+          label={a.receiverPhone}
+          value={receiverPhone}
+          onChange={(stored) => {
+            setReceiverPhone(stored);
+            clearFieldError('receiver_phone');
+          }}
+          placeholder={a.receiverPhonePlaceholder}
+          error={fieldErrors.receiver_phone}
+          required
+        />
+      </section>
 
-      <div className="rounded-xl border border-layali-pink/25 bg-black/25 p-4 space-y-3">
+      <section className="space-y-4">
+        <SectionTitle>{a.sectionLabel}</SectionTitle>
+        <Select
+          label={a.addressType}
+          options={labelOptions}
+          value={label}
+          onChange={(e) => setLabel(e.target.value as AddressLabel)}
+        />
+        {label === 'other' && (
+          <Input
+            id={`${formId}-custom-label`}
+            label={a.specifyLabel}
+            value={customLabel}
+            onChange={(e) => setCustomLabel(e.target.value)}
+            placeholder={a.specifyLabelPlaceholder}
+            error={fieldErrors.custom_label}
+            required
+          />
+        )}
+        <label className="flex items-center gap-2 text-sm text-white cursor-pointer min-h-11">
+          <input
+            type="checkbox"
+            checked={isDefault}
+            onChange={(e) => setIsDefault(e.target.checked)}
+            className="rounded"
+          />
+          {a.setDefault}
+        </label>
+      </section>
+
+      <section className="space-y-3">
+        <SectionTitle>{a.sectionInstructions}</SectionTitle>
+        <div className="w-full">
+          <label htmlFor={directionsId} className="block text-sm font-medium text-white/70 mb-1.5">
+            {a.directions}
+          </label>
+          <textarea
+            id={directionsId}
+            value={fields.directions}
+            onChange={(e) => updateField('directions', e.target.value)}
+            rows={3}
+            placeholder={a.directionsPlaceholder}
+            className={cn(
+              'w-full min-h-12 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2',
+              'border border-white/12 bg-white/5 text-white placeholder:text-white/30 focus:ring-layali-pink/50 focus:border-layali-pink/40'
+            )}
+          />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-layali-pink/25 bg-black/25 p-4 sm:p-5 space-y-4">
         <div>
-          <p className="text-sm font-medium text-white">{a.confirmTitle}</p>
-          <p className="text-xs text-white/50 mt-1">{a.confirmHint}</p>
+          <SectionTitle>{a.sectionReview}</SectionTitle>
+          <p className="text-xs text-white/50 mt-2">{a.confirmHint}</p>
         </div>
         {summaryLines.length > 0 ? (
           <div className="text-sm text-white/85 whitespace-pre-line leading-relaxed">
@@ -551,7 +594,7 @@ export function AddressForm({
         ) : (
           <p className="text-sm text-white/40">{a.confirmEmpty}</p>
         )}
-        <label className="flex items-start gap-3 text-sm text-white cursor-pointer">
+        <label className="flex items-start gap-3 text-sm text-white cursor-pointer min-h-11">
           <input
             type="checkbox"
             checked={confirmed}
@@ -559,24 +602,14 @@ export function AddressForm({
               setConfirmed(e.target.checked);
               clearFieldError('confirm');
             }}
-            className="mt-0.5 h-4 w-4 rounded"
+            className="mt-1 h-4 w-4 rounded"
           />
           <span>{a.confirmCheckbox}</span>
         </label>
         {fieldErrors.confirm ? <p className="text-sm text-red-400">{fieldErrors.confirm}</p> : null}
-      </div>
+      </section>
 
-      <label className="flex items-center gap-2 text-sm text-white cursor-pointer min-h-11">
-        <input
-          type="checkbox"
-          checked={isDefault}
-          onChange={(e) => setIsDefault(e.target.checked)}
-          className="rounded"
-        />
-        {a.setDefault}
-      </label>
-
-      <div className="flex gap-3">
+      <div className="flex flex-col-reverse sm:flex-row gap-3 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
         {onCancel && (
           <Button type="button" variant="outline" className="flex-1 min-h-12" onClick={onCancel}>
             {a.cancel}

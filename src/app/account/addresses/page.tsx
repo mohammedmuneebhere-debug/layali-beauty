@@ -10,14 +10,13 @@ import { AddressForm, addressDisplayLabel, addressDisplayLines, type AddressForm
 import { LocationMap } from '@/components/map/LocationMap';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { formatSaudiPhoneDisplay } from '@/lib/address/saudi-phone';
 import type { Address } from '@/types/database';
 
 export default function AddressesPage() {
   const router = useRouter();
   const { t } = useLanguage();
   const [userId, setUserId] = useState<string | null>(null);
-  const [profileCity, setProfileCity] = useState('');
-  const [profileCountry, setProfileCountry] = useState('');
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -43,15 +42,6 @@ export default function AddressesPage() {
         return;
       }
       setUserId(user.id);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('city, country')
-        .eq('id', user.id)
-        .single();
-
-      setProfileCity(profile?.city || '');
-      setProfileCountry(profile?.country || '');
       await load(user.id);
       setFetching(false);
     }
@@ -70,8 +60,8 @@ export default function AddressesPage() {
       receiver_name: values.receiver_name,
       receiver_phone: values.receiver_phone,
       address_line: values.address_line,
-      city: values.city || profileCity,
-      country: values.country || profileCountry,
+      city: values.city.trim(),
+      country: values.country.trim() || 'Saudi Arabia',
       latitude: values.latitude,
       longitude: values.longitude,
       is_default: values.is_default || addresses.length === 0,
@@ -130,8 +120,7 @@ export default function AddressesPage() {
             <div className="bg-layali-surface rounded-2xl p-6 border border-layali-pink/20 mb-6">
               <h2 className="font-medium text-white mb-4">New Address</h2>
               <AddressForm
-                defaultCity={profileCity}
-                defaultCountry={profileCountry}
+                defaultCountry="Saudi Arabia"
                 loading={loading}
                 onCancel={() => setShowForm(false)}
                 onSubmit={saveAddress}
@@ -156,7 +145,9 @@ export default function AddressesPage() {
                         {address.is_default && ' · Default'}
                       </p>
                       <p className="font-medium text-white">{address.receiver_name}</p>
-                      <p className="text-sm text-white/60">{address.receiver_phone}</p>
+                      <p className="text-sm text-white/60">
+                        {formatSaudiPhoneDisplay(address.receiver_phone) || address.receiver_phone}
+                      </p>
                       <div className="text-sm text-white/70 mt-2 whitespace-pre-line leading-relaxed">
                         {addressDisplayLines(address, t.checkout.address.additionalNumber).join('\n')}
                       </div>
