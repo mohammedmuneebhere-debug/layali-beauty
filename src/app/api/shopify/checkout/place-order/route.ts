@@ -17,6 +17,8 @@ import {
 import { toShopifyAddressParts } from '@/lib/address/structured';
 
 export const runtime = 'nodejs';
+/** Shopify Admin draft+complete can exceed the default platform budget. */
+export const maxDuration = 300;
 
 type PlaceOrderBody = {
   cartId?: string;

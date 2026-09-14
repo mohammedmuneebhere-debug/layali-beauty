@@ -43,11 +43,72 @@ function customerCheckoutError(message: string): string {
   return kept.join('; ');
 }
 
+const SUBMISSION_STORAGE_KEY = 'layali-checkout-submission-id';
+const UNCONFIRMED_PLACE_ORDER =
+  "We couldn't confirm the response from the server. Please check My Orders before trying again.";
+
 function newSubmissionId() {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
     return crypto.randomUUID();
   }
   return `sub_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function isValidSubmissionId(value: string): boolean {
+  return value.length >= 8 && value.length <= 80;
+}
+
+function readStoredSubmissionId(): string | null {
+  try {
+    if (typeof sessionStorage === 'undefined') return null;
+    const value = sessionStorage.getItem(SUBMISSION_STORAGE_KEY)?.trim() || '';
+    return isValidSubmissionId(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSubmissionId(id: string): void {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    sessionStorage.setItem(SUBMISSION_STORAGE_KEY, id);
+  } catch {
+    // Private mode / quota — keep the in-memory id only.
+  }
+}
+
+function clearStoredSubmissionId(): void {
+  try {
+    if (typeof sessionStorage === 'undefined') return;
+    sessionStorage.removeItem(SUBMISSION_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+function getOrCreateSubmissionId(): string {
+  const stored = readStoredSubmissionId();
+  if (stored) return stored;
+  const id = newSubmissionId();
+  writeStoredSubmissionId(id);
+  return id;
+}
+
+function rotateSubmissionId(): string {
+  const id = newSubmissionId();
+  writeStoredSubmissionId(id);
+  return id;
+}
+
+function isAbortOrNetworkError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+  const name = 'name' in err ? String((err as { name?: string }).name || '') : '';
+  const message = err instanceof Error ? err.message : String(err);
+  return (
+    name === 'AbortError' ||
+    name === 'TimeoutError' ||
+    /aborted|timeout|failed to fetch|networkerror|load failed/i.test(message)
+  );
 }
 
 export default function CheckoutPage() {
@@ -74,8 +135,11 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [error, setError] = useState('');
+  const [cartReady, setCartReady] = useState(false);
+  const [checkOrdersHint, setCheckOrdersHint] = useState(false);
   const placingRef = useRef(false);
-  const submissionIdRef = useRef(newSubmissionId());
+  const orderPlacedRef = useRef(false);
+  const submissionIdRef = useRef('');
   const lastCheckoutPinKey = useRef('');
 
   const loadAddresses = async (uid: string, selectId?: string) => {
@@ -100,10 +164,25 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    const finish = () => setCartReady(true);
+    const unsub = useCartStore.persist.onFinishHydration(finish);
+    if (useCartStore.persist.hasHydrated()) finish();
+    return unsub;
+  }, []);
 
   useEffect(() => {
+    submissionIdRef.current = getOrCreateSubmissionId();
+  }, []);
+
+  useEffect(() => {
+    if (!cartReady) return;
+    void refresh();
+  }, [cartReady, refresh]);
+
+  useEffect(() => {
+    if (!cartReady) return;
+    if (placingRef.current || orderPlacedRef.current) return;
+
     async function init() {
       const supabase = createClient();
       const {
@@ -127,13 +206,18 @@ export default function CheckoutPage() {
       await loadAddresses(user.id);
     }
 
+    // Persist restore only cartId — line items stay empty until Shopify refresh.
     if (items.length === 0) {
+      if (cartId) {
+        void init();
+        return;
+      }
       router.push('/cart');
       return;
     }
 
     void init();
-  }, [items.length, router, refresh]);
+  }, [cartReady, items.length, cartId, router]);
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || null;
 
@@ -197,9 +281,18 @@ export default function CheckoutPage() {
     setShowNewAddress(false);
   };
 
+  const resolveSubmissionId = () => {
+    const current = submissionIdRef.current.trim();
+    if (isValidSubmissionId(current)) return current;
+    const id = getOrCreateSubmissionId();
+    submissionIdRef.current = id;
+    return id;
+  };
+
   const placeOrder = async () => {
-    if (placingRef.current || loading) return;
+    if (placingRef.current || loading || orderPlacedRef.current) return;
     setError('');
+    setCheckOrdersHint(false);
 
     if (!userId || !userEmail) {
       router.push('/auth/signin?redirect=/checkout');
@@ -264,11 +357,11 @@ export default function CheckoutPage() {
           addressId: selectedAddressId,
           notes,
           paymentMethod: 'cod',
-          submissionId: submissionIdRef.current,
+          submissionId: resolveSubmissionId(),
         }),
       });
 
-      const json = (await res.json()) as {
+      let json: {
         ok?: boolean;
         error?: string;
         code?: string;
@@ -289,11 +382,24 @@ export default function CheckoutPage() {
           };
         };
       };
+      try {
+        json = JSON.parse(await res.text()) as typeof json;
+      } catch {
+        // Keep submissionId. Do not auto-retry — Shopify may already have completed.
+        setCheckOrdersHint(true);
+        setError(UNCONFIRMED_PLACE_ORDER);
+        return;
+      }
+
+      if (!json || typeof json !== 'object') {
+        setCheckOrdersHint(true);
+        setError(UNCONFIRMED_PLACE_ORDER);
+        return;
+      }
 
       // Success (including recovered / already-completed submissions).
       if (json.ok && json.order) {
-        clearLocalCart();
-        submissionIdRef.current = newSubmissionId();
+        orderPlacedRef.current = true;
         const q = new URLSearchParams();
         if (json.order.name) q.set('name', json.order.name);
         if (Number.isFinite(json.order.totalAmount)) {
@@ -304,22 +410,33 @@ export default function CheckoutPage() {
         if (json.order.financialStatus) q.set('status', json.order.financialStatus);
         q.set('date', new Date().toISOString());
         router.push(`/checkout/success?${q.toString()}`);
+        clearStoredSubmissionId();
+        submissionIdRef.current = '';
+        clearLocalCart();
         return;
       }
 
       // Keep cart. Only rotate submissionId when the server says a retry cannot
       // duplicate a Shopify order (pre-completion validation failures).
       if (json.retrySafe === true) {
-        submissionIdRef.current = newSubmissionId();
+        submissionIdRef.current = rotateSubmissionId();
       }
       const raw = json.error || 'Could not place your order. Please try again.';
       setError(customerCheckoutError(raw) || 'Could not place your order. Please try again.');
-    } catch {
-      // Network/unknown — keep submissionId so a retry can hit server idempotency.
-      setError('Could not place your order. Please try again.');
+    } catch (err) {
+      // Keep submissionId so a manual retry can hit server idempotency.
+      // Do not auto-submit again — Shopify may already have completed.
+      if (isAbortOrNetworkError(err)) {
+        setCheckOrdersHint(true);
+        setError(UNCONFIRMED_PLACE_ORDER);
+      } else {
+        setError('Could not place your order. Please try again.');
+      }
     } finally {
-      placingRef.current = false;
-      setLoading(false);
+      if (!orderPlacedRef.current) {
+        placingRef.current = false;
+        setLoading(false);
+      }
     }
   };
 
@@ -328,7 +445,10 @@ export default function CheckoutPage() {
       <div className="max-w-4xl mx-auto px-4">
         <h1 className="font-serif text-heading-lg text-white mb-8">{t.checkout.title}</h1>
 
-        <div className="grid md:grid-cols-2 gap-8">
+        {!cartReady ? (
+          <p className="text-white/45">Loading cart…</p>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-8">
           <div className="bg-layali-surface rounded-2xl p-6 border border-layali-pink/20 space-y-5">
             <div className="flex items-center justify-between">
               <h2 className="text-ui-heading text-white">{t.checkout.deliveryAddress}</h2>
@@ -458,12 +578,22 @@ export default function CheckoutPage() {
                 </div>
 
                 {error && (
-                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm">
-                    {error}
+                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/25 text-red-300 text-sm space-y-2">
+                    <p>{error}</p>
+                    {checkOrdersHint && (
+                      <button
+                        type="button"
+                        onClick={() => router.push('/account/orders')}
+                        className="text-sm text-layali-pink font-medium hover:underline"
+                      >
+                        {t.checkout.viewOrders}
+                      </button>
+                    )}
                   </div>
                 )}
 
                 <Button
+                  type="button"
                   className="w-full"
                   size="lg"
                   loading={loading}
@@ -513,6 +643,7 @@ export default function CheckoutPage() {
             )}
           </div>
         </div>
+        )}
       </div>
     </div>
   );
