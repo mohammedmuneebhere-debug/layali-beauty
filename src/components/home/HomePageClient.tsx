@@ -221,18 +221,29 @@ export default function HomePageClient({
             <h2 className="font-serif text-heading-lg text-white mb-4">{t.categories.title}</h2>
           </FadeIn>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {categories.map((cat, i) => (
+            {categories.map((cat, i) => {
+              const cover = heroProducts.find((p) => p.category === cat.href && p.image_url)?.image_url;
+              return (
               <FadeIn key={cat.key} delay={i * 0.1}>
                 <Link href={`/shop?category=${cat.href}`}>
                   <div className="aspect-square rounded-2xl bg-black/40 backdrop-blur-md border border-layali-pink/25 flex items-center justify-center card-hover relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-t from-layali-pink-glow/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cover}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : null}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
                     <span className="relative font-serif text-heading-sm text-white text-center px-2">
                       {cat.label}
                     </span>
                   </div>
                 </Link>
               </FadeIn>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

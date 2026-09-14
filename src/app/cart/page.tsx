@@ -229,7 +229,7 @@ export default function CartPage() {
               <span className="text-sm text-emerald-300/90">−{formatPrice(d.amount.amount)}</span>
             </div>
           ))}
-          {/* Shipping is not available on Storefront cart until Shopify Checkout — keep checkout authoritative. */}
+          {/* Shipping is confirmed on the Layali COD checkout — do not invent a cart shipping total. */}
           <div className="flex justify-between items-center mb-2 gap-3 min-w-0">
             <span className="text-white/50 shrink-0">{t.cart.delivery}</span>
             <span className="text-sm text-white/40 text-end min-w-0">Calculated at checkout</span>
