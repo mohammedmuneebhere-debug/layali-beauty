@@ -7,7 +7,6 @@ import { ArrowRight, Sparkles, Droplets, Leaf } from 'lucide-react';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { RitualCarousel } from '@/components/home/RitualCarousel';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
-import { TrustStrip } from '@/components/commerce/TrustStrip';
 import { HeroStage } from '@/components/home/HeroStage';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
@@ -133,13 +132,6 @@ export default function HomePageClient({
           ))}
         </div>
       </div>
-
-      {/* Trust */}
-      <section className="py-10 sm:py-12 section-glide-soft">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <TrustStrip labels={t.trust} />
-        </div>
-      </section>
 
       {/* Campaign banners */}
       <section className="py-10 sm:py-14 section-glide-soft">
