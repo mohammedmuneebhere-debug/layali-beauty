@@ -2,15 +2,23 @@
 
 import Link from 'next/link';
 import { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Sparkles, Droplets, Leaf } from 'lucide-react';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { RitualCarousel } from '@/components/home/RitualCarousel';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
+import { TrustStrip } from '@/components/commerce/TrustStrip';
+import { HeroStage } from '@/components/home/HeroStage';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import type { CatalogProduct } from '@/lib/shopify/normalize';
 
-export default function HomePageClient() {
+export default function HomePageClient({
+  heroProducts = [],
+}: {
+  heroProducts?: CatalogProduct[];
+}) {
   const { t } = useLanguage();
+  const reduceMotion = useReducedMotion();
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -43,57 +51,54 @@ export default function HomePageClient() {
         className="relative min-h-[100svh] flex items-center overflow-hidden pt-20 section-glide-soft"
       >
         <motion.div style={{ y: yGlow }} className="absolute inset-0 pointer-events-none" aria-hidden>
-          <div className="glow-orb w-[50vw] h-[50vw] max-w-[560px] max-h-[560px] left-[-8%] top-[20%] opacity-70" />
-          <div className="glow-orb w-[28vw] h-[28vw] max-w-[320px] max-h-[320px] right-[-5%] bottom-[15%] opacity-35" />
+          <div className="glow-orb w-[50vw] h-[50vw] max-w-[560px] max-h-[560px] left-[-8%] top-[20%] opacity-45" />
+          <div className="glow-orb w-[28vw] h-[28vw] max-w-[320px] max-h-[320px] right-[-5%] bottom-[15%] opacity-25" />
         </motion.div>
 
         <motion.div
           style={{ opacity }}
           className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24"
         >
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.85 }}
-            className="max-w-2xl"
-          >
-            {t.hero.eyebrow ? (
-              <p className="text-meta tracking-[0.18em] text-layali-pink mb-6 uppercase">
-                {t.hero.eyebrow}
-              </p>
-            ) : null}
-            <h1 className="font-serif text-hero text-white mb-1">
-              {t.hero.titleBeauty}
-            </h1>
-            <p className="font-serif text-hero text-layali-pink-light mb-6">
-              {t.hero.titleRedefined}
-            </p>
-            <p className="text-body-lg text-white/70 max-w-md mb-10">
-              {t.hero.subtitle}
-            </p>
-            <div className="flex flex-wrap items-center gap-5">
-              <Link
-                href="/shop"
-                prefetch
-                className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-nav tracking-[0.1em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
-              >
-                {t.hero.shopCta} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
-              </Link>
-              <Link
-                href="/about"
-                prefetch
-                className="text-nav tracking-[0.12em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
-              >
-                {t.hero.storyCta}
-              </Link>
-            </div>
-          </motion.div>
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.85 }}
+              className="max-w-2xl"
+            >
+              {t.hero.eyebrow ? (
+                <p className="text-meta tracking-[0.18em] text-layali-gold-light mb-6 uppercase">
+                  {t.hero.eyebrow}
+                </p>
+              ) : null}
+              <h1 className="font-serif text-hero text-white mb-1">{t.hero.titleBeauty}</h1>
+              <p className="font-serif text-hero text-layali-pink-light mb-6">{t.hero.titleRedefined}</p>
+              <p className="text-body-lg text-white/70 max-w-md mb-10">{t.hero.subtitle}</p>
+              <div className="flex flex-wrap items-center gap-5">
+                <Link
+                  href="/shop"
+                  prefetch
+                  className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-nav tracking-[0.1em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
+                >
+                  {t.hero.shopCta} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+                </Link>
+                <Link
+                  href="/survey"
+                  prefetch
+                  className="text-nav tracking-[0.12em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
+                >
+                  {t.hero.ritualCta}
+                </Link>
+              </div>
+            </motion.div>
+            <HeroStage products={heroProducts} />
+          </div>
         </motion.div>
 
         <div className="absolute bottom-8 inset-x-0 flex justify-center">
           <motion.p
-            animate={{ opacity: [0.35, 0.8, 0.35], y: [0, 4, 0] }}
-            transition={{ duration: 2.2, repeat: Infinity }}
+            animate={reduceMotion ? undefined : { opacity: [0.35, 0.8, 0.35], y: [0, 4, 0] }}
+            transition={reduceMotion ? undefined : { duration: 2.2, repeat: Infinity }}
             className="text-meta tracking-[0.2em] uppercase text-white/50"
           >
             {t.hero.scroll} ↓
@@ -117,6 +122,13 @@ export default function HomePageClient() {
           ))}
         </div>
       </div>
+
+      {/* Trust */}
+      <section className="py-10 sm:py-12 section-glide-soft">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <TrustStrip labels={t.trust} />
+        </div>
+      </section>
 
       {/* Campaign banners */}
       <section className="py-10 sm:py-14 section-glide-soft">
@@ -192,7 +204,7 @@ export default function HomePageClient() {
             <h2 className="font-serif text-heading-lg text-white mb-6">{t.survey.title}</h2>
             <p className="text-body-lg text-white/65 mb-8 max-w-2xl mx-auto">{t.survey.body}</p>
             <Link
-              href="/auth/signup"
+              href="/survey"
               prefetch
               className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-sm tracking-[0.14em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
             >

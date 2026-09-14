@@ -8,6 +8,8 @@ import {
   OG_IMAGE_PATH,
 } from '@/lib/seo';
 import { SITE_URL } from '@/lib/constants';
+import { createClient } from '@/lib/supabase/server';
+import { fetchTrendingProducts } from '@/lib/trending';
 
 export const metadata: Metadata = {
   title: {
@@ -65,14 +67,22 @@ const websiteJsonLd = {
   ],
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  let heroProducts: Awaited<ReturnType<typeof fetchTrendingProducts>> = [];
+  try {
+    const supabase = await createClient();
+    heroProducts = await fetchTrendingProducts(supabase);
+  } catch {
+    heroProducts = [];
+  }
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
       />
-      <HomePageClient />
+      <HomePageClient heroProducts={heroProducts} />
     </>
   );
 }
