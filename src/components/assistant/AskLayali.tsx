@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Sparkles, X } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
-import { formatPrice } from '@/lib/utils';
+import { formatPrice, cn } from '@/lib/utils';
 import { track } from '@/lib/track';
 import type { AssistantReply } from '@/lib/assistant';
 
@@ -48,6 +48,8 @@ export function AskLayali() {
 
   if (hidden) return null;
 
+  const onProductDetail = /^\/shop\/.+/.test(pathname);
+
   const send = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
@@ -87,7 +89,12 @@ export function AskLayali() {
     <>
       <button
         type="button"
-        className="fixed bottom-5 end-4 z-[60] inline-flex min-h-12 items-center gap-2 rounded-full border border-layali-gold/30 bg-black/80 px-4 text-sm tracking-[0.08em] text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur hover:border-layali-gold/60 focus-ring"
+        className={cn(
+          'fixed end-4 z-[45] inline-flex min-h-12 items-center gap-2 rounded-full border border-layali-gold/30 bg-black/80 px-4 text-sm tracking-[0.08em] text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur hover:border-layali-gold/60 focus-ring',
+          onProductDetail
+            ? 'bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-5'
+            : 'bottom-5'
+        )}
         aria-label={t.assistant.open}
         aria-expanded={open}
         aria-controls={panelId}
@@ -112,7 +119,12 @@ export function AskLayali() {
             initial={reduceMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={reduceMotion ? undefined : { opacity: 0, y: 12 }}
-            className="fixed bottom-20 end-4 z-[60] flex h-[min(70vh,34rem)] w-[min(92vw,24rem)] flex-col overflow-hidden rounded-3xl border border-white/10 bg-layali-black/95 shadow-[0_24px_80px_rgba(0,0,0,0.5)]"
+            className={cn(
+              'fixed end-4 z-[45] flex h-[min(70vh,34rem)] w-[min(92vw,24rem)] flex-col overflow-hidden rounded-3xl border border-white/10 bg-layali-black/95 shadow-[0_24px_80px_rgba(0,0,0,0.5)]',
+              onProductDetail
+                ? 'bottom-[calc(7.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-20'
+                : 'bottom-20'
+            )}
           >
             <div className="flex items-center justify-between border-b border-white/8 px-4 py-3">
               <div>

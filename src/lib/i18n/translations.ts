@@ -97,7 +97,9 @@ export const translations = {
     },
     pdp: {
       add: 'Add to Cart',
+      adding: 'Adding…',
       added: 'Added to Cart',
+      addFailed: 'Could not add this item. Please try again.',
       viewCart: 'View Cart',
       about: 'About this product',
       benefits: 'Benefits',
@@ -465,7 +467,9 @@ export const translations = {
     },
     pdp: {
       add: 'أضيفي للسلة',
+      adding: 'جاري الإضافة…',
       added: 'تمت الإضافة',
+      addFailed: 'تعذر إضافة المنتج. حاولِ مرة أخرى.',
       viewCart: 'عرض السلة',
       about: 'عن هذا المنتج',
       benefits: 'الفوائد',

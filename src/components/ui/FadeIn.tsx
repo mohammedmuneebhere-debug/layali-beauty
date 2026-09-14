@@ -18,16 +18,14 @@ export function FadeIn({ children, delay = 0, className, direction = 'up' }: Fad
     right: { x: -30, y: 0 },
   };
 
-  if (reduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
-
   return (
     <motion.div
-      initial={{ opacity: 0, ...directions[direction] }}
+      initial={reduceMotion ? false : { opacity: 0, ...directions[direction] }}
       whileInView={{ opacity: 1, x: 0, y: 0 }}
       viewport={{ once: true, amount: 0.15, margin: '0px 0px -10% 0px' }}
-      transition={{ duration: 0.6, delay, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={
+        reduceMotion ? { duration: 0 } : { duration: 0.6, delay, ease: [0.25, 0.1, 0.25, 1] }
+      }
       className={className}
     >
       {children}
@@ -47,22 +45,14 @@ export function StaggerContainer({
 }) {
   const reduceMotion = useReducedMotion();
 
-  if (reduceMotion) {
-    return (
-      <div key={remountKey} className={className}>
-        {children}
-      </div>
-    );
-  }
-
   return (
     <motion.div
       key={remountKey}
-      initial="hidden"
+      initial={reduceMotion ? false : 'hidden'}
       animate="visible"
       variants={{
         hidden: {},
-        visible: { transition: { staggerChildren: 0.06 } },
+        visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.06 } },
       }}
       className={className}
     >
@@ -74,15 +64,11 @@ export function StaggerContainer({
 export function StaggerItem({ children, className }: { children: React.ReactNode; className?: string }) {
   const reduceMotion = useReducedMotion();
 
-  if (reduceMotion) {
-    return <div className={className}>{children}</div>;
-  }
-
   return (
     <motion.div
       variants={{
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
+        hidden: reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: reduceMotion ? 0 : 0.5 } },
       }}
       className={className}
     >

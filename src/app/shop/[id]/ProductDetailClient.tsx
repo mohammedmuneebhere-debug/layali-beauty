@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Minus, Plus, ShoppingBag, Check, Truck, ShieldCheck } from 'lucide-react';
@@ -41,9 +41,11 @@ export function ProductDetailClient({
   const router = useRouter();
   const { t } = useLanguage();
   const addItem = useCartStore((s) => s.addItem);
+  const addingRef = useRef(false);
 
   const [product, setProduct] = useState<DetailProduct | null>(initialProduct);
   const [loading, setLoading] = useState(!initialProduct);
+  const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [similar, setSimilar] = useState<ShopProduct[]>([]);
@@ -169,31 +171,41 @@ export function ProductDetailClient({
   );
 
   const handleAddToCart = async () => {
-    if (!product) return;
+    if (!product || addingRef.current) return;
     const merchandiseId = variantId || product.defaultVariantId;
     if (!merchandiseId) return;
-    const image = productPhotos(product)[0] || null;
-    const ok = await addItem({
-      id: product.id,
-      type: 'product',
-      name: product.name,
-      price: selectedVariant?.price ?? Number(product.price),
-      image_url: image,
-      merchandiseId,
-      quantity,
-    });
-    if (ok) {
-      setAdded(true);
-      toast(t.pdp.added);
-      track({
-        event: 'add_to_cart',
+
+    addingRef.current = true;
+    setAdding(true);
+    try {
+      const image = productPhotos(product)[0] || null;
+      const ok = await addItem({
         id: product.id,
+        type: 'product',
         name: product.name,
-        category: product.category,
-        value: Number(product.price) * quantity,
-        currency: 'SAR',
+        price: selectedVariant?.price ?? Number(product.price),
+        image_url: image,
+        merchandiseId,
+        quantity,
       });
-      window.setTimeout(() => setAdded(false), 2000);
+      if (ok) {
+        setAdded(true);
+        toast(t.pdp.added);
+        track({
+          event: 'add_to_cart',
+          id: product.id,
+          name: product.name,
+          category: product.category,
+          value: Number(product.price) * quantity,
+          currency: 'SAR',
+        });
+        window.setTimeout(() => setAdded(false), 2000);
+      } else {
+        toast(t.pdp.addFailed);
+      }
+    } finally {
+      addingRef.current = false;
+      setAdding(false);
     }
   };
 
@@ -250,10 +262,14 @@ export function ProductDetailClient({
   const inStock = selectedVariant ? selectedVariant.available : product.available || product.stock_quantity > 0;
   const displayPrice = selectedVariant?.price ?? Number(product.price);
   const compareAt = selectedVariant?.compareAtPrice ?? product.compare_at_price;
+  const canAdd = Boolean(inStock && (variantId || product.defaultVariantId) && !adding);
+  const addButtonLabel = adding ? t.pdp.adding : added ? t.pdp.added : t.pdp.add;
 
   return (
-    <div className="relative min-h-screen bg-transparent pt-24 pb-28 lg:pb-14 overflow-hidden">
-      <div className="glow-orb w-[480px] h-[480px] -top-20 right-0 opacity-25 pointer-events-none" />
+    <div className="relative min-h-screen bg-transparent pt-24 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-14">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+        <div className="glow-orb w-[480px] h-[480px] -top-20 right-0 opacity-25" />
+      </div>
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <FadeIn>
           <Link
@@ -373,17 +389,15 @@ export function ProductDetailClient({
                   size="lg"
                   className="flex-1"
                   onClick={() => void handleAddToCart()}
-                  disabled={!inStock || !(variantId || product.defaultVariantId)}
+                  loading={adding}
+                  disabled={!canAdd}
                 >
-                  {added ? (
-                    <>
-                      <Check className="w-5 h-5" /> {t.pdp.added}
-                    </>
+                  {adding ? null : added ? (
+                    <Check className="w-5 h-5" />
                   ) : (
-                    <>
-                      <ShoppingBag className="w-5 h-5" /> {t.pdp.add}
-                    </>
+                    <ShoppingBag className="w-5 h-5" />
                   )}
+                  {addButtonLabel}
                 </Button>
                 <Link href="/cart" className="flex-1">
                   <Button variant="outline" size="lg" className="w-full">
@@ -449,14 +463,15 @@ export function ProductDetailClient({
         )}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-black/85 p-3 backdrop-blur sm:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-[70] border-t border-white/10 bg-black/85 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur sm:hidden">
         <Button
           size="lg"
-          className="w-full"
+          className="w-full touch-manipulation"
           onClick={() => void handleAddToCart()}
-          disabled={!inStock || !(variantId || product.defaultVariantId)}
+          loading={adding}
+          disabled={!canAdd}
         >
-          {added ? t.pdp.added : `${t.pdp.add} · ${formatPrice(displayPrice)}`}
+          {added || adding ? addButtonLabel : `${t.pdp.add} · ${formatPrice(displayPrice)}`}
         </Button>
       </div>
     </div>
