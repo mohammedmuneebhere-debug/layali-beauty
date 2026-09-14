@@ -24,9 +24,11 @@ const CATEGORY_IMAGES: Record<string, string> = {
 export default function HomePageClient({
   heroProducts = [],
   categoryCovers = {},
+  marqueeBrands = [],
 }: {
   heroProducts?: CatalogProduct[];
   categoryCovers?: Record<string, string>;
+  marqueeBrands?: string[];
 }) {
   const { t } = useLanguage();
   const reduceMotion = useReducedMotion();
@@ -51,7 +53,9 @@ export default function HomePageClient({
     href: cat.value,
   }));
 
-  const marquee = `${t.glow.line1}  ✦  ${t.brand}  ✦  ${t.tagline}  ✦  `;
+  const marquee = marqueeBrands.length
+    ? `${marqueeBrands.join('  ✦  ')}  ✦  `
+    : '';
 
   return (
     <div className="page-shell text-white">
@@ -117,17 +121,17 @@ export default function HomePageClient({
       </section>
 
       {/* Marquee ticker */}
-      <div className="border-y border-layali-pink/20 section-glide overflow-hidden py-4">
-        <div className="flex whitespace-nowrap animate-marquee">
+      <div className="border-y border-layali-pink/20 section-glide overflow-hidden py-4" dir="ltr">
+        <div className="flex w-max whitespace-nowrap animate-marquee">
           {[0, 1].map((i) => (
             <span
               key={i}
-              className="mx-4 text-heading-lg font-serif italic text-transparent"
+              className="mx-4 shrink-0 text-heading-lg font-serif italic text-transparent"
               style={{
                 WebkitTextStroke: '1px rgba(224, 122, 138, 0.55)',
               }}
             >
-              {marquee.repeat(3)}
+              {marquee.repeat(4)}
             </span>
           ))}
         </div>
