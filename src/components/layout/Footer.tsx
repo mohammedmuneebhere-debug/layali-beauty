@@ -34,6 +34,7 @@ export function Footer() {
             </Link>
             <p className="text-eyebrow text-layali-pink mb-4">{t.brandSub}</p>
             <p className="text-body text-white/65 max-w-md mb-4">{t.footer.blurb}</p>
+            <p className="text-sm text-layali-gold-light/80 mb-4">{t.trust.cod} — {t.trust.codHint}</p>
             <div className="space-y-1.5 text-meta text-white/55 font-mono tracking-wide min-w-0">
               <p className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 min-w-0">
                 <span className="text-white/40 shrink-0">{t.footer.crNumber}:</span>

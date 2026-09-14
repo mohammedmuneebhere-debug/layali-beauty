@@ -4,6 +4,8 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { StageBackdrop } from '@/components/layout/StageBackdrop';
 import { CartHydrator } from '@/components/cart/CartHydrator';
+import { AskLayali } from '@/components/assistant/AskLayali';
+import { ToastViewport } from '@/components/ui/Toast';
 import { LanguageProvider } from '@/lib/i18n/LanguageProvider';
 import { SITE_URL } from '@/lib/constants';
 import {
@@ -108,9 +110,19 @@ export default function RootLayout({
           <StageBackdrop />
           <div className="relative z-10 flex min-h-full flex-1 flex-col">
             <CartHydrator />
+            <a
+              href="#main-content"
+              className="sr-only focus:not-sr-only focus:absolute focus:start-4 focus:top-4 focus:z-[80] focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-black"
+            >
+              Skip to content
+            </a>
             <Navbar />
-            <main className="flex-1 bg-transparent">{children}</main>
+            <main id="main-content" className="flex-1 bg-transparent">
+              {children}
+            </main>
             <Footer />
+            <AskLayali />
+            <ToastViewport />
           </div>
         </LanguageProvider>
       </body>
