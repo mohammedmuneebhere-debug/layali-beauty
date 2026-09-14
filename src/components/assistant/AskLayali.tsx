@@ -92,7 +92,7 @@ export function AskLayali() {
         className={cn(
           'fixed end-4 z-[45] inline-flex min-h-12 items-center gap-2 rounded-full border border-layali-gold/30 bg-black/80 px-4 text-sm tracking-[0.08em] text-white shadow-[0_12px_40px_rgba(0,0,0,0.45)] backdrop-blur hover:border-layali-gold/60 focus-ring',
           onProductDetail
-            ? 'bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] sm:bottom-5'
+            ? 'bottom-[calc(6.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-5 max-sm:end-3 max-sm:min-w-12 max-sm:justify-center max-sm:px-3'
             : 'bottom-5'
         )}
         aria-label={t.assistant.open}
@@ -107,7 +107,7 @@ export function AskLayali() {
         }}
       >
         <Sparkles className="h-4 w-4 text-layali-gold-light" />
-        {t.assistant.teaser}
+        <span className={onProductDetail ? 'max-sm:hidden' : undefined}>{t.assistant.teaser}</span>
       </button>
 
       <AnimatePresence>

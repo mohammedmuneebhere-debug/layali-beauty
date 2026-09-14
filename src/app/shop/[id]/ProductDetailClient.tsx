@@ -43,6 +43,15 @@ export function ProductDetailClient({
   const { t } = useLanguage();
   const addItem = useCartStore((s) => s.addItem);
   const addingRef = useRef(false);
+  const addedTimeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (addedTimeoutRef.current != null) {
+        window.clearTimeout(addedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const [product, setProduct] = useState<DetailProduct | null>(initialProduct);
   const [loading, setLoading] = useState(!initialProduct);
@@ -200,12 +209,21 @@ export function ProductDetailClient({
           value: Number(product.price) * quantity,
           currency: 'SAR',
         });
-        window.setTimeout(() => setAdded(false), 2000);
+        if (addedTimeoutRef.current != null) {
+          window.clearTimeout(addedTimeoutRef.current);
+        }
+        addedTimeoutRef.current = window.setTimeout(() => {
+          addingRef.current = false;
+          setAdded(false);
+          addedTimeoutRef.current = null;
+        }, 2000);
       } else {
         toast(t.pdp.addFailed);
+        addingRef.current = false;
       }
-    } finally {
+    } catch {
       addingRef.current = false;
+    } finally {
       setAdding(false);
     }
   };
@@ -263,7 +281,7 @@ export function ProductDetailClient({
   const inStock = selectedVariant ? selectedVariant.available : product.available || product.stock_quantity > 0;
   const displayPrice = selectedVariant?.price ?? Number(product.price);
   const compareAt = selectedVariant?.compareAtPrice ?? product.compare_at_price;
-  const canAdd = Boolean(inStock && (variantId || product.defaultVariantId) && !adding);
+  const canAdd = Boolean(inStock && (variantId || product.defaultVariantId) && !adding && !added);
   const addButtonLabel = adding ? t.pdp.adding : added ? t.pdp.added : t.pdp.add;
   const categoryMeta = STOREFRONT_NAV_CATEGORIES.find((c) => c.value === product.category);
 
