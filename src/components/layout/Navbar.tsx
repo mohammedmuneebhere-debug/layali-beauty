@@ -83,7 +83,7 @@ export function Navbar() {
             <Link
               href="/"
               prefetch
-              className="flex flex-col items-start justify-center group min-w-0 flex-1 overflow-hidden me-1 focus-ring rounded-md"
+              className="flex flex-col items-start justify-center group min-w-0 flex-1 overflow-visible me-1 focus-ring rounded-md"
               onClick={() => setMobileOpen(false)}
             >
               <span className="text-brand text-white group-hover:text-layali-pink-light transition-colors whitespace-nowrap">
