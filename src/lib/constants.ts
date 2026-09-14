@@ -43,8 +43,13 @@ export const PRODUCT_CATEGORIES = [
   { value: 'haircare', label: 'Haircare' },
   { value: 'bodycare', label: 'Body Care' },
   { value: 'fragrance', label: 'Fragrance' },
+  { value: 'lenses', label: 'Lenses' },
   { value: 'combo', label: 'Combo' },
-];
+] as const;
+
+export const STOREFRONT_NAV_CATEGORIES = PRODUCT_CATEGORIES.filter(
+  (c) => c.value !== 'combo'
+);
 
 export const ORDER_STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },

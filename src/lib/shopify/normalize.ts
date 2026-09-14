@@ -1,4 +1,5 @@
 import { parseMoney } from './client';
+import { resolveStorefrontCategory } from './category';
 import { shopifyImageUrl, SHOP_CARD_IMAGE_WIDTH } from './image';
 import type {
   ShopifyCart,
@@ -261,15 +262,13 @@ export type CatalogProduct = {
 };
 
 export function toCatalogProduct(p: ShopifyProduct): CatalogProduct {
-  const category =
-    p.productType ||
-    p.collections[0]?.handle ||
-    p.tags.find((t) =>
-      ['makeup', 'skincare', 'haircare', 'bodycare', 'fragrance', 'combo'].includes(
-        t.toLowerCase()
-      )
-    ) ||
-    'skincare';
+  const category = resolveStorefrontCategory({
+    productType: p.productType,
+    tags: p.tags,
+    collections: p.collections,
+    title: p.title,
+    handle: p.handle,
+  });
 
   return {
     id: p.id,
@@ -278,7 +277,7 @@ export function toCatalogProduct(p: ShopifyProduct): CatalogProduct {
     description: p.description || null,
     price: p.price.amount,
     compare_at_price: p.compareAtPrice?.amount ?? null,
-    category: category.toLowerCase(),
+    category,
     // Prefer featuredImage; CDN-size for cards (GraphQL list transform + query param safety net).
     image_url: shopifyImageUrl(p.featuredImage?.url || null, SHOP_CARD_IMAGE_WIDTH),
     images: p.images

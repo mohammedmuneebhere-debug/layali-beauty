@@ -10,6 +10,7 @@ import {
 import { SITE_URL } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/server';
 import { fetchTrendingProducts } from '@/lib/trending';
+import { getCatalogProducts, isShopifyConfigured } from '@/lib/shopify';
 
 export const metadata: Metadata = {
   title: {
@@ -69,11 +70,25 @@ const websiteJsonLd = {
 
 export default async function HomePage() {
   let heroProducts: Awaited<ReturnType<typeof fetchTrendingProducts>> = [];
+  const categoryCovers: Record<string, string> = {};
   try {
     const supabase = await createClient();
     heroProducts = await fetchTrendingProducts(supabase);
   } catch {
     heroProducts = [];
+  }
+
+  try {
+    if (isShopifyConfigured()) {
+      const catalog = await getCatalogProducts({ first: 250 });
+      for (const product of [...heroProducts, ...catalog]) {
+        if (product.category && product.image_url && !categoryCovers[product.category]) {
+          categoryCovers[product.category] = product.image_url;
+        }
+      }
+    }
+  } catch {
+    // Category tiles still render without covers.
   }
 
   return (
@@ -82,7 +97,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
       />
-      <HomePageClient heroProducts={heroProducts} />
+      <HomePageClient heroProducts={heroProducts} categoryCovers={categoryCovers} />
     </>
   );
 }

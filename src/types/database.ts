@@ -1,7 +1,7 @@
 export type UserRole = 'user' | 'admin';
 export type Gender = 'female' | 'male';
 export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-export type ProductCategory = 'skincare' | 'haircare' | 'fragrance' | 'bodycare' | 'makeup' | 'combo';
+export type ProductCategory = 'skincare' | 'haircare' | 'fragrance' | 'bodycare' | 'makeup' | 'lenses' | 'combo';
 
 export type BannerPlacement = 'landing_hero' | 'shop_hero' | 'promo_grid';
 

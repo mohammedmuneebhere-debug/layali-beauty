@@ -10,16 +10,14 @@ import { toast } from '@/components/ui/Toast';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { cn } from '@/lib/utils';
-import { PRODUCT_CATEGORIES } from '@/lib/constants';
+import { PRODUCT_CATEGORIES, STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import type { ShopProduct } from '@/lib/catalog';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { collectVendors, PAGE_SIZE } from '@/lib/shop-filters';
 import { track } from '@/lib/track';
 
-const VALID_CATEGORIES = new Set(
-  PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((c) => c.value)
-);
+const VALID_CATEGORIES = new Set<string>(STOREFRONT_NAV_CATEGORIES.map((c) => c.value));
 
 function normalizeCategory(value: string | null | undefined) {
   if (!value) return '';
@@ -242,7 +240,7 @@ export default function ShopContent() {
 
   const chipClass = (active: boolean) =>
     cn(
-      'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-colors border',
+      'px-4 py-2 rounded-full text-xs tracking-[0.14em] uppercase font-medium transition-colors border focus-ring',
       active
         ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
         : 'bg-transparent text-white/50 border-white/15 hover:border-layali-pink/40 hover:text-white'
@@ -250,15 +248,21 @@ export default function ShopContent() {
 
   const categoryChips = (
     <>
-      <button type="button" onClick={() => selectCategory('')} className={chipClass(!category)}>
+      <button
+        type="button"
+        onClick={() => selectCategory('')}
+        className={chipClass(!category)}
+        aria-pressed={!category}
+      >
         {t.shop.all}
       </button>
-      {PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((cat) => (
+      {STOREFRONT_NAV_CATEGORIES.map((cat) => (
         <button
           key={cat.value}
           type="button"
           onClick={() => selectCategory(cat.value)}
           className={chipClass(category === cat.value)}
+          aria-pressed={category === cat.value}
         >
           {cat.label}
         </button>
@@ -369,25 +373,27 @@ export default function ShopContent() {
                   type="button"
                   onClick={() => selectCategory('')}
                   className={cn(
-                    'px-3 py-1.5 rounded-full text-xs border transition-colors',
+                    'px-3 py-1.5 rounded-full text-xs border transition-colors focus-ring',
                     !category
                       ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                       : 'border-white/15 text-white/60 hover:border-layali-pink/40'
                   )}
+                  aria-pressed={!category}
                 >
                   {t.shop.all}
                 </button>
-                {PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((cat) => (
+                {STOREFRONT_NAV_CATEGORIES.map((cat) => (
                   <button
                     key={cat.value}
                     type="button"
                     onClick={() => selectCategory(cat.value)}
                     className={cn(
-                      'px-3 py-1.5 rounded-full text-xs border transition-colors',
+                      'px-3 py-1.5 rounded-full text-xs border transition-colors focus-ring',
                       category === cat.value
                         ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                         : 'border-white/15 text-white/60 hover:border-layali-pink/40'
                     )}
+                    aria-pressed={category === cat.value}
                   >
                     {cat.label}
                   </button>
@@ -403,7 +409,7 @@ export default function ShopContent() {
                     type="button"
                     onClick={() => setBrand('')}
                     className={cn(
-                      'px-3 py-1.5 rounded-full text-xs border transition-colors',
+                      'px-3 py-1.5 rounded-full text-xs border transition-colors focus-ring',
                       !brand
                         ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                         : 'border-white/15 text-white/60 hover:border-layali-pink/40'
@@ -417,7 +423,7 @@ export default function ShopContent() {
                       type="button"
                       onClick={() => setBrand(b)}
                       className={cn(
-                        'px-3 py-1.5 rounded-full text-xs border transition-colors',
+                        'px-3 py-1.5 rounded-full text-xs border transition-colors focus-ring',
                         brand === b
                           ? 'bg-layali-pink-glow text-white border-layali-pink-glow'
                           : 'border-white/15 text-white/60 hover:border-layali-pink/40'

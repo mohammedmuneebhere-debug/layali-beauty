@@ -10,12 +10,15 @@ import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { TrustStrip } from '@/components/commerce/TrustStrip';
 import { HeroStage } from '@/components/home/HeroStage';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
 
 export default function HomePageClient({
   heroProducts = [],
+  categoryCovers = {},
 }: {
   heroProducts?: CatalogProduct[];
+  categoryCovers?: Record<string, string>;
 }) {
   const { t } = useLanguage();
   const reduceMotion = useReducedMotion();
@@ -33,13 +36,12 @@ export default function HomePageClient({
     { icon: Sparkles, ...t.why.personal },
   ];
 
-  const categories = [
-    { key: 'makeup', label: t.categories.makeup, href: 'makeup' },
-    { key: 'skincare', label: t.categories.skincare, href: 'skincare' },
-    { key: 'haircare', label: t.categories.haircare, href: 'haircare' },
-    { key: 'bodycare', label: t.categories.bodycare, href: 'bodycare' },
-    { key: 'fragrance', label: t.categories.fragrance, href: 'fragrance' },
-  ];
+  const categories = STOREFRONT_NAV_CATEGORIES.map((cat) => ({
+    key: cat.value,
+    label:
+      (t.categories[cat.value as keyof typeof t.categories] as string | undefined) || cat.label,
+    href: cat.value,
+  }));
 
   const marquee = `${t.glow.line1}  ✦  ${t.brand}  ✦  ${t.tagline}  ✦  `;
 
@@ -222,10 +224,15 @@ export default function HomePageClient({
           </FadeIn>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {categories.map((cat, i) => {
-              const cover = heroProducts.find((p) => p.category === cat.href && p.image_url)?.image_url;
+              const cover =
+                categoryCovers[cat.href] ||
+                heroProducts.find((p) => p.category === cat.href && p.image_url)?.image_url;
               return (
               <FadeIn key={cat.key} delay={i * 0.1}>
-                <Link href={`/shop?category=${cat.href}`}>
+                <Link
+                  href={`/shop?category=${cat.href}`}
+                  className="block focus-ring rounded-2xl"
+                >
                   <div className="aspect-square rounded-2xl bg-black/40 backdrop-blur-md border border-layali-pink/25 flex items-center justify-center card-hover relative overflow-hidden group">
                     {cover ? (
                       // eslint-disable-next-line @next/next/no-img-element

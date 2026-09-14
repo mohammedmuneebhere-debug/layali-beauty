@@ -23,6 +23,7 @@ const CATEGORY_WORDS: Record<string, string[]> = {
   haircare: ['hair', 'haircare', 'shampoo', 'conditioner', 'scalp'],
   fragrance: ['fragrance', 'perfume', 'scent', 'oud', 'mist'],
   bodycare: ['body', 'bodycare', 'lotion', 'shower', 'bath'],
+  lenses: ['lenses', 'contact lenses', 'contact lens', 'contacts', 'lensme', 'lens me'],
 };
 
 function parseBudget(query: string): number | null {
@@ -35,7 +36,7 @@ function parseBudget(query: string): number | null {
   return Number.isFinite(amount) && amount > 0 ? amount : null;
 }
 
-function detectCategories(query: string): string[] {
+export function detectCategories(query: string): string[] {
   const q = query.toLowerCase();
   return Object.entries(CATEGORY_WORDS)
     .filter(([, words]) => words.some((word) => q.includes(word)))
@@ -130,7 +131,11 @@ export function answerCatalogQuery(query: string, catalog: ShopProduct[]): Assis
       if (product.available) score += 0.1;
       return { product, score };
     })
-    .filter((row) => row.score >= 2)
+    .filter((row) => {
+      if (row.score < 2) return false;
+      if (budget != null && Number(row.product.price) > budget) return false;
+      return true;
+    })
     .sort((a, b) => b.score - a.score);
 
   let picks = scored.slice(0, isRoutine(q) ? 4 : 6).map((row) => row.product);

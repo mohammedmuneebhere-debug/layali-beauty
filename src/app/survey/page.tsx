@@ -31,6 +31,7 @@ const SHOPPING_FOR = [
   { id: 'makeup', label: 'Makeup' },
   { id: 'haircare', label: 'Haircare' },
   { id: 'fragrance', label: 'Fragrance' },
+  { id: 'lenses', label: 'Lenses' },
   { id: 'complete', label: 'Complete routine' },
 ];
 const BUDGET_OPTIONS = [

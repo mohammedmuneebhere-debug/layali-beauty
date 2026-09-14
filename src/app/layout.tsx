@@ -59,6 +59,7 @@ export const metadata: Metadata = {
     'haircare',
     'fragrance',
     'body care',
+    'lenses',
     'lifestyle',
     'layali',
     'saudi arabia',

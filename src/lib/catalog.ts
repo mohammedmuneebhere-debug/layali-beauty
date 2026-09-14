@@ -227,7 +227,6 @@ export async function loadRecommendationCatalog(options: {
       supabase: options.supabase,
       country: options.country,
       city: options.city,
-      first: 100,
       enrichMetadata: true,
     });
 

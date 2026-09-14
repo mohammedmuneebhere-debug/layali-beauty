@@ -13,6 +13,7 @@ import { toast } from '@/components/ui/Toast';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import type { ShopProduct, ShopVariant } from '@/lib/catalog';
+import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import { pickSimilarProducts, vendorSearchQuery } from '@/lib/similar-products';
 import { pickRitualProducts } from '@/lib/ritual';
 import { track } from '@/lib/track';
@@ -264,6 +265,7 @@ export function ProductDetailClient({
   const compareAt = selectedVariant?.compareAtPrice ?? product.compare_at_price;
   const canAdd = Boolean(inStock && (variantId || product.defaultVariantId) && !adding);
   const addButtonLabel = adding ? t.pdp.adding : added ? t.pdp.added : t.pdp.add;
+  const categoryMeta = STOREFRONT_NAV_CATEGORIES.find((c) => c.value === product.category);
 
   return (
     <div className="relative min-h-screen bg-transparent pt-24 pb-[calc(7.5rem+env(safe-area-inset-bottom,0px))] lg:pb-14">
@@ -272,12 +274,27 @@ export function ProductDetailClient({
       </div>
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <FadeIn>
-          <Link
-            href="/shop"
-            className="inline-flex items-center gap-2 text-nav text-white/45 hover:text-white mb-8 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> {t.pdp.back}
-          </Link>
+          <div className="flex flex-wrap items-center gap-2 mb-8">
+            <Link
+              href="/shop"
+              className="inline-flex items-center gap-2 text-nav text-white/45 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4 rtl:rotate-180" /> {t.pdp.back}
+            </Link>
+            {categoryMeta ? (
+              <>
+                <span className="text-white/25" aria-hidden>
+                  /
+                </span>
+                <Link
+                  href={`/shop?category=${categoryMeta.value}`}
+                  className="text-nav text-white/45 hover:text-white transition-colors"
+                >
+                  {categoryMeta.label}
+                </Link>
+              </>
+            ) : null}
+          </div>
 
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-start">
             <ProductImageGallery images={productPhotos(product)} alt={product.name} />

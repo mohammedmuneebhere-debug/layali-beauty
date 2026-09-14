@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { loadShopCatalog } from '@/lib/catalog';
-import { answerCatalogQuery } from '@/lib/assistant';
+import { answerCatalogQuery, detectCategories } from '@/lib/assistant';
 import { isShopifyConfigured } from '@/lib/shopify';
 
 export async function POST(req: NextRequest) {
@@ -17,9 +17,10 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient();
+    const categories = detectCategories(query);
     const { products, source } = await loadShopCatalog({
       supabase,
-      first: 80,
+      category: categories.length === 1 ? categories[0] : undefined,
       enrichMetadata: false,
     });
 

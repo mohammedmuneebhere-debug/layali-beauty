@@ -131,6 +131,7 @@ export const translations = {
       haircare: 'Haircare',
       fragrance: 'Fragrance',
       bodycare: 'Body Care',
+      lenses: 'Lenses',
     },
     footer: {
       blurb:
@@ -501,6 +502,7 @@ export const translations = {
       haircare: 'العناية بالشعر',
       fragrance: 'العطور',
       bodycare: 'العناية بالجسم',
+      lenses: 'العدسات',
     },
     footer: {
       blurb:

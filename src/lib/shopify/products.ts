@@ -1,4 +1,5 @@
 import { isShopifyConfigured, shopifyFetch } from './client';
+import { resolveStorefrontCategory } from './category';
 import { normalizeProduct, toCatalogProduct, type CatalogProduct } from './normalize';
 import {
   COLLECTION_PRODUCTS_QUERY,
@@ -191,7 +192,7 @@ export async function getCatalogProducts(options?: {
   /** Optional upper bound. Omit to fetch the complete published Storefront catalog. */
   first?: number;
 }): Promise<CatalogProduct[]> {
-  const category = options?.category?.trim();
+  const category = options?.category?.trim().toLowerCase();
   let products: ShopifyProduct[] = [];
 
   if (category) {
@@ -213,7 +214,24 @@ export async function getCatalogProducts(options?: {
     });
   }
 
-  return products.map(toCatalogProduct);
+  let catalog = products.map(toCatalogProduct);
+  if (category) {
+    catalog = catalog.filter((p) => p.category === category);
+    // Shopify type/collection/tag may not match the storefront slug
+    // (e.g. cosmetic lenses still typed as makeup). Resolve from the
+    // published catalog rather than hiding a first-class category.
+    if (catalog.length === 0) {
+      const all = await fetchAllShopifyProducts({
+        query: options?.query,
+        maxCount: options?.first,
+      });
+      catalog = all
+        .filter((p) => resolveStorefrontCategory(p) === category)
+        .map(toCatalogProduct);
+    }
+  }
+
+  return catalog;
 }
 
 export async function getCatalogProductByHandle(

@@ -9,7 +9,7 @@ import { useCartStore } from '@/store/cart';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { SearchOverlay } from '@/components/layout/SearchOverlay';
-import { PRODUCT_CATEGORIES } from '@/lib/constants';
+import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
 export function Navbar() {
@@ -150,11 +150,11 @@ export function Navbar() {
                       className="absolute start-0 top-full pt-3"
                     >
                       <div className="min-w-[16rem] rounded-2xl border border-white/10 bg-black/92 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.45)] backdrop-blur">
-                        {PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((cat) => (
+                        {STOREFRONT_NAV_CATEGORIES.map((cat) => (
                           <Link
                             key={cat.value}
                             href={`/shop?category=${cat.value}`}
-                            className="block rounded-xl px-3 py-2.5 text-sm text-white/70 hover:bg-white/5 hover:text-white"
+                            className="block rounded-xl px-3 py-2.5 text-sm text-white/70 hover:bg-white/5 hover:text-white focus-ring"
                             onClick={() => setCategoriesOpen(false)}
                           >
                             {cat.label}
@@ -254,12 +254,12 @@ export function Navbar() {
                   <p className="px-1 pt-3 pb-1 text-meta uppercase tracking-[0.16em] text-white/40">
                     {t.nav.categories}
                   </p>
-                  {PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((cat) => (
+                  {STOREFRONT_NAV_CATEGORIES.map((cat) => (
                     <Link
                       key={cat.value}
                       href={`/shop?category=${cat.value}`}
                       onClick={() => setMobileOpen(false)}
-                      className="block py-3 px-1 text-nav text-white/80 hover:text-layali-pink-light min-h-11"
+                      className="block py-3 px-1 text-nav text-white/80 hover:text-layali-pink-light min-h-11 focus-ring rounded-lg"
                     >
                       {cat.label}
                     </Link>
