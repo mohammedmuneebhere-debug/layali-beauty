@@ -105,7 +105,7 @@ export default function HomePageClient({
                 </Link>
               </div>
             </motion.div>
-            <HeroStage products={heroProducts} />
+            <HeroStage />
           </div>
         </motion.div>
 
