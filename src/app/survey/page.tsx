@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Check, ArrowRight, ArrowLeft, Shield, ShoppingBag } from 'lucide-react';
+import { Sparkles, Check, ArrowRight, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -13,6 +13,7 @@ import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import type { AIRecommendation, AIRecommendationProduct } from '@/types/database';
 import { isVariantGid } from '@/lib/recommendation';
+import { track } from '@/lib/track';
 
 const STEPS = [
   { id: 'welcome', title: 'Welcome' },
@@ -25,6 +26,19 @@ const STEPS = [
 
 const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55+'];
 const LIFESTYLE_OPTIONS = ['active', 'office work', 'outdoor', 'minimal routine', 'full routine'];
+const SHOPPING_FOR = [
+  { id: 'skincare', label: 'Skincare' },
+  { id: 'makeup', label: 'Makeup' },
+  { id: 'haircare', label: 'Haircare' },
+  { id: 'fragrance', label: 'Fragrance' },
+  { id: 'complete', label: 'Complete routine' },
+];
+const BUDGET_OPTIONS = [
+  { id: 'budget:150', label: 'Under SAR 150' },
+  { id: 'budget:400', label: 'SAR 150–400' },
+  { id: 'budget:2000', label: 'SAR 400–2,000' },
+  { id: 'budget:99999', label: 'No set budget' },
+];
 
 function recommendationLines(rec: AIRecommendation): AIRecommendationProduct[] {
   return rec.products;
@@ -56,6 +70,12 @@ export default function SurveyPage() {
     lifestyle: [] as string[],
     additional_notes: '',
   });
+  const [shoppingFor, setShoppingFor] = useState('');
+  const [budget, setBudget] = useState('');
+
+  useEffect(() => {
+    track({ event: 'survey_start' });
+  }, []);
 
   const toggleArray = (key: 'skin_concerns' | 'hair_concerns' | 'lifestyle', value: string) => {
     setSurvey((prev) => ({
@@ -89,7 +109,16 @@ export default function SurveyPage() {
     const genRes = await fetch('/api/recommendations/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ survey, country, city }),
+      body: JSON.stringify({
+        survey: {
+          ...survey,
+          additional_notes: [shoppingFor && `Shopping for ${shoppingFor}`, budget]
+            .filter(Boolean)
+            .join(' | '),
+        },
+        country,
+        city,
+      }),
     });
 
     const genJson = (await genRes.json()) as {
@@ -152,7 +181,7 @@ export default function SurveyPage() {
       compare_at_price: comboPrice > 0 ? comboPrice : null,
       gender: profile?.gender || 'female',
       is_ai_generated: true,
-      dermatologist_verified: true,
+      dermatologist_verified: false,
       shopify_items: shopifyItems,
       image_url: lines[0]?.image_url || null,
     };
@@ -180,8 +209,8 @@ export default function SurveyPage() {
       combo_id: combo?.id || null,
       ai_recommendation: aiRec,
       recommendation_items: shopifyItems,
-      dermatologist_verified: true,
-      dermatologist_name: 'Dr. Layali Certified',
+      dermatologist_verified: false,
+      dermatologist_name: '',
     };
 
     let { error: pcError } = await supabase
@@ -205,6 +234,7 @@ export default function SurveyPage() {
 
     setStep(5);
     setLoading(false);
+    track({ event: 'survey_complete' });
   };
 
   const addRecommendationToCart = async () => {
@@ -271,7 +301,7 @@ export default function SurveyPage() {
             <div
               key={s.id}
               className={`h-2 rounded-full transition-all duration-300 ${
-                i <= step ? 'bg-layali-black w-8' : 'bg-layali-pink/30 w-4'
+                i <= step ? 'bg-layali-pink w-8' : 'bg-white/15 w-4'
               }`}
             />
           ))}
@@ -287,15 +317,27 @@ export default function SurveyPage() {
           >
             {step === 0 && (
               <div className="text-center">
-                <Sparkles className="w-12 h-12 mx-auto text-white mb-6" />
+                <Sparkles className="w-12 h-12 mx-auto text-layali-gold-light mb-6" />
                 <h1 className="font-serif text-heading-lg text-white mb-4">
-                  Let&apos;s Get to Know You
+                  Your Layali Ritual
                 </h1>
-                <p className="font-script text-heading-md text-white/70 mb-6">your beauty profile</p>
+                <p className="font-script text-heading-md text-white/70 mb-6">beauty, curated for you</p>
                 <p className="text-white/60 mb-8 leading-relaxed">
-                  Answer a few fun questions about your skin and hair,
-                  and we&apos;ll create a personalized beauty combo just for you!
+                  A few questions help us match products from the live catalog to your routine.
+                  This is not a medical or dermatological diagnosis.
                 </p>
+                <h2 className="font-serif text-heading-sm text-white mb-4">What are you shopping for?</h2>
+                <div className="grid grid-cols-2 gap-3 text-start">
+                  {SHOPPING_FOR.map((option) => (
+                    <OptionButton
+                      key={option.id}
+                      selected={shoppingFor === option.id}
+                      onClick={() => setShoppingFor(option.id)}
+                    >
+                      {option.label}
+                    </OptionButton>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -387,7 +429,7 @@ export default function SurveyPage() {
                 </div>
 
                 <h3 className="font-medium text-white mb-3">Lifestyle</h3>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 mb-6">
                   {LIFESTYLE_OPTIONS.map((opt) => (
                     <OptionButton
                       key={opt}
@@ -395,6 +437,19 @@ export default function SurveyPage() {
                       onClick={() => toggleArray('lifestyle', opt)}
                     >
                       {opt}
+                    </OptionButton>
+                  ))}
+                </div>
+
+                <h3 className="font-medium text-white mb-3">Budget</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {BUDGET_OPTIONS.map((opt) => (
+                    <OptionButton
+                      key={opt.id}
+                      selected={budget === opt.id}
+                      onClick={() => setBudget(opt.id)}
+                    >
+                      {opt.label}
                     </OptionButton>
                   ))}
                 </div>
@@ -412,22 +467,20 @@ export default function SurveyPage() {
                     <Sparkles className="w-12 h-12 mx-auto text-layali-gold mb-4" />
                   </motion.div>
                   <h2 className="font-serif text-heading-md text-white mb-2">
-                    Your Personalized Combo
+                    Your Layali Ritual
                   </h2>
-                  <p className="font-script text-heading-sm text-white/70">crafted just for you</p>
+                  <p className="font-script text-heading-sm text-white/70">crafted from the catalog</p>
                 </div>
 
                 {catalogMessage && (
                   <p className="text-sm text-amber-200/90 mb-4 text-center">{catalogMessage}</p>
                 )}
 
-                <div className="bg-white/80 rounded-3xl p-6 shadow-xl border border-layali-pink/20 mb-6">
-                  <div className="flex items-center gap-2 mb-4 p-3 rounded-xl bg-layali-gold/10 border border-layali-gold/30">
-                    <Shield className="w-5 h-5 text-layali-gold" />
-                    <span className="text-sm font-medium text-white">
-                      Certified & Verified by Dr. Layali
-                    </span>
-                  </div>
+                <div className="glass-panel rounded-3xl p-6 mb-6">
+                  <p className="text-xs leading-relaxed text-white/45 mb-5">
+                    These suggestions are based on your answers and available Layali products.
+                    They are not medical or dermatological advice.
+                  </p>
 
                   <p className="text-white/70 mb-6 leading-relaxed">{recommendation.summary}</p>
 
@@ -436,7 +489,7 @@ export default function SurveyPage() {
                     {recommendation.products.map((product) => (
                       <div
                         key={product.shopify_product_id || product.name}
-                        className="flex items-start gap-3 p-3 rounded-xl bg-black"
+                        className="flex items-start gap-3 p-3 rounded-xl bg-black/40"
                       >
                         <div className="w-8 h-8 rounded-full bg-layali-pink-glow/25 flex items-center justify-center flex-shrink-0">
                           <Check className="w-4 h-4 text-white" />

@@ -62,6 +62,22 @@ export function generatePersonalizedCombo(
 
     if (product.is_featured) score += 1;
 
+    const notes = (survey.additional_notes || '').toLowerCase();
+    if (notes && product.category && notes.includes(product.category)) {
+      score += 3;
+      reasons.push(`Chosen for your ${product.category} ritual`);
+    }
+    const budgetMatch = notes.match(/budget:(\d+)/);
+    if (budgetMatch) {
+      const max = Number(budgetMatch[1]);
+      if (Number.isFinite(max) && product.price <= max) {
+        score += 2;
+        reasons.push('Fits your selected budget');
+      } else if (Number.isFinite(max) && product.price > max) {
+        score -= 2;
+      }
+    }
+
     return { product, score, reasons };
   });
 

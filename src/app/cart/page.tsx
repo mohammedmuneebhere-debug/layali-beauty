@@ -7,10 +7,15 @@ import { motion } from 'framer-motion';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { FadeIn } from '@/components/ui/FadeIn';
+import { RitualRail } from '@/components/commerce/RitualRail';
+import { toast } from '@/components/ui/Toast';
 import { useCartStore } from '@/store/cart';
 import { createClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { pickRitualProducts } from '@/lib/ritual';
+import { track } from '@/lib/track';
+import type { ShopProduct } from '@/lib/catalog';
 
 export default function CartPage() {
   const router = useRouter();
@@ -29,6 +34,8 @@ export default function CartPage() {
   const setError = useCartStore((s) => s.setError);
   const [checkingAuth, setCheckingAuth] = useState(false);
   const [cartReady, setCartReady] = useState(false);
+  const [ritual, setRitual] = useState<ShopProduct[]>([]);
+  const addItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
     const finish = () => setCartReady(true);
@@ -40,7 +47,36 @@ export default function CartPage() {
   useEffect(() => {
     if (!cartReady) return;
     void refresh();
+    track({ event: 'cart_view' });
   }, [cartReady, refresh]);
+
+  useEffect(() => {
+    if (!cartReady || items.length === 0) {
+      void Promise.resolve().then(() => setRitual([]));
+      return;
+    }
+    let cancelled = false;
+    void fetch('/api/shopify/products?first=48')
+      .then((res) => res.json())
+      .then((json: { products?: ShopProduct[] }) => {
+        if (cancelled) return;
+        const catalog = json.products || [];
+        const current =
+          catalog.find((p) => items.some((item) => item.name.includes(p.name) || p.name.includes(item.name.split(' — ')[0]))) ||
+          catalog[0];
+        if (!current) {
+          setRitual([]);
+          return;
+        }
+        setRitual(pickRitualProducts(current, catalog));
+      })
+      .catch(() => {
+        if (!cancelled) setRitual([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cartReady, items]);
 
   const proceedToCheckout = async () => {
     setCheckingAuth(true);
@@ -55,6 +91,7 @@ export default function CartPage() {
       return;
     }
 
+    track({ event: 'checkout_start' });
     router.push('/checkout');
     setCheckingAuth(false);
   };
@@ -201,9 +238,9 @@ export default function CartPage() {
             <span className="text-white font-medium">{t.cart.total}</span>
             <span className="text-price text-lg text-white">{formatPrice(totalAmount || subtotal)}</span>
           </div>
+          <p className="text-xs text-white/45 mb-3">{t.cart.codAvailable}</p>
           <p className="text-xs text-white/40 mb-6">
-            You will complete payment and shipping on Shopify Checkout. Totals above use Shopify cart
-            cost (subtotal/total); delivery is set at checkout.
+            {t.cart.shippingAtCheckout}. {t.cart.secureCheckout}.
           </p>
           <Button
             className="w-full"
@@ -215,6 +252,29 @@ export default function CartPage() {
             {t.cart.checkout} <ArrowRight className="w-5 h-5" />
           </Button>
         </div>
+
+        <RitualRail
+          products={ritual}
+          title={t.completeRitual.title}
+          subtitle={t.completeRitual.subtitle}
+          addLabel={t.shop.add}
+          saleLabel={t.shop.sale}
+          soldOutLabel={t.shop.soldOut}
+          onAdd={(e, product) => {
+            e.preventDefault();
+            if (!product.defaultVariantId) return;
+            void addItem({
+              id: product.id,
+              type: 'product',
+              name: product.name,
+              price: Number(product.price),
+              image_url: product.image_url,
+              merchandiseId: product.defaultVariantId,
+            }).then((ok) => {
+              if (ok) toast(t.pdp.added);
+            });
+          }}
+        />
       </div>
     </div>
   );
