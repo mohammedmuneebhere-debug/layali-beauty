@@ -103,6 +103,25 @@ async function loadMetadataMap(
   return map;
 }
 
+export async function withProductMetadata(
+  supabase: SupabaseClient,
+  products: ShopProduct[]
+): Promise<ShopProduct[]> {
+  const meta = await loadMetadataMap(
+    supabase,
+    products.map((p) => p.shopifyProductId)
+  );
+  return products.map((p) => {
+    const m = meta.get(p.shopifyProductId);
+    if (!m) return p;
+    return {
+      ...p,
+      benefits: [...new Set([...p.benefits, ...m.benefits, ...p.tags])],
+      is_featured: m.is_featured || p.is_featured,
+    };
+  });
+}
+
 export async function filterByRegion(
   supabase: SupabaseClient,
   products: ShopProduct[],

@@ -18,6 +18,7 @@ import { pickSimilarProducts, vendorSearchQuery } from '@/lib/similar-products';
 import { pickRitualProducts } from '@/lib/ritual';
 import { track } from '@/lib/track';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
+import { rememberViewedProduct } from '@/lib/recently-viewed';
 
 export type DetailProduct = ShopProduct & {
   shopifyVariants?: ShopVariant[];
@@ -118,6 +119,10 @@ export function ProductDetailClient({
 
     if (productParam) void load();
   }, [productParam, initialProduct]);
+
+  useEffect(() => {
+    if (product?.handle) rememberViewedProduct(product.handle);
+  }, [product?.handle]);
 
   useEffect(() => {
     if (!product) return;
