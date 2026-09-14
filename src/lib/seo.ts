@@ -20,3 +20,8 @@ export const ABOUT_DESCRIPTION =
   'Discover the story behind Layali — a beauty and lifestyle destination created around thoughtful rituals, confidence, and everyday self-care.';
 
 export const OG_IMAGE_PATH = '/og-image.jpg';
+
+export const SHOP_TITLE = 'Shop Beauty Essentials';
+export const SHOP_DESCRIPTION =
+  'Explore Layali’s curated beauty collection — makeup, skincare, haircare, fragrance, and body care selected for everyday rituals.';
+export const SHOP_URL = `${SITE_URL}/shop`;

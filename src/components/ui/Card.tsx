@@ -22,12 +22,14 @@ export function Card({ children, className, hover = false }: CardProps) {
 
 export function CardImage({
   src,
+  hoverSrc,
   alt,
   className,
   priority = false,
   sizes = '(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw',
 }: {
   src?: string | null;
+  hoverSrc?: string | null;
   alt: string;
   className?: string;
   priority?: boolean;
@@ -44,13 +46,27 @@ export function CardImage({
           sizes={sizes}
           loading={priority ? 'eager' : 'lazy'}
           decoding="async"
-          className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          className={cn(
+            'w-full h-full object-cover transition-[transform,opacity] duration-500 ease-out group-hover:scale-105',
+            hoverSrc && 'group-hover:opacity-0'
+          )}
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center">
           <span className="text-3xl text-layali-pink/50">✦</span>
         </div>
       )}
+      {hoverSrc ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={hoverSrc}
+          alt=""
+          sizes={sizes}
+          loading="lazy"
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 ease-out group-hover:opacity-100"
+        />
+      ) : null}
       <div className="absolute inset-0 bg-gradient-to-t from-layali-void/50 via-transparent to-transparent opacity-60 pointer-events-none" />
     </div>
   );

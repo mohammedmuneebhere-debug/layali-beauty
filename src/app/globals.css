@@ -20,6 +20,16 @@
   --layali-gold-light: #e0c9a0;
   --layali-muted: rgba(255, 255, 255, 0.65);
   --layali-faint: rgba(255, 255, 255, 0.12);
+  --layali-ivory: #f4ebe4;
+  --layali-porcelain: #efe4db;
+  --radius-sm: 0.5rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 1.75rem;
+  --shadow-soft: 0 12px 40px rgba(0, 0, 0, 0.38);
+  --shadow-lift: 0 18px 48px rgba(8, 4, 8, 0.45);
+  --shadow-glow: 0 0 28px rgba(201, 168, 124, 0.12);
+  --space-section: clamp(4.5rem, 8vw, 7.5rem);
   --background: #000000;
   --foreground: #ffffff;
 }
@@ -53,6 +63,8 @@
   --color-layali-gold-light: #e0c9a0;
   --color-layali-muted: rgba(255, 255, 255, 0.65);
   --color-layali-faint: rgba(255, 255, 255, 0.12);
+  --color-layali-ivory: #f4ebe4;
+  --color-layali-porcelain: #efe4db;
   --font-sans: var(--font-manrope), system-ui, sans-serif;
   --font-serif: var(--font-bodoni), "Times New Roman", serif;
   --font-display: var(--font-bodoni), "Times New Roman", serif;
@@ -602,9 +614,19 @@ html[dir='rtl'] .rtl-flip {
 }
 
 .card-hover:hover {
-  transform: translateY(-6px);
-  border-color: rgba(212, 46, 124, 0.5);
-  box-shadow: 0 24px 60px rgba(212, 46, 124, 0.22);
+  transform: translateY(-4px);
+  border-color: rgba(224, 122, 138, 0.28);
+  box-shadow: var(--shadow-lift);
+}
+
+.product-frame {
+  background: linear-gradient(180deg, #161214 0%, #0c0b0b 100%);
+  border: 1px solid rgba(244, 235, 228, 0.08);
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(224, 122, 138, 0.85);
+  outline-offset: 3px;
 }
 
 .btn-glow:hover {
