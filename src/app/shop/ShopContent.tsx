@@ -1,21 +1,21 @@
 'use client';
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ShoppingBag, Filter, Search, X, ChevronLeft, ChevronRight, PackageOpen } from 'lucide-react';
-import { Card, CardImage, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Filter, Search, X, ChevronLeft, ChevronRight, PackageOpen } from 'lucide-react';
 import { FadeIn } from '@/components/ui/FadeIn';
+import { ProductCard } from '@/components/shop/ProductCard';
+import { toast } from '@/components/ui/Toast';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
-import { formatPrice, cn } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { PRODUCT_CATEGORIES } from '@/lib/constants';
 import type { ShopProduct } from '@/lib/catalog';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { collectVendors, PAGE_SIZE } from '@/lib/shop-filters';
-import { shopifyImageUrl, SHOP_CARD_IMAGE_WIDTH } from '@/lib/shopify/image';
+import { track } from '@/lib/track';
 
 const VALID_CATEGORIES = new Set(
   PRODUCT_CATEGORIES.filter((c) => c.value !== 'combo').map((c) => c.value)
@@ -26,79 +26,32 @@ function normalizeCategory(value: string | null | undefined) {
   return VALID_CATEGORIES.has(value) ? value : '';
 }
 
-function writeCategoryToUrl(next: string) {
+function writeShopQuery(updates: Record<string, string>) {
   if (typeof window === 'undefined') return;
   const params = new URLSearchParams(window.location.search);
-  if (next) params.set('category', next);
-  else params.delete('category');
+  for (const [key, value] of Object.entries(updates)) {
+    if (value) params.set(key, value);
+    else params.delete(key);
+  }
   const qs = params.toString();
   const url = qs ? `/shop?${qs}` : '/shop';
   window.history.replaceState(window.history.state, '', url);
 }
 
-const ProductCard = memo(function ProductCard({
-  product,
-  addLabel,
-  onAdd,
-}: {
-  product: ShopProduct;
-  addLabel: string;
-  onAdd: (e: React.MouseEvent, product: ShopProduct) => void;
-}) {
-  // Prefer CDN-sized featured image from catalog; safety-size if raw URL slips through.
-  const cover = shopifyImageUrl(
-    product.image_url || product.images?.[0] || null,
-    SHOP_CARD_IMAGE_WIDTH
-  );
-  const href = `/shop/${product.handle || product.id}`;
-
-  return (
-    <Link href={href} prefetch={false} className="block h-full min-w-0">
-      <Card hover className="h-full bg-transparent border-0 shadow-none">
-        <div className="relative min-w-0">
-          <CardImage src={cover} alt={product.name} className="rounded-2xl border border-white/8" />
-          {(product.images?.length || 0) > 1 && (
-            <span className="absolute bottom-3 end-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur text-white text-meta border border-white/10">
-              {product.images.length} photos
-            </span>
-          )}
-        </div>
-        <CardContent className="px-1 pt-4 pb-2">
-          <p className="text-meta text-layali-pink uppercase tracking-[0.14em] mb-1.5 truncate">
-            {product.category}
-          </p>
-          <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
-            <h3 className="text-product-name text-white leading-snug line-clamp-2 min-w-0">
-              {product.name}
-            </h3>
-            <span className="text-price text-white/90 shrink-0 tabular-nums">
-              {formatPrice(Number(product.price))}
-            </span>
-          </div>
-          {product.compare_at_price && (
-            <span className="text-meta text-white/30 line-through block mb-2">
-              {formatPrice(Number(product.compare_at_price))}
-            </span>
-          )}
-          <Button size="sm" variant="outline" className="w-full" onClick={(e) => onAdd(e, product)}>
-            <ShoppingBag className="w-3.5 h-3.5" /> {addLabel}
-          </Button>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-});
+type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
 
 export default function ShopContent() {
   const searchParams = useSearchParams();
   const { t } = useLanguage();
 
   const categoryFromUrl = normalizeCategory(searchParams.get('category'));
+  const qFromUrl = searchParams.get('q') || '';
   const [category, setCategory] = useState(categoryFromUrl);
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(qFromUrl);
+  const [sort, setSort] = useState<SortKey>('featured');
   const [brand, setBrand] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -116,10 +69,12 @@ export default function ShopContent() {
   useEffect(() => {
     void Promise.resolve().then(() => {
       setCategory(categoryFromUrl);
+      setSearch(qFromUrl);
       setPage(1);
       setBrand('');
+      if (categoryFromUrl) track({ event: 'category_view', category: categoryFromUrl });
     });
-  }, [categoryFromUrl]);
+  }, [categoryFromUrl, qFromUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,8 +152,8 @@ export default function ShopContent() {
     });
     setPage(1);
     setBrand('');
-    writeCategoryToUrl(next);
-  }, []);
+    writeShopQuery({ category: next, q: search });
+  }, [search]);
 
   const brands = useMemo(() => {
     const inCategory = category ? products.filter((p) => p.category === category) : products;
@@ -210,7 +165,7 @@ export default function ShopContent() {
     const min = minPrice ? Number(minPrice) : null;
     const max = maxPrice ? Number(maxPrice) : null;
 
-    return products.filter((p) => {
+    const next = products.filter((p) => {
       if (category && p.category !== category) return false;
       if (brand && (p.vendor || '').trim() !== brand) return false;
       const price = Number(p.price);
@@ -223,7 +178,13 @@ export default function ShopContent() {
       }
       return true;
     });
-  }, [products, category, search, brand, minPrice, maxPrice]);
+
+    const sorted = [...next];
+    if (sort === 'price-asc') sorted.sort((a, b) => Number(a.price) - Number(b.price));
+    if (sort === 'price-desc') sorted.sort((a, b) => Number(b.price) - Number(a.price));
+    if (sort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name));
+    return sorted;
+  }, [products, category, search, brand, minPrice, maxPrice, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -257,9 +218,21 @@ export default function ShopContent() {
         price: Number(product.price),
         image_url: image,
         merchandiseId: product.defaultVariantId,
+      }).then((ok) => {
+        if (ok) {
+          toast(t.pdp.added);
+          track({
+            event: 'add_to_cart',
+            id: product.id,
+            name: product.name,
+            category: product.category,
+            value: Number(product.price),
+            currency: 'SAR',
+          });
+        }
       });
     },
-    [addItem]
+    [addItem, t.pdp.added]
   );
 
   const goToPage = (next: number) => {
@@ -334,10 +307,28 @@ export default function ShopContent() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              onBlur={() => writeShopQuery({ q: search.trim(), category })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') writeShopQuery({ q: search.trim(), category });
+              }}
               placeholder={t.shop.searchPlaceholder}
               className="w-full rounded-full bg-white/5 border border-white/15 text-white placeholder:text-white/35 py-3 ps-10 pe-4 text-sm focus:outline-none focus:border-layali-pink/50"
             />
           </div>
+          <label className="inline-flex items-center gap-2 text-sm text-white/50">
+            <span className="hidden sm:inline">{t.shop.sort}</span>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="rounded-full border border-white/15 bg-black/40 px-4 py-3 text-xs uppercase tracking-[0.12em] text-white focus:border-layali-pink/50 focus:outline-none"
+              aria-label={t.shop.sort}
+            >
+              <option value="featured">{t.shop.sortFeatured}</option>
+              <option value="price-asc">{t.shop.sortPriceAsc}</option>
+              <option value="price-desc">{t.shop.sortPriceDesc}</option>
+              <option value="name">{t.shop.sortName}</option>
+            </select>
+          </label>
           <button
             type="button"
             onClick={() => setFiltersOpen((o) => !o)}
@@ -522,6 +513,8 @@ export default function ShopContent() {
                   key={product.id}
                   product={product}
                   addLabel={t.shop.add}
+                  saleLabel={t.shop.sale}
+                  soldOutLabel={t.shop.soldOut}
                   onAdd={handleAddToCart}
                 />
               ))}

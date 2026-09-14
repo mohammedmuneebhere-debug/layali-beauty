@@ -19,6 +19,32 @@ import { toCatalogProduct } from '@/lib/shopify/normalize';
 import { getRegionId } from '@/lib/regions';
 import type { RecommendationProduct } from '@/lib/recommendation';
 
+export type ShopVariant = {
+  id: string;
+  title: string;
+  available: boolean;
+  price: number;
+  compareAtPrice: number | null;
+};
+
+function mapShopVariants(
+  variants: {
+    id: string;
+    title: string;
+    availableForSale: boolean;
+    price: { amount: number };
+    compareAtPrice: { amount: number } | null;
+  }[]
+): ShopVariant[] {
+  return variants.map((v) => ({
+    id: v.id,
+    title: v.title,
+    available: v.availableForSale,
+    price: v.price.amount,
+    compareAtPrice: v.compareAtPrice?.amount ?? null,
+  }));
+}
+
 export type ShopProduct = CatalogProduct & {
   /** UI fields expected by existing product cards / PDP */
   benefits: string[];
@@ -220,17 +246,14 @@ export async function loadRecommendationCatalog(options: {
 
 export async function loadShopProductByParam(
   param: string
-): Promise<(ShopProduct & { shopifyVariants: { id: string; available: boolean }[] }) | null> {
+): Promise<(ShopProduct & { shopifyVariants: ShopVariant[] }) | null> {
   if (!isShopifyConfigured() || !param) return null;
 
   const byHandle = await getCatalogProductByHandle(param);
   if (byHandle) {
     return {
       ...toShopProduct(byHandle),
-      shopifyVariants: byHandle.shopify.variants.map((v) => ({
-        id: v.id,
-        available: v.availableForSale,
-      })),
+      shopifyVariants: mapShopVariants(byHandle.shopify.variants),
     };
   }
 
@@ -243,19 +266,13 @@ export async function loadShopProductByParam(
       const catalog = toCatalogProduct(byId);
       return {
         ...toShopProduct(catalog),
-        shopifyVariants: byId.variants.map((v) => ({
-          id: v.id,
-          available: v.availableForSale,
-        })),
+        shopifyVariants: mapShopVariants(byId.variants),
       };
     }
     const catalog = toCatalogProduct(product);
     return {
       ...toShopProduct(catalog),
-      shopifyVariants: product.variants.map((v) => ({
-        id: v.id,
-        available: v.availableForSale,
-      })),
+      shopifyVariants: mapShopVariants(product.variants),
     };
   }
 
