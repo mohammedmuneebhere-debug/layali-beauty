@@ -54,6 +54,37 @@ function isRoutine(query: string) {
   return /routine|ritual|regimen|complete|set|combo/.test(query);
 }
 
+const STOPWORDS = new Set([
+  'the',
+  'and',
+  'for',
+  'from',
+  'with',
+  'what',
+  'can',
+  'get',
+  'need',
+  'simple',
+  'that',
+  'this',
+  'have',
+  'just',
+  'into',
+  'your',
+  'you',
+  'are',
+  'was',
+  'how',
+  'any',
+  'all',
+]);
+
+function queryTokens(query: string): string[] {
+  return query
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length > 2 && !STOPWORDS.has(token));
+}
+
 function reasonFor(product: ShopProduct, query: string, budget: number | null): string {
   if (budget != null && Number(product.price) <= budget) {
     return `Within your budget at ${Math.round(Number(product.price))} SAR.`;
@@ -81,11 +112,13 @@ export function answerCatalogQuery(query: string, catalog: ShopProduct[]): Assis
   const categories = detectCategories(q);
   const available = catalog.filter((p) => p.handle && p.defaultVariantId);
 
+  const tokens = queryTokens(q);
+
   const scored = available
     .map((product) => {
       const text = `${product.name} ${product.category} ${product.vendor} ${product.description || ''} ${(product.tags || []).join(' ')}`.toLowerCase();
       let score = 0;
-      for (const token of q.split(/[^a-z0-9]+/).filter((t) => t.length > 2)) {
+      for (const token of tokens) {
         if (text.includes(token)) score += 2;
       }
       if (categories.includes(product.category)) score += 5;
@@ -94,10 +127,10 @@ export function answerCatalogQuery(query: string, catalog: ShopProduct[]): Assis
       if (isNight(q) && /night|repair|sleep|retinol/.test(text)) score += 3;
       if (isMorning(q) && /day|spf|sunscreen|morning|vitamin c/.test(text)) score += 3;
       if (isRoutine(q) && product.is_featured) score += 1;
-      if (product.available) score += 1;
+      if (product.available) score += 0.1;
       return { product, score };
     })
-    .filter((row) => row.score > 0)
+    .filter((row) => row.score >= 2)
     .sort((a, b) => b.score - a.score);
 
   let picks = scored.slice(0, isRoutine(q) ? 4 : 6).map((row) => row.product);
