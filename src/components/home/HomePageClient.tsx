@@ -24,11 +24,9 @@ const CATEGORY_IMAGES: Record<string, string> = {
 export default function HomePageClient({
   heroProducts = [],
   categoryCovers = {},
-  marqueeBrands = [],
 }: {
   heroProducts?: CatalogProduct[];
   categoryCovers?: Record<string, string>;
-  marqueeBrands?: string[];
 }) {
   const { t } = useLanguage();
   const reduceMotion = useReducedMotion();
@@ -52,10 +50,6 @@ export default function HomePageClient({
       (t.categories[cat.value as keyof typeof t.categories] as string | undefined) || cat.label,
     href: cat.value,
   }));
-
-  const marquee = marqueeBrands.length
-    ? `${marqueeBrands.join('  ✦  ')}  ✦  `
-    : '';
 
   return (
     <div className="page-shell text-white">
@@ -121,108 +115,7 @@ export default function HomePageClient({
         </div>
       </section>
 
-      {/* Marquee ticker */}
-      <div className="border-y border-layali-pink/20 section-glide overflow-hidden py-4" dir="ltr">
-        <div className="flex w-max whitespace-nowrap animate-marquee">
-          {[0, 1].map((i) => (
-            <span
-              key={i}
-              className="mx-4 shrink-0 text-heading-lg font-serif italic text-transparent"
-              style={{
-                WebkitTextStroke: '1px rgba(224, 122, 138, 0.55)',
-              }}
-            >
-              {marquee.repeat(4)}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Campaign banners */}
-      <section className="py-10 sm:py-14 section-glide-soft">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FadeIn>
-            <DynamicBannerCarousel
-              placement="landing_hero"
-              className="border border-layali-pink/20 shadow-[0_0_40px_rgba(212,46,124,0.12)]"
-            />
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* Glow CTA band */}
-      <section className="relative py-24 section-glide overflow-hidden text-center">
-        <div
-          className="glow-orb w-[520px] h-[520px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
-          aria-hidden
-        />
-        <FadeIn className="relative z-10 px-4">
-          <p className="font-serif text-heading-md text-white mb-3">{t.glow.line1}</p>
-          <p className="font-serif text-heading-lg text-layali-pink-light mb-8">
-            {t.glow.line2}
-          </p>
-          <Link
-            href="/shop"
-            prefetch
-            className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-nav tracking-[0.1em] border border-layali-pink/60 text-white hover:bg-layali-pink/10 hover:border-layali-pink hover:shadow-[0_0_24px_rgba(212,46,124,0.3)]"
-          >
-            {t.glow.enter} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
-          </Link>
-        </FadeIn>
-      </section>
-
-      <RitualCarousel />
-
-      {/* Why Layali */}
-      <section className="py-20 section-glide border-y border-layali-pink/15 relative overflow-hidden">
-        <div className="glow-orb w-[400px] h-[400px] -right-32 top-0 opacity-50" aria-hidden />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FadeIn className="text-center mb-16">
-            <h2 className="font-serif text-heading-lg text-white mb-4">{t.why.title}</h2>
-            <p className="text-body-lg text-white/60 max-w-2xl mx-auto">{t.why.subtitle}</p>
-          </FadeIn>
-
-          <StaggerContainer className="grid md:grid-cols-3 gap-8">
-            {features.map((feature) => (
-              <StaggerItem key={feature.title}>
-                <div className="text-center p-8 rounded-2xl bg-black/45 backdrop-blur-md border border-layali-pink/20 card-hover h-full">
-                  <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-layali-pink-glow/20 border border-layali-pink/40 flex items-center justify-center shadow-[0_0_20px_rgba(212,46,124,0.25)]">
-                    <feature.icon className="w-7 h-7 text-layali-pink-light" />
-                  </div>
-                  <h3 className="font-serif text-heading-sm text-white mb-3">{feature.title}</h3>
-                  <p className="text-body text-white/55">{feature.description}</p>
-                </div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
-
-      {/* Survey CTA */}
-      <section className="py-20 section-glide-soft relative overflow-hidden">
-        <div
-          className="glow-orb w-[600px] h-[600px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
-          aria-hidden
-        />
-        <div className="relative max-w-4xl mx-auto px-4 text-center">
-          <FadeIn>
-            <p className="font-script text-script-xl text-layali-pink-light mb-4 scale-75 origin-center">
-              {t.survey.script}
-            </p>
-            <h2 className="font-serif text-heading-lg text-white mb-6">{t.survey.title}</h2>
-            <p className="text-body-lg text-white/65 mb-8 max-w-2xl mx-auto">{t.survey.body}</p>
-            <Link
-              href="/survey"
-              prefetch
-              className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-sm tracking-[0.14em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
-            >
-              {t.survey.cta} <Sparkles className="w-5 h-5" />
-            </Link>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* Categories */}
+      {/* Shop by Category */}
       <section className="py-20 section-glide border-t border-layali-pink/15">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn className="text-center mb-12">
@@ -260,6 +153,90 @@ export default function HomePageClient({
             })}
           </div>
         </div>
+      </section>
+
+      <RitualCarousel />
+
+      {/* Why Layali */}
+      <section className="py-20 section-glide border-y border-layali-pink/15 relative overflow-hidden">
+        <div className="glow-orb w-[400px] h-[400px] -right-32 top-0 opacity-50" aria-hidden />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn className="text-center mb-16">
+            <h2 className="font-serif text-heading-lg text-white mb-4">{t.why.title}</h2>
+            <p className="text-body-lg text-white/60 max-w-2xl mx-auto">{t.why.subtitle}</p>
+          </FadeIn>
+
+          <StaggerContainer className="grid md:grid-cols-3 gap-8">
+            {features.map((feature) => (
+              <StaggerItem key={feature.title}>
+                <div className="text-center p-8 rounded-2xl bg-black/45 backdrop-blur-md border border-layali-pink/20 card-hover h-full">
+                  <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-layali-pink-glow/20 border border-layali-pink/40 flex items-center justify-center shadow-[0_0_20px_rgba(212,46,124,0.25)]">
+                    <feature.icon className="w-7 h-7 text-layali-pink-light" />
+                  </div>
+                  <h3 className="font-serif text-heading-sm text-white mb-3">{feature.title}</h3>
+                  <p className="text-body text-white/55">{feature.description}</p>
+                </div>
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </div>
+      </section>
+
+      {/* Find Your Ritual */}
+      <section className="py-20 section-glide-soft relative overflow-hidden">
+        <div
+          className="glow-orb w-[600px] h-[600px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
+          aria-hidden
+        />
+        <div className="relative max-w-4xl mx-auto px-4 text-center">
+          <FadeIn>
+            <p className="font-script text-script-xl text-layali-pink-light mb-4 scale-75 origin-center">
+              {t.survey.script}
+            </p>
+            <h2 className="font-serif text-heading-lg text-white mb-6">{t.survey.title}</h2>
+            <p className="text-body-lg text-white/65 mb-8 max-w-2xl mx-auto">{t.survey.body}</p>
+            <Link
+              href="/survey"
+              prefetch
+              className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-sm tracking-[0.14em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
+            >
+              {t.survey.cta} <Sparkles className="w-5 h-5" />
+            </Link>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Campaign banners */}
+      <section className="py-10 sm:py-14 section-glide-soft">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeIn>
+            <DynamicBannerCarousel
+              placement="landing_hero"
+              className="border border-layali-pink/20 shadow-[0_0_40px_rgba(212,46,124,0.12)]"
+            />
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Enter the Store */}
+      <section className="relative py-24 section-glide overflow-hidden text-center">
+        <div
+          className="glow-orb w-[520px] h-[520px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
+          aria-hidden
+        />
+        <FadeIn className="relative z-10 px-4">
+          <p className="font-serif text-heading-md text-white mb-3">{t.glow.line1}</p>
+          <p className="font-serif text-heading-lg text-layali-pink-light mb-8">
+            {t.glow.line2}
+          </p>
+          <Link
+            href="/shop"
+            prefetch
+            className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-nav tracking-[0.1em] border border-layali-pink/60 text-white hover:bg-layali-pink/10 hover:border-layali-pink hover:shadow-[0_0_24px_rgba(212,46,124,0.3)]"
+          >
+            {t.glow.enter} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+          </Link>
+        </FadeIn>
       </section>
     </div>
   );

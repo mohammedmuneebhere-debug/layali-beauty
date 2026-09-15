@@ -29,7 +29,6 @@ export function Navbar() {
     { href: '/shop', label: t.nav.shop },
     { href: '/combos', label: t.nav.combos },
     { href: '/about', label: t.nav.manifesto },
-    { href: '/customer-care', label: t.nav.customerCare },
   ];
 
   const [menuPathname, setMenuPathname] = useState(pathname);

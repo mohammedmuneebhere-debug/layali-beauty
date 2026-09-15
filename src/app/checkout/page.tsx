@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Package, Plus, MapPin } from 'lucide-react';
+import { Package, Plus, MapPin, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import {
@@ -536,6 +536,7 @@ export default function CheckoutPage() {
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={t.checkout.notesPlaceholder}
+                  autoComplete="off"
                 />
 
                 {selectedAddress && (
@@ -568,12 +569,29 @@ export default function CheckoutPage() {
                         : 'border-layali-pink/20'
                     }`}
                   >
-                    <p className="font-medium text-white">{t.checkout.cod}</p>
-                    <p className="text-sm text-white/60 mt-1">Pay when your order is delivered.</p>
+                    <span className="flex items-center gap-3">
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-layali-pink/30 bg-layali-pink-glow/15 shrink-0">
+                        <Banknote className="w-5 h-5 text-layali-pink-light" aria-hidden />
+                      </span>
+                      <span>
+                        <p className="font-medium text-white">{t.checkout.cod}</p>
+                        <p className="text-sm text-white/60 mt-1">Pay when your order is delivered.</p>
+                      </span>
+                    </span>
                   </button>
-                  <div className="w-full text-left p-4 rounded-xl border border-white/10 opacity-60">
-                    <p className="font-medium text-white/80">Online Payment</p>
-                    <p className="text-sm text-white/45 mt-1">Coming soon</p>
+                  <div
+                    className="w-full text-left p-4 rounded-xl border border-dashed border-white/15 bg-white/[0.03] pointer-events-none select-none"
+                    aria-disabled="true"
+                  >
+                    <p className="font-medium text-white/70">Online Payment</p>
+                    <p className="text-sm text-white/40 mt-1">Coming soon</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2 opacity-55 grayscale">
+                      <ApplePayMark />
+                      <VisaMark />
+                      <MastercardMark />
+                      <MadaMark />
+                      <StcPayMark />
+                    </div>
                   </div>
                 </div>
 
@@ -646,5 +664,89 @@ export default function CheckoutPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function PayMark({
+  label,
+  className,
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className={`inline-flex h-7 min-w-[2.75rem] items-center justify-center rounded-md border border-black/10 px-1.5 ${className ?? 'bg-white'}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function ApplePayMark() {
+  return (
+    <PayMark label="Apple Pay" className="bg-black border-white/20 min-w-[3.4rem]">
+      <svg viewBox="0 0 48 20" className="h-3.5 w-[2.4rem]" aria-hidden>
+        <path
+          fill="#fff"
+          d="M9.1 4.4c.5-.6.8-1.4.7-2.2-1.3.1-2.4.8-3 1.8-.6.8-1 1.7-.9 2.5 1.4.1 2.6-.6 3.2-2.1Zm.2 1.3c-1.8-.1-3.3 1-3.9 1-.6 0-1.9-1-3.2-1-1.7 0-3.2 1-4.1 2.5-1.7 3-.5 7.4 1.3 9.8.8 1.2 1.8 2.5 3.1 2.5 1.2 0 1.6-.8 3.1-.8s1.8.8 3.2.8c1.3 0 2.2-1.2 3-2.4.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8 0-2.4 2-3.5 2.1-3.6-1.2-1.7-3-1.9-3.4-1.9Z"
+        />
+        <text x="18" y="14.5" fill="#fff" fontSize="9.5" fontFamily="system-ui, -apple-system, sans-serif" fontWeight="500">
+          Pay
+        </text>
+      </svg>
+    </PayMark>
+  );
+}
+
+function VisaMark() {
+  return (
+    <PayMark label="Visa">
+      <svg viewBox="0 0 40 14" className="h-3 w-8" aria-hidden>
+        <text x="0" y="12" fill="#1A1F71" fontSize="12" fontFamily="Arial Black, Arial, sans-serif" fontStyle="italic" fontWeight="700" letterSpacing="-0.5">
+          VISA
+        </text>
+      </svg>
+    </PayMark>
+  );
+}
+
+function MastercardMark() {
+  return (
+    <PayMark label="Mastercard">
+      <svg viewBox="0 0 32 20" className="h-4 w-7" aria-hidden>
+        <circle cx="12" cy="10" r="8" fill="#EB001B" />
+        <circle cx="20" cy="10" r="8" fill="#F79E1B" />
+        <path d="M16 4.4a8 8 0 0 1 0 11.2 8 8 0 0 1 0-11.2Z" fill="#FF5F00" />
+      </svg>
+    </PayMark>
+  );
+}
+
+function MadaMark() {
+  return (
+    <PayMark label="mada">
+      <svg viewBox="0 0 44 14" className="h-3.5 w-10" aria-hidden>
+        <text x="0" y="11.5" fill="#00A651" fontSize="11" fontFamily="Arial, sans-serif" fontWeight="700">
+          mada
+        </text>
+      </svg>
+    </PayMark>
+  );
+}
+
+function StcPayMark() {
+  return (
+    <PayMark label="stc pay" className="bg-[#4F008C] border-[#4F008C]">
+      <svg viewBox="0 0 52 14" className="h-3 w-[2.7rem]" aria-hidden>
+        <text x="0" y="11" fill="#fff" fontSize="8.5" fontFamily="Arial, sans-serif" fontWeight="700">
+          stc pay
+        </text>
+      </svg>
+    </PayMark>
   );
 }

@@ -209,10 +209,10 @@ export default function SignUpPage() {
               )}
 
               <form onSubmit={handleSubmit(onSubmitDetails, () => setError(''))} className="space-y-4">
-                <Input label={t.signup.fullName} {...register('full_name')} error={errors.full_name?.message} />
-                <Input label={t.signup.email} type="email" {...register('email')} error={errors.email?.message} />
-                <Input label={t.signup.password} type="password" {...register('password')} error={errors.password?.message} />
-                <Input label={t.signup.phone} type="tel" {...register('phone')} error={errors.phone?.message} />
+                <Input label={t.signup.fullName} {...register('full_name')} autoComplete="name" error={errors.full_name?.message} />
+                <Input label={t.signup.email} type="email" {...register('email')} autoComplete="email" error={errors.email?.message} />
+                <Input label={t.signup.password} type="password" {...register('password')} autoComplete="new-password" error={errors.password?.message} />
+                <Input label={t.signup.phone} type="tel" {...register('phone')} autoComplete="tel" error={errors.phone?.message} />
 
                 <Select
                   label={t.signup.country}
@@ -224,6 +224,7 @@ export default function SignUpPage() {
                       setValue('city', '');
                     },
                   })}
+                  autoComplete="country-name"
                   error={errors.country?.message}
                 />
 
@@ -232,6 +233,7 @@ export default function SignUpPage() {
                   options={CITIES[country || selectedCountry] || []}
                   placeholder={t.signup.selectCity}
                   {...register('city')}
+                  autoComplete="address-level2"
                   error={errors.city?.message}
                   disabled={!country && !selectedCountry}
                 />

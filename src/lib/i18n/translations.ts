@@ -383,9 +383,9 @@ export const translations = {
     manifesto: {
       title: 'Manifesto',
       script: 'Beauty, Redefined.',
-      p1: 'Layali is a women’s beauty destination for makeup, skincare, haircare, and lifestyle essentials. Our name means “nights” in Arabic — those quiet rituals when self-care becomes self-love.',
-      p2: 'We curate trusted brands across beauty categories — from everyday makeup to skincare, haircare, body care, and fragrance — made for real glow, not filters.',
-      p3: 'From Riyadh to Jeddah and across the Gulf, we bring beauty you can trust to your door — with personalized guidance and delivery you can rely on.',
+      p1: 'Layali was born of the night — those private hours when a woman meets herself without audience. In Arabic, our name means “nights”: the hush between dusk and dawn, when ritual becomes devotion, and beauty is chosen, not performed.',
+      p2: 'We compose a sanctuary of makeup, skincare, hair, body, and fragrance — houses you can trust, textures you can feel, colour that belongs on real skin. No filters. No theatre. Only the glow that remains after the lights go down.',
+      p3: 'From Riyadh to Jeddah, and across the Gulf, Layali arrives at your door with the same care we take in the edit: considered guidance, discreet delivery, and a beauty ritual composed just for you.',
       closing: 'glow with confidence, just for you',
     },
     signup: {
@@ -843,9 +843,9 @@ export const translations = {
     manifesto: {
       title: 'مانيفستو',
       script: 'جمال معاد تعريفه',
-      p1: 'Layali وجهة جمال للنساء تشمل المكياج والعناية بالبشرة والشعر ومستلزمات الجمال. اسمنا يعني «الليالي» بالعربية — تلك الطقوس الهادئة حين تصبح العناية بالذات حباً للذات.',
-      p2: 'نختار بعناية علامات موثوقة عبر فئات الجمال — من المكياج اليومي إلى العناية بالبشرة والشعر والجسم والعطور — لتوهج حقيقي لا يعتمد على الفلاتر.',
-      p3: 'من الرياض إلى جدة وعبر الخليج، نجلب جمالاً يمكن الوثوق به إلى بابكِ — مع إرشاد شخصي وتوصيل يمكن الاعتماد عليه.',
+      p1: 'وُلدت ليالي من الليل — تلك الساعات الخاصة حين تلتقي المرأة بنفسها دون جمهور. اسمنا بالعربية يعني «الليالي»: السكون بين الغروب والفجر، حين يتحوّل الطقس إلى تفانٍ، ويُختار الجمال لا يُؤدّى.',
+      p2: 'نصنع ملاذاً من المكياج والعناية بالبشرة والشعر والجسم والعطور — دور يمكنك الوثوق بها، وملمس يمكنك الإحساس به، ولون ينتمي إلى البشرة الحقيقية. بلا فلاتر. بلا مسرح. فقط التوهج الذي يبقى بعد أن تنطفئ الأضواء.',
+      p3: 'من الرياض إلى جدة، وعبر الخليج، تصل ليالي إلى بابكِ بالعناية نفسها التي نختار بها كل منتج: إرشاد مدروس، وتوصيل راقٍ، وطقس جمال أُلّف من أجلكِ أنتِ.',
       closing: 'تألقي بثقة، من أجلكِ أنتِ',
     },
     signup: {

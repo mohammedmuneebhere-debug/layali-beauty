@@ -432,6 +432,7 @@ export function AddressForm({
           value={buildingUnitDetails(fields)}
           onChange={(e) => updateBuildingUnit(e.target.value)}
           placeholder={a.buildingUnitPlaceholder}
+          autoComplete="address-line2"
           error={fieldErrors.building}
           required
         />
@@ -451,6 +452,7 @@ export function AddressForm({
           value={fields.area}
           onChange={(e) => updateField('area', e.target.value)}
           placeholder={a.areaPlaceholder}
+          autoComplete="address-level3"
           error={fieldErrors.area}
           required
         />
@@ -481,6 +483,7 @@ export function AddressForm({
           value={fields.additional}
           onChange={(e) => updateField('additional', e.target.value)}
           placeholder={a.additionalPlaceholder}
+          autoComplete="address-line3"
         />
         {lockCountryToSA ? (
           <Input
@@ -574,6 +577,7 @@ export function AddressForm({
             onChange={(e) => updateField('directions', e.target.value)}
             rows={3}
             placeholder={a.directionsPlaceholder}
+            autoComplete="off"
             className={cn(
               'w-full min-h-12 px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2',
               'border border-white/12 bg-white/5 text-white placeholder:text-white/30 focus:ring-layali-pink/50 focus:border-layali-pink/40'

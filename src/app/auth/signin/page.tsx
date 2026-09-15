@@ -95,8 +95,8 @@ function SignInForm() {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input label="Email" type="email" {...register('email')} error={errors.email?.message} />
-            <Input label="Password" type="password" {...register('password')} error={errors.password?.message} />
+            <Input label="Email" type="email" {...register('email')} autoComplete="email" error={errors.email?.message} />
+            <Input label="Password" type="password" {...register('password')} autoComplete="current-password" error={errors.password?.message} />
 
             <Button type="submit" className="w-full" loading={loading}>
               Sign In

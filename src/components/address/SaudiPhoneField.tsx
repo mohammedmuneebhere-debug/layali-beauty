@@ -54,6 +54,7 @@ export function SaudiPhoneField({
           type="tel"
           inputMode="numeric"
           autoComplete="tel-national"
+          name="tel-national"
           required={required}
           aria-label={label}
           placeholder={placeholder}
