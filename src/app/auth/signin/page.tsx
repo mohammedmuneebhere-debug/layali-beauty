@@ -109,12 +109,6 @@ function SignInForm() {
               Sign Up
             </Link>
           </p>
-
-          <div className="mt-4 pt-4 border-t border-white/10 text-center">
-            <Link href="/auth/admin/signin" className="text-xs text-white/30 hover:text-white/50">
-              Admin Login
-            </Link>
-          </div>
         </div>
       </motion.div>
     </div>
