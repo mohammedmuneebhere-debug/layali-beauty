@@ -1,18 +1,21 @@
 'use client';
 
-const HERO_VISUAL = '/brand/hero-haircare.jpg';
+const HERO_VISUAL = '/brand/hero-makeup.jpg';
 
 const IMAGE_MASK = [
-  'linear-gradient(to right, transparent 0%, #000 12%, #000 90%, transparent 100%)',
-  'linear-gradient(to bottom, transparent 0%, #000 10%, #000 90%, transparent 100%)',
+  'linear-gradient(to right, transparent 0%, #000 32%, #000 88%, transparent 100%)',
+  'linear-gradient(to bottom, transparent 0%, #000 18%, #000 86%, transparent 100%)',
 ].join(', ');
 
 const EDGE_BLEND =
-  'radial-gradient(ellipse 82% 84% at 42% 58%, transparent 48%, rgba(8,4,8,0.22) 76%, rgba(0,0,0,0.72) 100%), linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, transparent 14%)';
+  'linear-gradient(90deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.35) 18%, transparent 36%), linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 18%), linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 16%), linear-gradient(270deg, rgba(0,0,0,0.38) 0%, transparent 14%), radial-gradient(ellipse 58% 64% at 54% 42%, transparent 46%, rgba(0,0,0,0.2) 78%, rgba(0,0,0,0.72) 100%)';
 
 export function HeroStage() {
   return (
-    <div className="relative mx-auto aspect-square w-full min-w-0 max-w-lg" aria-hidden>
+    <div
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[min(52vh,420px)] overflow-hidden lg:inset-x-auto lg:start-auto lg:end-0 lg:top-[8%] lg:bottom-0 lg:h-auto lg:w-[min(68vw,62%)] lg:overflow-hidden"
+      aria-hidden
+    >
       <div
         className="absolute inset-0"
         style={{
@@ -30,13 +33,14 @@ export function HeroStage() {
         <img
           src={HERO_VISUAL}
           alt=""
-          className="h-full w-full max-w-full select-none object-cover object-center"
+          className="h-full w-full max-w-none select-none object-cover object-[18%_10%] lg:scale-[0.96] lg:object-[22%_16%] lg:origin-[40%_28%]"
           draggable={false}
         />
         <div
           className="pointer-events-none absolute inset-0"
           style={{ background: EDGE_BLEND }}
         />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black via-black/55 to-transparent lg:hidden" />
       </div>
     </div>
   );

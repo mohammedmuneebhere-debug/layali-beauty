@@ -62,7 +62,7 @@ export default function HomePageClient({
       {/* Hero — concept UI */}
       <section
         ref={heroRef}
-        className="relative min-h-[100svh] flex items-center overflow-hidden pt-20 section-glide-soft"
+        className="relative min-h-[100svh] overflow-hidden pt-20 section-glide-soft"
       >
         <motion.div style={{ y: yGlow }} className="absolute inset-0 pointer-events-none" aria-hidden>
           <div className="glow-orb w-[50vw] h-[50vw] max-w-[560px] max-h-[560px] left-[-8%] top-[20%] opacity-45" />
@@ -71,14 +71,16 @@ export default function HomePageClient({
 
         <motion.div
           style={{ opacity }}
-          className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 lg:py-24"
+          className="relative z-10 min-h-[calc(100svh-5rem)]"
         >
-          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+          <HeroStage />
+          <div className="pointer-events-none absolute inset-y-0 start-0 z-[2] hidden w-[min(52%,40rem)] bg-gradient-to-r from-black via-black/75 to-transparent lg:block" />
+          <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-7xl flex-col justify-center px-4 py-16 pb-48 sm:px-6 lg:px-8 lg:py-24 lg:pb-24">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.85 }}
-              className="max-w-2xl"
+              className="relative z-10 max-w-2xl"
             >
               {t.hero.eyebrow ? (
                 <p className="text-meta tracking-[0.18em] text-layali-gold-light mb-6 uppercase">
@@ -105,7 +107,6 @@ export default function HomePageClient({
                 </Link>
               </div>
             </motion.div>
-            <HeroStage />
           </div>
         </motion.div>
 
