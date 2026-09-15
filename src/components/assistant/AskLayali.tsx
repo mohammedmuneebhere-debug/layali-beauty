@@ -232,12 +232,15 @@ export function AskLayali() {
     }
   };
 
+  const onHome = pathname === '/';
   const baseBottom = onProductDetail
     ? 'bottom-[calc(7.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-20'
     : 'bottom-20';
   const teaserBottom = onProductDetail
     ? 'bottom-[calc(6.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-5 max-sm:end-3 max-sm:min-w-12 max-sm:justify-center max-sm:px-3'
-    : 'bottom-5';
+    : onHome
+      ? 'bottom-5 max-lg:bottom-16 max-lg:end-auto max-lg:start-3'
+      : 'bottom-5';
 
   return (
     <>

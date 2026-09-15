@@ -13,7 +13,7 @@ const EDGE_BLEND =
 export function HeroStage() {
   return (
     <div
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[min(52vh,420px)] overflow-hidden lg:inset-x-auto lg:start-auto lg:end-0 lg:top-[8%] lg:bottom-0 lg:h-auto lg:w-[min(68vw,62%)] lg:overflow-hidden"
+      className="pointer-events-none absolute z-[1] overflow-hidden inset-auto start-[16%] end-[-6%] bottom-12 h-[46%] lg:start-auto lg:end-0 lg:top-[8%] lg:bottom-0 lg:h-auto lg:w-[min(68vw,62%)] lg:overflow-hidden"
       aria-hidden
     >
       <div
@@ -33,14 +33,14 @@ export function HeroStage() {
         <img
           src={HERO_VISUAL}
           alt=""
-          className="h-full w-full max-w-none select-none object-cover object-[18%_10%] lg:scale-[0.96] lg:object-[22%_16%] lg:origin-[40%_28%]"
+          className="h-full w-full max-w-none select-none object-cover object-[22%_8%] lg:scale-[0.96] lg:object-[22%_16%] lg:origin-[40%_28%]"
           draggable={false}
         />
         <div
           className="pointer-events-none absolute inset-0"
           style={{ background: EDGE_BLEND }}
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black via-black/55 to-transparent lg:hidden" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/70 via-black/15 to-transparent lg:hidden" />
       </div>
     </div>
   );

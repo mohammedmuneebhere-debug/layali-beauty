@@ -83,13 +83,13 @@ export function Navbar() {
             <Link
               href="/"
               prefetch
-              className="flex flex-col items-start justify-center group min-w-0 flex-1 overflow-visible me-1 focus-ring rounded-md"
+              className="flex flex-col items-start justify-center group shrink-0 overflow-visible me-2 focus-ring rounded-md"
               onClick={() => setMobileOpen(false)}
             >
               <span className="text-brand text-white group-hover:text-layali-pink-light transition-colors whitespace-nowrap">
                 {t.brand}
               </span>
-              <span className="text-meta uppercase tracking-[0.14em] sm:tracking-[0.2em] text-layali-pink -mt-0.5 truncate w-full">
+              <span className="text-meta uppercase tracking-[0.14em] sm:tracking-[0.2em] text-layali-pink -mt-0.5 whitespace-nowrap">
                 {t.brandSub}
               </span>
             </Link>
@@ -167,11 +167,11 @@ export function Navbar() {
               </div>
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-              <LanguageSwitcher />
+            <div className="flex items-center gap-0.5 sm:gap-2 shrink-0">
+              <LanguageSwitcher className="max-lg:p-0 max-lg:[&_button]:min-h-8 max-lg:[&_button]:min-w-7 max-lg:[&_button]:px-1.5" />
               <button
                 type="button"
-                className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink transition-all focus-ring"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 max-lg:min-h-9 max-lg:min-w-9 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink transition-all focus-ring"
                 aria-label={t.nav.search}
                 onClick={() => {
                   setSearchOpen(true);
@@ -182,7 +182,7 @@ export function Navbar() {
               </button>
               <Link
                 href="/account"
-                className="inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink transition-all focus-ring"
+                className="inline-flex items-center justify-center min-h-11 min-w-11 max-lg:min-h-9 max-lg:min-w-9 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink transition-all focus-ring"
                 aria-label={t.nav.account}
                 onClick={() => setMobileOpen(false)}
               >
@@ -190,7 +190,7 @@ export function Navbar() {
               </Link>
               <Link
                 href="/cart"
-                className="relative inline-flex items-center justify-center min-h-11 min-w-11 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink transition-all focus-ring"
+                className="relative inline-flex items-center justify-center min-h-11 min-w-11 max-lg:min-h-9 max-lg:min-w-9 rounded-full border border-layali-pink/25 text-white hover:border-layali-pink transition-all focus-ring"
                 aria-label={t.nav.cart}
                 onClick={() => setMobileOpen(false)}
               >
@@ -207,7 +207,7 @@ export function Navbar() {
               </Link>
               <button
                 type="button"
-                className="lg:hidden inline-flex items-center justify-center min-h-11 min-w-11 text-white focus-ring rounded-full"
+                className="lg:hidden inline-flex items-center justify-center min-h-11 min-w-11 max-lg:min-h-9 max-lg:min-w-9 text-white focus-ring rounded-full"
                 onClick={() => setMobileOpen((open) => !open)}
                 aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
                 aria-expanded={mobileOpen}

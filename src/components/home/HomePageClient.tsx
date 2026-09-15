@@ -62,7 +62,7 @@ export default function HomePageClient({
       {/* Hero — concept UI */}
       <section
         ref={heroRef}
-        className="relative min-h-[100svh] overflow-hidden pt-20 section-glide-soft"
+        className="relative min-h-[100svh] overflow-hidden pt-16 lg:pt-20 section-glide-soft"
       >
         <motion.div style={{ y: yGlow }} className="absolute inset-0 pointer-events-none" aria-hidden>
           <div className="glow-orb w-[50vw] h-[50vw] max-w-[560px] max-h-[560px] left-[-8%] top-[20%] opacity-45" />
@@ -71,11 +71,11 @@ export default function HomePageClient({
 
         <motion.div
           style={{ opacity }}
-          className="relative z-10 min-h-[calc(100svh-5rem)]"
+          className="relative z-10 min-h-[calc(100svh-4rem)] lg:min-h-[calc(100svh-5rem)]"
         >
           <HeroStage />
           <div className="pointer-events-none absolute inset-y-0 start-0 z-[2] hidden w-[min(52%,40rem)] bg-gradient-to-r from-black via-black/75 to-transparent lg:block" />
-          <div className="relative z-10 mx-auto flex min-h-[calc(100svh-5rem)] w-full max-w-7xl flex-col justify-center px-4 py-16 pb-48 sm:px-6 lg:px-8 lg:py-24 lg:pb-24">
+          <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col justify-start px-4 pt-5 pb-36 sm:px-6 lg:min-h-[calc(100svh-5rem)] lg:justify-center lg:px-8 lg:py-24 lg:pb-24">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
@@ -83,25 +83,25 @@ export default function HomePageClient({
               className="relative z-10 max-w-2xl"
             >
               {t.hero.eyebrow ? (
-                <p className="text-meta tracking-[0.18em] text-layali-gold-light mb-6 uppercase">
+                <p className="text-meta tracking-[0.18em] text-layali-gold-light mb-2.5 lg:mb-6 uppercase">
                   {t.hero.eyebrow}
                 </p>
               ) : null}
-              <h1 className="font-serif text-hero text-white mb-1">{t.hero.titleBeauty}</h1>
-              <p className="font-serif text-hero text-layali-pink-light mb-6">{t.hero.titleRedefined}</p>
-              <p className="text-body-lg text-white/70 max-w-md mb-10">{t.hero.subtitle}</p>
-              <div className="flex flex-wrap items-center gap-5">
+              <h1 className="font-serif text-hero max-lg:!text-[1.875rem] max-lg:!leading-[1.08] text-white mb-0.5 lg:mb-1">{t.hero.titleBeauty}</h1>
+              <p className="font-serif text-hero max-lg:!text-[1.875rem] max-lg:!leading-[1.08] text-layali-pink-light mb-3 lg:mb-6">{t.hero.titleRedefined}</p>
+              <p className="text-body-lg max-lg:!text-[0.8125rem] max-lg:!leading-snug text-white/70 max-w-md mb-5 lg:mb-10">{t.hero.subtitle}</p>
+              <div className="flex flex-wrap items-center gap-3 lg:gap-5">
                 <Link
                   href="/shop"
                   prefetch
-                  className="inline-flex items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-8 py-3.5 text-nav tracking-[0.1em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
+                  className="inline-flex w-auto items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-5 py-2 text-[0.7rem] tracking-[0.08em] lg:px-8 lg:py-3.5 lg:text-nav lg:tracking-[0.1em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
                 >
                   {t.hero.shopCta} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                 </Link>
                 <Link
                   href="/survey"
                   prefetch
-                  className="text-nav tracking-[0.12em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
+                  className="text-[0.7rem] tracking-[0.1em] lg:text-nav lg:tracking-[0.12em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
                 >
                   {t.hero.ritualCta}
                 </Link>
@@ -110,7 +110,7 @@ export default function HomePageClient({
           </div>
         </motion.div>
 
-        <div className="absolute bottom-8 inset-x-0 flex justify-center">
+        <div className="absolute bottom-5 lg:bottom-8 inset-x-0 flex justify-center">
           <motion.p
             animate={reduceMotion ? undefined : { opacity: [0.35, 0.8, 0.35], y: [0, 4, 0] }}
             transition={reduceMotion ? undefined : { duration: 2.2, repeat: Infinity }}
