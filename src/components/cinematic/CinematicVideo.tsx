@@ -17,18 +17,72 @@ type CinematicVideoProps = {
   height?: number;
 };
 
+type Syncer = {
+  video: HTMLVideoElement;
+  index: number;
+  play: () => void;
+  pause: () => void;
+};
+
 /** Cap simultaneous decodes — category grid + films can otherwise play 7 at once. */
 const MAX_PLAYING = 2;
 const playing = new Set<HTMLVideoElement>();
-const pending = new Set<() => void>();
-const syncers = new Set<() => void>();
+const syncers = new Set<Syncer>();
 
 let hooked = false;
 let ticking = false;
+let nextIndex = 0;
+
+/**
+ * Visible clips near the viewport center outrank clips that merely
+ * intersect. Otherwise the first DOM videos keep both decode slots
+ * for as long as 1px remains on screen.
+ */
+function visibilityScore(video: HTMLVideoElement) {
+  const r = video.getBoundingClientRect();
+  const vh = window.innerHeight;
+  if (r.width < 2 || r.height < 2) return 0;
+
+  const inset = 8;
+  const visibleH = Math.min(r.bottom, vh - inset) - Math.max(r.top, inset);
+  const visibleW = Math.min(r.right, window.innerWidth) - Math.max(r.left, 0);
+  if (visibleH <= 0 || visibleW <= 0) return 0;
+
+  const ratio = Math.min(1, (visibleH * visibleW) / (r.width * r.height));
+  const cy = r.top + r.height / 2;
+  const ny = Math.abs(cy - vh / 2) / (vh / 2 || 1);
+  // Quantize so a 6-column row ties on vertical score and falls through
+  // to DOM order (Makeup, Skincare) instead of locking a random pair.
+  return Math.round((ratio * 3 - ny) * 20) / 20;
+}
 
 function pump() {
   ticking = false;
-  for (const sync of syncers) sync();
+  const hidden = document.visibilityState === 'hidden';
+  const ranked = [...syncers].map((entry) => ({
+    entry,
+    score: hidden ? 0 : visibilityScore(entry.video),
+  }));
+  ranked.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return a.entry.index - b.entry.index;
+  });
+
+  const next = new Set<HTMLVideoElement>();
+  for (const { entry, score } of ranked) {
+    if (score > 0 && next.size < MAX_PLAYING) next.add(entry.video);
+  }
+
+  for (const { entry } of ranked) {
+    if (!next.has(entry.video)) entry.pause();
+  }
+
+  playing.clear();
+  for (const { entry } of ranked) {
+    if (!next.has(entry.video)) continue;
+    playing.add(entry.video);
+    entry.play();
+  }
 }
 
 function requestPump() {
@@ -42,31 +96,6 @@ function ensureScrollHook() {
   hooked = true;
   window.addEventListener('scroll', requestPump, { passive: true, capture: true });
   window.addEventListener('resize', requestPump, { passive: true });
-}
-
-function acquire(video: HTMLVideoElement): boolean {
-  if (playing.has(video)) return true;
-  if (playing.size >= MAX_PLAYING) return false;
-  playing.add(video);
-  return true;
-}
-
-function release(video: HTMLVideoElement) {
-  playing.delete(video);
-  if (pending.size === 0) return;
-  const retry = [...pending];
-  pending.clear();
-  for (const fn of retry) fn();
-}
-
-function isOnscreen(video: HTMLVideoElement) {
-  const r = video.getBoundingClientRect();
-  return (
-    r.width >= 2 &&
-    r.height >= 2 &&
-    r.bottom > 8 &&
-    r.top < window.innerHeight - 8
-  );
 }
 
 /**
@@ -97,51 +126,37 @@ export function CinematicVideo({
     video.pause();
 
     let cancelled = false;
-    let inView = false;
+    const index = nextIndex++;
 
-    const stop = () => {
-      video.pause();
-      release(video);
-    };
-
-    const tryPlay = () => {
-      pending.delete(tryPlay);
-      if (cancelled || !inView || document.visibilityState === 'hidden') return;
-      if (!acquire(video)) {
+    const entry: Syncer = {
+      video,
+      index,
+      play: () => {
+        if (cancelled) return;
+        video.muted = true;
+        const attempt = video.play();
+        if (attempt) attempt.catch(() => {});
+      },
+      pause: () => {
         video.pause();
-        pending.add(tryPlay);
-        return;
-      }
-      video.muted = true;
-      const attempt = video.play();
-      if (attempt) attempt.catch(() => {});
-    };
-
-    const sync = () => {
-      if (cancelled) return;
-      inView = isOnscreen(video);
-      if (inView) tryPlay();
-      else stop();
+      },
     };
 
     ensureScrollHook();
-    syncers.add(sync);
-    sync();
+    syncers.add(entry);
     requestPump();
-    video.addEventListener('canplay', tryPlay);
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') stop();
-      else requestPump();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
+    requestAnimationFrame(requestPump);
+    video.addEventListener('canplay', requestPump);
+    document.addEventListener('visibilitychange', requestPump);
 
     return () => {
       cancelled = true;
-      pending.delete(tryPlay);
-      syncers.delete(sync);
-      stop();
-      video.removeEventListener('canplay', tryPlay);
-      document.removeEventListener('visibilitychange', onVisibility);
+      syncers.delete(entry);
+      playing.delete(video);
+      video.pause();
+      video.removeEventListener('canplay', requestPump);
+      document.removeEventListener('visibilitychange', requestPump);
+      requestPump();
     };
   }, [primary?.src]);
 
