@@ -193,19 +193,19 @@ export default function HomePageClient({
                   className="block focus-ring rounded-2xl"
                 >
                   <div className="aspect-[4/5] lg:aspect-[3/4] rounded-2xl bg-black/55 border border-layali-pink/25 flex items-end justify-start card-hover relative overflow-hidden group">
-                    {cover ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={cover}
-                        alt=""
-                        className={`absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105 ${film?.object || ''}`}
-                      />
-                    ) : null}
                     {film ? (
                       <CinematicVideo
                         sources={[{ src: film.src, type: 'video/mp4' }]}
                         poster={film.poster}
-                        className={`absolute inset-0 opacity-80 transition-transform duration-500 group-hover:scale-105 ${film.object}`}
+                        playbackMode="independent"
+                        className={`absolute inset-0 transition-transform duration-500 group-hover:scale-105 ${film.object}`}
+                      />
+                    ) : cover ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={cover}
+                        alt=""
+                        className={`absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105`}
                       />
                     ) : null}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
