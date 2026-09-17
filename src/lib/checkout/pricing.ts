@@ -1,8 +1,8 @@
+import { DELIVERY_FEE } from '@/lib/constants';
 import type { ShopifyCartDiscount, ShopifyCartLine } from '@/lib/shopify/types';
 
-/** Intended Layali COD delivery policy (SAR). Not applied to Shopify draft orders yet. */
-export const LAYALI_DELIVERY_FEE = 20;
-export const LAYALI_FREE_DELIVERY_MIN = 100;
+/** Fixed COD delivery (SAR). Same value charged on Shopify draft orders via shippingLine. */
+export const LAYALI_DELIVERY_FEE = DELIVERY_FEE;
 
 export function roundMoney(value: number): number {
   return Math.round((Number(value) || 0) * 100) / 100;
@@ -63,14 +63,17 @@ export function productSavingsTotal(lines: CheckoutLinePricing[]): number {
   return roundMoney(lines.reduce((sum, line) => sum + line.lineSavings, 0));
 }
 
+/** Fixed delivery shown on checkout. Storefront cart totals never include this. */
+export function checkoutDeliveryAmount(): number {
+  return LAYALI_DELIVERY_FEE;
+}
+
 /**
- * Delivery actually present on the Storefront cart total.
- * COD draft orders currently send line items only (no shippingLine), so this
- * is typically 0 — do not display a different fee than Shopify will charge.
+ * Payable COD total: Shopify merchandise/cart total + fixed delivery.
+ * Cart.cost.totalAmount is merchandise (and discounts) only — not shipping.
  */
-export function chargedDeliveryAmount(subtotal: number, totalAmount: number): number {
-  const delta = roundMoney(totalAmount - subtotal);
-  return delta > 0.004 ? delta : 0;
+export function checkoutPayableTotal(merchandiseTotal: number): number {
+  return roundMoney((Number(merchandiseTotal) || 0) + LAYALI_DELIVERY_FEE);
 }
 
 export function discountRows(discounts: ShopifyCartDiscount[]): { title: string; amount: number }[] {

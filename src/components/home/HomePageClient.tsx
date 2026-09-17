@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Sparkles, Droplets, Leaf } from 'lucide-react';
@@ -8,14 +9,23 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { RitualCarousel } from '@/components/home/RitualCarousel';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { HeroStage } from '@/components/home/HeroStage';
-import { CinematicProductFilm } from '@/components/cinematic/CinematicProductFilm';
-import { CinematicLookbook } from '@/components/cinematic/CinematicLookbook';
 import { CinematicVideo } from '@/components/cinematic/CinematicVideo';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
 import type { BannerSlide } from '@/lib/banners';
 import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion';
+
+const CinematicProductFilm = dynamic(() =>
+  import('@/components/cinematic/CinematicProductFilm').then((m) => ({
+    default: m.CinematicProductFilm,
+  }))
+);
+const CinematicLookbook = dynamic(() =>
+  import('@/components/cinematic/CinematicLookbook').then((m) => ({
+    default: m.CinematicLookbook,
+  }))
+);
 
 const CATEGORY_IMAGES: Record<string, string> = {
   makeup: '/categories/makeup.jpg',
@@ -93,13 +103,13 @@ export default function HomePageClient({
         ref={heroRef}
         className="relative min-h-[100svh] overflow-hidden pt-16 lg:pt-20"
       >
-        <motion.div style={{ y: yGlow }} className="absolute inset-0 pointer-events-none" aria-hidden>
+        <motion.div style={reduceMotion ? undefined : { y: yGlow }} className="absolute inset-0 pointer-events-none" aria-hidden>
           <div className="glow-orb w-[50vw] h-[50vw] max-w-[560px] max-h-[560px] left-[-8%] top-[20%] opacity-45" />
           <div className="glow-orb w-[28vw] h-[28vw] max-w-[320px] max-h-[320px] right-[-5%] bottom-[15%] opacity-25" />
         </motion.div>
 
         <motion.div
-          style={{ opacity }}
+          style={reduceMotion ? undefined : { opacity }}
           className="relative z-10 min-h-[calc(100svh-4rem)] lg:min-h-[calc(100svh-5rem)]"
         >
           <HeroStage />
@@ -177,7 +187,7 @@ export default function HomePageClient({
                   href={`/shop?category=${cat.href}`}
                   className="block focus-ring rounded-2xl"
                 >
-                  <div className="aspect-[4/5] lg:aspect-[3/4] rounded-2xl bg-black/40 backdrop-blur-md border border-layali-pink/25 flex items-end justify-start card-hover relative overflow-hidden group">
+                  <div className="aspect-[4/5] lg:aspect-[3/4] rounded-2xl bg-black/55 border border-layali-pink/25 flex items-end justify-start card-hover relative overflow-hidden group">
                     {cover ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -207,7 +217,7 @@ export default function HomePageClient({
       </section>
 
       {/* Why Layali — right after categories */}
-      <section className="relative py-12 sm:py-16">
+      <section className="relative overflow-x-clip py-12 sm:py-16">
         <div className="glow-orb w-[400px] h-[400px] -right-32 top-0 opacity-50" aria-hidden />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn className="mb-8 lg:mb-10">
@@ -218,7 +228,7 @@ export default function HomePageClient({
           <StaggerContainer className="grid md:grid-cols-3 gap-4 lg:gap-5">
             {features.map((feature) => (
               <StaggerItem key={feature.title}>
-                <div className="h-full rounded-2xl border border-layali-pink/20 bg-black/45 p-6 text-start backdrop-blur-md card-hover sm:p-7">
+                <div className="h-full rounded-2xl border border-layali-pink/20 bg-black/55 p-6 text-start card-hover sm:p-7">
                   <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-layali-pink/40 bg-layali-pink-glow/20 shadow-[0_0_20px_rgba(212,46,124,0.25)]">
                     <feature.icon className="h-6 w-6 text-layali-pink-light" />
                   </div>
@@ -234,7 +244,7 @@ export default function HomePageClient({
       <RitualCarousel initialProducts={heroProducts} />
 
       {/* Find Your Ritual — after trending */}
-      <section className="relative py-14 sm:py-16 lg:py-20">
+      <section className="relative overflow-x-clip py-14 sm:py-16 lg:py-20">
         <div
           className="glow-orb w-[600px] h-[600px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
           aria-hidden
@@ -274,7 +284,7 @@ export default function HomePageClient({
       <CinematicLookbook />
 
       {/* Enter the Store */}
-      <section className="relative py-16 sm:py-20 text-center">
+      <section className="relative overflow-x-clip py-16 sm:py-20 text-center">
         <div
           className="glow-orb w-[520px] h-[520px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
           aria-hidden

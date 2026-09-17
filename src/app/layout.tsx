@@ -115,7 +115,7 @@ export default function RootLayout({
       <body className="film-grain min-h-full flex flex-col antialiased bg-transparent text-white">
         <LanguageProvider>
           <StageBackdrop />
-          <div className="relative z-10 flex min-h-full flex-1 flex-col">
+          <div className="relative z-10 flex min-h-full flex-1 flex-col overflow-x-clip">
             <CartHydrator />
             <a
               href="#main-content"

@@ -73,20 +73,18 @@
   --font-arabic-family: var(--font-arabic), var(--font-manrope), system-ui, sans-serif;
 }
 
-* {
-  scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  * {
-    scroll-behavior: auto !important;
-  }
-}
-
 html {
   background: #000000;
   color-scheme: dark;
-  overflow-x: hidden;
+  /* Single document scrollport. overflow-x:hidden on BOTH html and body
+     computes overflow-y to auto on each and makes wheel/touch inconsistent. */
+  overflow-x: clip;
+  overflow-y: scroll;
+  overscroll-behavior-x: none;
+}
+
+html.scroll-locked {
+  overflow-y: hidden;
 }
 
 body {
@@ -96,7 +94,8 @@ body {
   font-size: 1rem; /* 16px */
   line-height: 1.65;
   font-weight: 400;
-  overflow-x: hidden;
+  overflow: visible;
+  overscroll-behavior-x: none;
 }
 
 html[lang='ar'] body,
@@ -498,10 +497,9 @@ html[dir='rtl'] .rtl-flip {
   inset: 0;
   z-index: 9999;
   opacity: 0.025;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 128 128' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 180px;
-  will-change: auto;
   contain: strict;
 }
 
@@ -526,7 +524,6 @@ html[dir='rtl'] .rtl-flip {
     rgba(224, 122, 138, 0.12) 40%,
     transparent 70%
   );
-  filter: blur(48px);
   animation: glow-breathe 7s ease-in-out infinite;
   pointer-events: none;
 }
@@ -599,8 +596,7 @@ html[dir='rtl'] .rtl-flip {
 }
 
 .glass-dark {
-  background: rgba(0, 0, 0, 0.62);
-  backdrop-filter: blur(16px) saturate(1.2);
+  background: rgba(0, 0, 0, 0.88);
   border-bottom: 1px solid rgba(224, 122, 138, 0.15);
 }
 
@@ -718,8 +714,7 @@ html[dir='rtl'] .rtl-flip {
 
 .layali-stage-photo {
   opacity: 0.78;
-  transform: scale(1.02);
-  filter: saturate(0.96) brightness(0.82);
+  transform: none;
   /* Dim the empty wall in the middle; keep arch, leaf shadows, and silk in the rim. */
   -webkit-mask-image: radial-gradient(
     ellipse 74% 68% at 50% 36%,

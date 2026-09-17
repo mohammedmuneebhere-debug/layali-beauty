@@ -271,7 +271,7 @@ export default function ShopContent() {
   );
 
   return (
-    <div className="relative min-h-screen page-shell pt-24 pb-16 overflow-hidden">
+    <div className="relative min-h-screen page-shell overflow-x-clip pt-24 pb-16">
       <div className="glow-orb w-[500px] h-[500px] -top-40 -right-20 opacity-40 pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

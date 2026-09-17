@@ -11,6 +11,7 @@ import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher';
 import { SearchOverlay } from '@/components/layout/SearchOverlay';
 import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+import { lockDocumentScroll } from '@/lib/lock-document-scroll';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -40,7 +41,11 @@ export function Navbar() {
   }
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => {
+      const y = window.scrollY || document.documentElement.scrollTop;
+      const next = y > 24;
+      setScrolled((prev) => (prev === next ? prev : next));
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -49,8 +54,7 @@ export function Navbar() {
   useEffect(() => {
     if (!mobileOpen) return;
 
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlock = lockDocumentScroll();
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMobileOpen(false);
@@ -58,7 +62,7 @@ export function Navbar() {
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
-      document.body.style.overflow = prevOverflow;
+      unlock();
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [mobileOpen]);
@@ -71,7 +75,7 @@ export function Navbar() {
     <>
       <header
         className={cn(
-          'fixed top-0 inset-x-0 z-50 transition-[background,border-color,backdrop-filter] duration-300',
+          'fixed top-0 inset-x-0 z-50 transition-[background,border-color] duration-300',
           overlayHero
             ? 'bg-transparent border-b border-transparent'
             : 'glass-dark'

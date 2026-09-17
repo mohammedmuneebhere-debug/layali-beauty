@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X, Expand } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { lockDocumentScroll } from '@/lib/lock-document-scroll';
 
 interface ProductImageGalleryProps {
   images: string[];
@@ -36,10 +37,10 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
       if (e.key === 'ArrowRight') goNext();
     };
 
-    document.body.style.overflow = 'hidden';
+    const unlock = lockDocumentScroll();
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = '';
+      unlock();
       window.removeEventListener('keydown', onKey);
     };
   }, [lightboxOpen, goPrev, goNext]);
@@ -110,7 +111,7 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
         </div>
 
         {hasMultiple && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-2 overflow-x-auto overflow-y-clip pb-1 [touch-action:pan-x_pan-y]">
             {photos.map((src, i) => (
               <button
                 key={`${src}-${i}`}
@@ -175,7 +176,7 @@ export function ProductImageGallery({ images, alt }: ProductImageGalleryProps) {
           </div>
 
           {hasMultiple && (
-            <div className="flex justify-center gap-2 pb-6 px-4 overflow-x-auto">
+            <div className="flex justify-center gap-2 overflow-x-auto overflow-y-clip pb-6 px-4 [touch-action:pan-x_pan-y]">
               {photos.map((src, i) => (
                 <button
                   key={`lb-${src}-${i}`}

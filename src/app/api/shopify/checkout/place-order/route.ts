@@ -16,6 +16,7 @@ import {
 } from '@/lib/shopify/admin-orders';
 import { upsertOwnedShopifyOrderLink } from '@/lib/account/shopify-order-links';
 import { toShopifyAddressParts } from '@/lib/address/structured';
+import { checkoutPayableTotal, LAYALI_DELIVERY_FEE } from '@/lib/checkout/pricing';
 
 export const runtime = 'nodejs';
 /** Shopify Admin draft+complete can exceed the default platform budget. */
@@ -400,11 +401,30 @@ export async function POST(req: NextRequest) {
             submissionTag(submissionId),
           ],
           shippingAddress,
+          currencyCode: cart.total.currencyCode || cart.subtotal.currencyCode || 'SAR',
           lineItems: cart.lines.map((l) => ({
             variantId: l.merchandiseId,
             quantity: l.quantity,
           })),
         });
+        const expectedTotal = checkoutPayableTotal(cart.total.amount);
+        const shippingMissing =
+          draft.shippingPrice < LAYALI_DELIVERY_FEE - 0.004 &&
+          draft.totalPrice + 0.004 < expectedTotal;
+        if (shippingMissing) {
+          console.error('Layali COD: draft total does not include delivery fee', {
+            draftOrderId: draft.draftOrderId,
+            draftTotal: draft.totalPrice,
+            shippingPrice: draft.shippingPrice,
+            expectedTotal,
+            expectedShipping: LAYALI_DELIVERY_FEE,
+          });
+          throw Object.assign(new Error('Could not place your order. Please try again.'), {
+            status: 502,
+            code: 'order_failed',
+            retrySafe: true,
+          });
+        }
         draftOrderId = draft.draftOrderId;
         draftTotal = draft.totalPrice;
         draftCurrency = draft.currencyCode;
@@ -493,6 +513,8 @@ export async function POST(req: NextRequest) {
         financialStatus: order.financialStatus,
         orderUnresolved: order.orderUnresolved || false,
         lineCount: cart.lines.length,
+        deliveryFee: LAYALI_DELIVERY_FEE,
+        totalAmount: order.totalAmount,
         submissionId,
         userId: user.id,
       });

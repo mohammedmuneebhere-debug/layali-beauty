@@ -11,7 +11,6 @@ import { SITE_URL } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/server';
 import { fetchTrendingProducts } from '@/lib/trending';
 import { fetchActiveBanners } from '@/lib/site-banners';
-import { getCatalogProducts, isShopifyConfigured } from '@/lib/shopify';
 import type { BannerSlide } from '@/lib/banners';
 
 export const metadata: Metadata = {
@@ -73,7 +72,6 @@ const websiteJsonLd = {
 export default async function HomePage() {
   let heroProducts: Awaited<ReturnType<typeof fetchTrendingProducts>> = [];
   let landingBanners: BannerSlide[] = [];
-  let catalogProducts: Awaited<ReturnType<typeof getCatalogProducts>> = [];
   const categoryCovers: Record<string, string> = {};
   try {
     const supabase = await createClient();
@@ -91,17 +89,10 @@ export default async function HomePage() {
     heroProducts = [];
   }
 
-  try {
-    if (isShopifyConfigured()) {
-      catalogProducts = await getCatalogProducts({ first: 250 });
-      for (const product of [...heroProducts, ...catalogProducts]) {
-        if (product.category && product.image_url && !categoryCovers[product.category]) {
-          categoryCovers[product.category] = product.image_url;
-        }
-      }
+  for (const product of heroProducts) {
+    if (product.category && product.image_url && !categoryCovers[product.category]) {
+      categoryCovers[product.category] = product.image_url;
     }
-  } catch {
-    // Category tiles still render without covers.
   }
 
   return (

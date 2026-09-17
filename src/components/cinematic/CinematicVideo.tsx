@@ -17,17 +17,68 @@ type CinematicVideoProps = {
   height?: number;
 };
 
+/** Cap simultaneous decodes — category grid + films can otherwise play 7 at once. */
+const MAX_PLAYING = 2;
+const playing = new Set<HTMLVideoElement>();
+const pending = new Set<() => void>();
+const syncers = new Set<() => void>();
+
+let hooked = false;
+let ticking = false;
+
+function pump() {
+  ticking = false;
+  for (const sync of syncers) sync();
+}
+
+function requestPump() {
+  if (ticking) return;
+  ticking = true;
+  requestAnimationFrame(pump);
+}
+
+function ensureScrollHook() {
+  if (hooked || typeof window === 'undefined') return;
+  hooked = true;
+  window.addEventListener('scroll', requestPump, { passive: true, capture: true });
+  window.addEventListener('resize', requestPump, { passive: true });
+}
+
+function acquire(video: HTMLVideoElement): boolean {
+  if (playing.has(video)) return true;
+  if (playing.size >= MAX_PLAYING) return false;
+  playing.add(video);
+  return true;
+}
+
+function release(video: HTMLVideoElement) {
+  playing.delete(video);
+  if (pending.size === 0) return;
+  const retry = [...pending];
+  pending.clear();
+  for (const fn of retry) fn();
+}
+
+function isOnscreen(video: HTMLVideoElement) {
+  const r = video.getBoundingClientRect();
+  return (
+    r.width >= 2 &&
+    r.height >= 2 &&
+    r.bottom > 8 &&
+    r.top < window.innerHeight - 8
+  );
+}
+
 /**
- * Decorative cinematic loop. No controls.
- * These clips are the media, not UI chrome — they play even when
- * prefers-reduced-motion is on (Windows animation settings otherwise
- * replace every film with a frozen poster).
+ * Decorative cinematic loop. Native autoPlay is omitted so off-screen clips
+ * do not start decoding. A shared passive scroll pump plays in-view clips
+ * under a decode cap of two.
  */
 export function CinematicVideo({
   sources,
   poster,
   className,
-  preload = 'metadata',
+  preload = 'none',
   width,
   height,
 }: CinematicVideoProps) {
@@ -43,54 +94,54 @@ export function CinematicVideo({
     video.playsInline = true;
     video.setAttribute('playsinline', '');
     video.setAttribute('webkit-playsinline', '');
+    video.pause();
 
     let cancelled = false;
     let inView = false;
 
+    const stop = () => {
+      video.pause();
+      release(video);
+    };
+
     const tryPlay = () => {
+      pending.delete(tryPlay);
       if (cancelled || !inView || document.visibilityState === 'hidden') return;
+      if (!acquire(video)) {
+        video.pause();
+        pending.add(tryPlay);
+        return;
+      }
       video.muted = true;
       const attempt = video.play();
       if (attempt) attempt.catch(() => {});
     };
 
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (cancelled) return;
-        const r = entry.boundingClientRect;
-        // A 0×0 first tick is layout, not off-screen — don't play or pause yet.
-        if (r.width < 2 || r.height < 2) {
-          return;
-        }
-        inView = entry.isIntersecting || entry.intersectionRatio > 0;
-        if (inView) tryPlay();
-        else video.pause();
-      },
-      { threshold: 0, rootMargin: '120px 0px' }
-    );
-
-    io.observe(video);
-    video.addEventListener('canplay', tryPlay);
-    video.addEventListener('loadeddata', tryPlay);
-    document.addEventListener('visibilitychange', tryPlay);
-
-    let attempts = 0;
-    const poll = window.setInterval(() => {
-      if (cancelled || (inView && !video.paused)) {
-        window.clearInterval(poll);
-        return;
-      }
+    const sync = () => {
+      if (cancelled) return;
+      inView = isOnscreen(video);
       if (inView) tryPlay();
-      if (++attempts > 40) window.clearInterval(poll);
-    }, 200);
+      else stop();
+    };
+
+    ensureScrollHook();
+    syncers.add(sync);
+    sync();
+    requestPump();
+    video.addEventListener('canplay', tryPlay);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') stop();
+      else requestPump();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
 
     return () => {
       cancelled = true;
-      window.clearInterval(poll);
-      io.disconnect();
+      pending.delete(tryPlay);
+      syncers.delete(sync);
+      stop();
       video.removeEventListener('canplay', tryPlay);
-      video.removeEventListener('loadeddata', tryPlay);
-      document.removeEventListener('visibilitychange', tryPlay);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [primary?.src]);
 
@@ -108,7 +159,6 @@ export function CinematicVideo({
       muted
       loop
       playsInline
-      autoPlay
       preload={preload}
       width={width}
       height={height}

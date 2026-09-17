@@ -3,6 +3,7 @@
  * Never import from Client Components. Never expose Admin tokens.
  */
 import { createHash } from 'node:crypto';
+import { LAYALI_DELIVERY_FEE } from '@/lib/checkout/pricing';
 import { shopifyAdminFetch } from './admin';
 
 /**
@@ -212,6 +213,15 @@ const DRAFT_ORDER_CREATE = `#graphql
         status
         totalPrice
         currencyCode
+        shippingLine {
+          title
+          originalPriceSet {
+            shopMoney {
+              amount
+              currencyCode
+            }
+          }
+        }
         lineItems(first: 100) {
           nodes {
             quantity
@@ -601,17 +611,23 @@ export async function createCodDraftOrder(options: {
   tags?: string[];
   shippingAddress: DraftOrderShippingAddress;
   lineItems: DraftOrderLineInput[];
-}): Promise<{ draftOrderId: string; totalPrice: number; currencyCode: string }> {
+  currencyCode?: string;
+}): Promise<{ draftOrderId: string; totalPrice: number; currencyCode: string; shippingPrice: number }> {
   if (!options.lineItems.length) {
     throw new Error('Draft order requires at least one line item');
   }
 
+  const currencyCode = options.currencyCode || 'SAR';
   const { data } = await shopifyAdminFetch<{
     draftOrderCreate: {
       draftOrder: {
         id: string;
         totalPrice: string;
         currencyCode: string;
+        shippingLine: {
+          title?: string | null;
+          originalPriceSet?: { shopMoney?: { amount?: string; currencyCode?: string } | null } | null;
+        } | null;
       } | null;
       userErrors: { field?: string[] | null; message: string }[];
     };
@@ -625,6 +641,15 @@ export async function createCodDraftOrder(options: {
       taxExempt: false,
       shippingAddress: options.shippingAddress,
       billingAddress: options.shippingAddress,
+      // Custom shippingLine only — omit shippingRateHandle so Shopify does not
+      // apply a carrier/profile rate on top of the fixed Layali fee.
+      shippingLine: {
+        title: 'Delivery',
+        priceWithCurrency: {
+          amount: LAYALI_DELIVERY_FEE.toFixed(2),
+          currencyCode,
+        },
+      },
       lineItems: options.lineItems.map((l) => ({
         variantId: l.variantId,
         quantity: l.quantity,
@@ -646,10 +671,25 @@ export async function createCodDraftOrder(options: {
     throw new Error('Shopify did not return a draft order');
   }
 
+  const shippingPrice = Number(
+    payload.draftOrder.shippingLine?.originalPriceSet?.shopMoney?.amount || 0
+  );
+  if (shippingPrice < LAYALI_DELIVERY_FEE - 0.004) {
+    // Create response may omit shippingLine even when input applied it.
+    // place-order compares draft totalPrice to merchandise + delivery.
+    console.warn('Layali COD: draft create response missing shippingLine amount', {
+      draftOrderId: payload.draftOrder.id,
+      shippingPrice,
+      expected: LAYALI_DELIVERY_FEE,
+      totalPrice: payload.draftOrder.totalPrice,
+    });
+  }
+
   return {
     draftOrderId: payload.draftOrder.id,
     totalPrice: Number(payload.draftOrder.totalPrice || 0),
-    currencyCode: payload.draftOrder.currencyCode || 'SAR',
+    currencyCode: payload.draftOrder.currencyCode || currencyCode,
+    shippingPrice,
   };
 }
 

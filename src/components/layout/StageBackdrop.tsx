@@ -51,8 +51,7 @@ export function StageBackdrop() {
         className="layali-stage-photo absolute inset-0 h-full w-full object-cover object-[50%_42%] max-lg:object-[50%_36%]"
         style={{
           opacity: 0.78,
-          transform: 'scale(1.02)',
-          filter: 'saturate(0.96) brightness(0.82)',
+          transform: 'scale(1)',
           WebkitMaskImage: PHOTO_MASK,
           maskImage: PHOTO_MASK,
         }}

@@ -128,7 +128,7 @@ export function RitualCarousel({
   if (products.length === 0) return null;
 
   return (
-    <section className="relative pt-4 pb-8 sm:pt-6 sm:pb-10">
+    <section className="relative overflow-x-clip pt-4 pb-8 sm:pt-6 sm:pb-10">
       <div className="glow-orb w-[420px] h-[420px] -right-24 top-10 opacity-45" aria-hidden />
       <div className="mx-auto mb-6 flex max-w-7xl items-end justify-between gap-6 px-4 sm:mb-8 sm:px-6 lg:px-8">
         <div>
@@ -155,7 +155,7 @@ export function RitualCarousel({
         onPointerCancel={endDrag}
         onClickCapture={onClickCapture}
         onDragStart={(e) => e.preventDefault()}
-        className="flex gap-4 overflow-x-auto px-4 sm:px-6 lg:px-8 pb-4 cursor-grab active:cursor-grabbing scrollbar-hide select-none touch-pan-x"
+        className="flex max-w-full gap-4 overflow-x-auto overflow-y-clip px-4 sm:px-6 lg:px-8 pb-4 cursor-grab active:cursor-grabbing scrollbar-hide select-none [touch-action:pan-x_pan-y]"
         style={{ scrollbarWidth: 'none' }}
       >
         {products.map((product, i) => {

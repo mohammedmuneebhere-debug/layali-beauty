@@ -9,7 +9,7 @@ export default function AboutPageClient() {
   const paragraphs = [t.manifesto.p1, t.manifesto.p2, t.manifesto.p3];
 
   return (
-    <div className="relative min-h-screen bg-transparent pt-24 pb-20 overflow-hidden">
+    <div className="relative min-h-screen bg-transparent pt-24 pb-20 overflow-x-clip">
       <div
         className="glow-orb w-[520px] h-[520px] left-1/2 top-16 -translate-x-1/2 opacity-45 pointer-events-none"
         aria-hidden

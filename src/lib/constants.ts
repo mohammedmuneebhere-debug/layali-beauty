@@ -8,15 +8,13 @@ export const CR_NUMBER = '1010955128';
 /** Customer-facing VAT registration number. */
 export const VAT_NUMBER = '311925554900003';
 
-/** Legacy fixed delivery fee (SAR) — used by email/order helpers only.
- * Cart/checkout do NOT use this: Storefront cart has no shipping until Shopify Checkout. */
 /**
- * Legacy COD/email delivery constant.
+ * Fixed Layali COD delivery charge (SAR).
  *
- * Shopify Checkout is authoritative for customer-facing shipping.
- * Cart UI shows "Calculated at checkout" and uses cart.cost from Storefront.
- * DELIVERY_FEE is ONLY for Layali-side order confirmation emails / admin analytics
- * on Supabase COD order rows — it must never be mixed into Shopify cart totals.
+ * Storefront cart.cost has no shipping. Checkout display and the COD
+ * Admin draft-order shippingLine both use this same amount so the customer
+ * total matches the Shopify order total. Do not add a second delivery fee
+ * on line items or from Shopify carrier rates.
  */
 export const DELIVERY_FEE = 20;
 

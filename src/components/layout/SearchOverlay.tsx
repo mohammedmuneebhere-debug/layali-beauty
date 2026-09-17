@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Search, X } from 'lucide-react';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { track } from '@/lib/track';
+import { lockDocumentScroll } from '@/lib/lock-document-scroll';
 
 export function SearchOverlay({
   open,
@@ -21,15 +22,14 @@ export function SearchOverlay({
 
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlock = lockDocumentScroll();
     const timer = window.setTimeout(() => inputRef.current?.focus(), 40);
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => {
-      document.body.style.overflow = prev;
+      unlock();
       window.clearTimeout(timer);
       window.removeEventListener('keydown', onKey);
     };

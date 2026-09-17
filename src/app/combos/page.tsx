@@ -78,7 +78,7 @@ export default function CombosPage() {
   const hasAny = shopCombos.length > 0 || layaliCombos.length > 0;
 
   return (
-    <div className="relative min-h-screen bg-transparent pt-24 pb-16 overflow-hidden">
+    <div className="relative min-h-screen bg-transparent pt-24 pb-16 overflow-x-clip">
       <div className="glow-orb w-[500px] h-[500px] top-0 left-1/2 -translate-x-1/2 opacity-35 pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

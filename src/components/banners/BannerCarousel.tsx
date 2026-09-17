@@ -77,14 +77,7 @@ export function BannerCarousel({
     if (count <= 1 || autoPlayMs <= 0) return;
     const id = window.setInterval(() => go(1), autoPlayMs);
     return () => window.clearInterval(id);
-  }, [count, autoPlayMs, go, index]);
-
-  useEffect(() => {
-    slides.forEach((s) => {
-      const el = new window.Image();
-      el.src = s.src;
-    });
-  }, [slides]);
+  }, [count, autoPlayMs, go]);
 
   if (count === 0) return null;
 

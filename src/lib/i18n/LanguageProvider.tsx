@@ -6,12 +6,13 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import { translations, type Locale, type TranslationTree } from './translations';
 
 const STORAGE_KEY = 'layali-locale';
+const LOCALE_CHANGE_EVENT = 'layali-locale-change';
 
 function readStoredLocale(): Locale {
   if (typeof window === 'undefined') return 'en';
@@ -21,6 +22,22 @@ function readStoredLocale(): Locale {
   } catch {
     // ignore
   }
+  return 'en';
+}
+
+function subscribeLocale(onStoreChange: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === STORAGE_KEY || event.key === null) onStoreChange();
+  };
+  window.addEventListener('storage', onStorage);
+  window.addEventListener(LOCALE_CHANGE_EVENT, onStoreChange);
+  return () => {
+    window.removeEventListener('storage', onStorage);
+    window.removeEventListener(LOCALE_CHANGE_EVENT, onStoreChange);
+  };
+}
+
+function getServerLocaleSnapshot(): Locale {
   return 'en';
 }
 
@@ -34,15 +51,21 @@ type LanguageContextValue = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(readStoredLocale);
+  // SSR + hydrate pass always 'en'. Stored 'ar' applies after subscribe so
+  // Navbar / HomePageClient / Footer text cannot mismatch on first paint.
+  const locale = useSyncExternalStore(
+    subscribeLocale,
+    readStoredLocale,
+    getServerLocaleSnapshot
+  );
 
   const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // ignore
     }
+    window.dispatchEvent(new Event(LOCALE_CHANGE_EVENT));
   }, []);
 
   useEffect(() => {

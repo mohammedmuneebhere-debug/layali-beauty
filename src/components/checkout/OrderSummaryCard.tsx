@@ -2,7 +2,8 @@
 
 import type { ShopifyCartDiscount, ShopifyCartLine } from '@/lib/shopify/types';
 import {
-  chargedDeliveryAmount,
+  checkoutDeliveryAmount,
+  checkoutPayableTotal,
   discountRows,
   lineCheckoutPricing,
   productSavingsTotal,
@@ -29,8 +30,8 @@ export function OrderSummaryCard({
   const { t } = useLanguage();
   const priced = lines.map(lineCheckoutPricing);
   const savings = productSavingsTotal(priced);
-  const delivery = chargedDeliveryAmount(subtotal, totalAmount);
-  const displayTotal = totalAmount || subtotal;
+  const delivery = checkoutDeliveryAmount();
+  const displayTotal = checkoutPayableTotal(totalAmount || subtotal);
   const promoRows = discountRows(discounts);
 
   return (

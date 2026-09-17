@@ -150,7 +150,7 @@ function ConfirmationContent() {
 
   if (!confirmation || !orderNumber) {
     return (
-      <div className="relative isolate min-h-screen overflow-x-hidden bg-transparent pt-24 pb-28 sm:pb-12">
+      <div className="relative isolate min-h-screen overflow-x-clip bg-transparent pt-24 pb-28 sm:pb-12">
         <SuccessAtmosphere reduceMotion={reduceMotion} />
         <div className="relative mx-auto max-w-lg px-5 text-center space-y-5">
           <h1 className="font-serif text-heading-md text-white">{t.checkout.confirmedTitle}</h1>
@@ -173,7 +173,7 @@ function ConfirmationContent() {
   }
 
   return (
-    <div className="relative isolate min-h-screen overflow-x-hidden bg-transparent pt-24 pb-28 sm:pb-16">
+    <div className="relative isolate min-h-screen overflow-x-clip bg-transparent pt-24 pb-28 sm:pb-16">
       <SuccessAtmosphere reduceMotion={reduceMotion} />
 
       <p
