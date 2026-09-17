@@ -1,0 +1,55 @@
+/* Isolated Hero video layer — Phase 1. Safe to delete. */
+
+@keyframes cinematic-video-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cinematic-video-layer {
+  animation: cinematic-video-fade 1.4s ease 0.25s both;
+}
+
+/* Knock out the clip’s black field so the bottle sits on the stage. */
+.cinematic-video-blend {
+  mix-blend-mode: lighten;
+  filter: brightness(1.08) contrast(1.04);
+}
+
+.cinematic-film-mask {
+  -webkit-mask-image:
+    radial-gradient(ellipse 78% 70% at 52% 48%, #000 22%, rgba(0, 0, 0, 0.45) 52%, transparent 78%),
+    linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%),
+    linear-gradient(to right, transparent 0%, #000 10%, #000 88%, transparent 100%);
+  mask-image:
+    radial-gradient(ellipse 78% 70% at 52% 48%, #000 22%, rgba(0, 0, 0, 0.45) 52%, transparent 78%),
+    linear-gradient(to bottom, transparent 0%, #000 12%, #000 82%, transparent 100%),
+    linear-gradient(to right, transparent 0%, #000 10%, #000 88%, transparent 100%);
+  -webkit-mask-composite: source-in, source-in;
+  mask-composite: intersect;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+}
+
+.cinematic-lookbook-frame {
+  overflow: hidden;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #1a1014;
+  box-shadow:
+    0 0 48px rgba(212, 46, 124, 0.18),
+    0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.cinematic-lookbook-frame video,
+.cinematic-lookbook-frame img {
+  height: 100%;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinematic-video-layer {
+    animation: none;
+  }
+}

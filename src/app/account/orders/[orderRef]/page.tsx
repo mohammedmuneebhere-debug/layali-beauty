@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Package, ExternalLink } from 'lucide-react';
@@ -10,6 +10,7 @@ import { OrderTimeline } from '@/components/account/OrderTimeline';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { shopifyImageUrl } from '@/lib/shopify/image';
+import { customerOrderFetchTimeoutSignal } from '@/lib/account/order-load';
 import { isForbiddenOrderRef } from '@/lib/account/order-ref';
 import type { CustomerOrderDetail } from '@/lib/account/order-types';
 
@@ -22,19 +23,22 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
+  const loadOrder = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = Boolean(opts?.silent);
       if (!orderRef || isForbiddenOrderRef(orderRef)) {
         setError(t.orders.notFound);
         setLoading(false);
         return;
       }
-      setLoading(true);
-      setError('');
+      if (!silent) {
+        setLoading(true);
+        setError('');
+      }
       try {
         const res = await fetch(`/api/account/orders/${encodeURIComponent(orderRef)}`, {
           cache: 'no-store',
+          signal: customerOrderFetchTimeoutSignal(),
         });
         if (res.status === 401) {
           router.push(`/auth/signin?redirect=/account/orders/${encodeURIComponent(orderRef)}`);
@@ -47,22 +51,40 @@ export default function OrderDetailPage() {
           return;
         }
         if (!res.ok || !json.order) {
-          setError(json.error || t.orders.unavailable);
-          setOrder(null);
+          if (!silent) {
+            setError(json.error || t.orders.unavailable);
+            setOrder(null);
+          }
           return;
         }
-        if (!cancelled) setOrder(json.order);
+        setOrder(json.order);
+        setError('');
       } catch {
-        if (!cancelled) setError(t.orders.unavailable);
+        if (!silent) setError(t.orders.unavailable);
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
-    }
-    void load();
-    return () => {
-      cancelled = true;
+    },
+    [orderRef, router, t.orders.notFound, t.orders.unavailable]
+  );
+
+  useEffect(() => {
+    void loadOrder();
+  }, [loadOrder]);
+
+  useEffect(() => {
+    if (!order?.ref || error) return;
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return;
+      void loadOrder({ silent: true });
     };
-  }, [orderRef, router, t.orders.notFound, t.orders.unavailable]);
+    const interval = window.setInterval(refresh, 60_000);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [order?.ref, error, loadOrder]);
 
   const statusLabel = order
     ? order.statusKey === 'cancelled'
@@ -86,9 +108,14 @@ export default function OrderDetailPage() {
           ) : error || !order ? (
             <div className="rounded-2xl border border-white/10 bg-layali-surface p-8 text-center">
               <p className="text-white mb-4">{error || t.orders.notFound}</p>
-              <Button variant="outline" onClick={() => router.push('/account/orders')}>
-                {t.orders.backToOrders}
-              </Button>
+              <div className="flex flex-wrap justify-center gap-3">
+                {error && error !== t.orders.notFound ? (
+                  <Button onClick={() => void loadOrder()}>{t.orders.retry}</Button>
+                ) : null}
+                <Button variant="outline" onClick={() => router.push('/account/orders')}>
+                  {t.orders.backToOrders}
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-6">
@@ -113,38 +140,93 @@ export default function OrderDetailPage() {
 
               <div className="bg-layali-surface rounded-2xl p-5 sm:p-6 border border-layali-pink/20">
                 <h2 className="font-serif text-lg text-white mb-4">{t.orders.tracking}</h2>
-                {order.tracking.length === 0 ? (
-                  <p className="text-sm text-white/55">{t.orders.trackingPending}</p>
-                ) : (
-                  <div className="space-y-4">
-                    {order.tracking.map((track, index) => (
-                      <div
-                        key={`${track.number || track.url || index}`}
-                        className="rounded-xl border border-white/10 bg-black/20 p-4 min-w-0"
-                      >
-                        {track.company ? (
-                          <p className="text-white font-medium mb-1">{track.company}</p>
-                        ) : null}
-                        {track.number ? (
-                          <p className="text-sm text-white/70 break-all">
-                            {t.orders.trackingNumber}: {track.number}
-                          </p>
-                        ) : null}
-                        {track.url ? (
-                          <a
-                            href={track.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-sm text-layali-pink mt-2 hover:underline"
+                {(() => {
+                  const hasTrackingNumber = order.tracking.some((track) =>
+                    Boolean(track.number || track.url)
+                  );
+                  const shippedOrLater =
+                    order.currentStep === 'shipped' ||
+                    order.currentStep === 'out_for_delivery' ||
+                    order.currentStep === 'delivered';
+                  if (order.tracking.length === 0) {
+                    return (
+                      <p className="text-sm text-white/55">
+                        {shippedOrLater
+                          ? t.orders.trackingShippedUnavailable
+                          : t.orders.trackingPending}
+                      </p>
+                    );
+                  }
+                  return (
+                    <div className="space-y-4">
+                      {!hasTrackingNumber && shippedOrLater ? (
+                        <p className="text-sm text-white/55">
+                          {t.orders.trackingShippedUnavailable}
+                        </p>
+                      ) : null}
+                      {order.tracking.map((track, index) => {
+                        const shipmentLabel = track.shipmentStatusKey
+                          ? t.orders.shipStatus[track.shipmentStatusKey]
+                          : null;
+                        const fulfillmentLabel = track.fulfillmentStatusKey
+                          ? t.orders.fulfillmentStatus[track.fulfillmentStatusKey]
+                          : null;
+                        return (
+                          <div
+                            key={`${track.number || track.url || track.shipmentStatusKey || index}`}
+                            className="rounded-xl border border-white/10 bg-black/20 p-4 min-w-0 space-y-2"
                           >
-                            {t.orders.trackShipment}
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        ) : null}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                            {track.company ? (
+                              <p className="text-white font-medium">
+                                <span className="text-white/50 text-xs uppercase tracking-[0.12em] block mb-1">
+                                  {t.orders.carrier}
+                                </span>
+                                {track.company}
+                              </p>
+                            ) : null}
+                            {track.number ? (
+                              <p className="text-sm text-white/70 break-all">
+                                {t.orders.trackingNumber}: {track.number}
+                              </p>
+                            ) : null}
+                            {fulfillmentLabel ? (
+                              <p className="text-sm text-white/60">
+                                {t.orders.fulfillmentLabel}: {fulfillmentLabel}
+                              </p>
+                            ) : null}
+                            {shipmentLabel ? (
+                              <p className="text-sm text-white/60">
+                                {t.orders.shipmentLabel}: {shipmentLabel}
+                              </p>
+                            ) : null}
+                            {track.estimatedDeliveryAt ? (
+                              <p className="text-sm text-white/60">
+                                {t.orders.estimatedDelivery}:{' '}
+                                {formatDate(track.estimatedDeliveryAt, locale)}
+                              </p>
+                            ) : null}
+                            {track.deliveredAt ? (
+                              <p className="text-sm text-white/60">
+                                {t.orders.deliveredOn}: {formatDate(track.deliveredAt, locale)}
+                              </p>
+                            ) : null}
+                            {track.url ? (
+                              <a
+                                href={track.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 text-sm text-layali-pink mt-1 hover:underline"
+                              >
+                                {t.orders.trackShipment}
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="bg-layali-surface rounded-2xl p-5 sm:p-6 border border-layali-pink/20">

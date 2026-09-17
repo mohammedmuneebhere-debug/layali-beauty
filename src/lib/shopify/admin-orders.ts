@@ -5,6 +5,12 @@
 import { createHash } from 'node:crypto';
 import { shopifyAdminFetch } from './admin';
 
+/**
+ * Customer account Shopify reads. Mutations keep the 90s / 3-retry Admin budget.
+ * One 15s attempt so a customer is not held for ~90s×4 while Shopify is down.
+ */
+const CUSTOMER_ORDER_ADMIN = { retries: 0, timeoutMs: 15_000, allowPartialData: true } as const;
+
 export type DraftOrderShippingAddress = {
   firstName: string;
   lastName: string;
@@ -722,6 +728,8 @@ const CUSTOMER_ORDER_FIELDS = `#graphql
     name
     createdAt
     cancelledAt
+    confirmed
+    closed
     displayFinancialStatus
     displayFulfillmentStatus
     tags
@@ -781,7 +789,9 @@ const CUSTOMER_ORDER_FIELDS = `#graphql
       status
       displayStatus
       createdAt
+      inTransitAt
       deliveredAt
+      estimatedDeliveryAt
       trackingInfo(first: 10) {
         company
         number
@@ -811,6 +821,8 @@ const CUSTOMER_ORDERS_BY_IDS_MINIMAL = `#graphql
         name
         createdAt
         cancelledAt
+        confirmed
+        closed
         displayFinancialStatus
         displayFulfillmentStatus
         tags
@@ -905,6 +917,8 @@ export type ShopifyCustomerOrderNode = {
   name?: string | null;
   createdAt?: string | null;
   cancelledAt?: string | null;
+  confirmed?: boolean | null;
+  closed?: boolean | null;
   displayFinancialStatus?: string | null;
   displayFulfillmentStatus?: string | null;
   tags?: string[] | null;
@@ -936,7 +950,9 @@ export type ShopifyCustomerOrderNode = {
     status?: string | null;
     displayStatus?: string | null;
     createdAt?: string | null;
+    inTransitAt?: string | null;
     deliveredAt?: string | null;
+    estimatedDeliveryAt?: string | null;
     trackingInfo?: {
       company?: string | null;
       number?: string | null;
@@ -964,7 +980,7 @@ async function fetchCustomerOrderNodeBatch(
 }> {
   const { data, errors } = await shopifyAdminFetch<{
     nodes: (ShopifyCustomerOrderNode | null)[];
-  }>(query, { ids: batch }, { allowPartialData: true });
+  }>(query, { ids: batch }, CUSTOMER_ORDER_ADMIN);
   return { nodes: data?.nodes || [], errors };
 }
 
@@ -1021,7 +1037,7 @@ export async function fetchShopifyOrderRefsForUser(
   const tag = userOwnershipTag(userId);
   const { data, errors } = await shopifyAdminFetch<{
     orders?: { nodes?: { id?: string | null; name?: string | null; tags?: string[] | null }[] };
-  }>(ORDERS_BY_QUERY, { query: shopifyTagQuery(tag) }, { allowPartialData: true });
+  }>(ORDERS_BY_QUERY, { query: shopifyTagQuery(tag) }, CUSTOMER_ORDER_ADMIN);
 
   if (errors?.length) {
     console.error('Layali customer orders: ownership-tag query errors', {
@@ -1055,7 +1071,7 @@ export async function fetchShopifyOrderRefsForUser(
         order?: { id?: string | null; name?: string | null; tags?: string[] | null } | null;
       }[];
     };
-  }>(DRAFT_ORDERS_FOR_USER_HISTORY, { query: shopifyTagQuery(tag) }, { allowPartialData: true });
+  }>(DRAFT_ORDERS_FOR_USER_HISTORY, { query: shopifyTagQuery(tag) }, CUSTOMER_ORDER_ADMIN);
 
   if (drafts.errors?.length) {
     console.error('Layali customer orders: draft ownership-tag query errors', {

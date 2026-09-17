@@ -1,16 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useCartStore } from '@/store/cart';
+import { bootCartStore } from '@/store/cart';
 
-/** Hydrate Shopify cart lines from persisted cartId after mount */
+/** Persist + Shopify cart boot. Always settles so "Loading cart…" cannot hang. */
 export function CartHydrator() {
-  const refresh = useCartStore((s) => s.refresh);
-  const cartId = useCartStore((s) => s.cartId);
-
   useEffect(() => {
-    if (cartId) void refresh();
-  }, [cartId, refresh]);
+    void bootCartStore();
+  }, []);
 
   return null;
 }

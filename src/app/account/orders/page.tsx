@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { formatDate, formatPrice } from '@/lib/utils';
 import { shopifyImageUrl } from '@/lib/shopify/image';
+import { customerOrderFetchTimeoutSignal } from '@/lib/account/order-load';
 import type { CustomerOrderSummary } from '@/lib/account/order-types';
 
 export default function OrdersPage() {
@@ -17,6 +18,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<CustomerOrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,7 +26,11 @@ export default function OrdersPage() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch('/api/account/orders', { cache: 'no-store' });
+        const res = await fetch('/api/account/orders', {
+          cache: 'no-store',
+          signal: customerOrderFetchTimeoutSignal(),
+        });
+        if (cancelled) return;
         if (res.status === 401) {
           router.push('/auth/signin?redirect=/account/orders');
           return;
@@ -35,9 +41,12 @@ export default function OrdersPage() {
           setOrders([]);
           return;
         }
-        if (!cancelled) setOrders(json.orders || []);
+        setOrders(json.orders || []);
       } catch {
-        if (!cancelled) setError(t.orders.unavailable);
+        if (!cancelled) {
+          setError(t.orders.unavailable);
+          setOrders([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -46,7 +55,7 @@ export default function OrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [router, t.orders.unavailable]);
+  }, [router, t.orders.unavailable, reloadToken]);
 
   return (
     <div className="min-h-screen bg-transparent pt-24 pb-12">
@@ -68,7 +77,12 @@ export default function OrdersPage() {
               ))}
             </div>
           ) : error ? (
-            <p className="text-sm text-red-300/90">{error}</p>
+            <div className="rounded-2xl border border-white/10 bg-layali-surface p-8 text-center">
+              <p className="text-sm text-red-300/90 mb-4">{error}</p>
+              <Button variant="outline" onClick={() => setReloadToken((n) => n + 1)}>
+                {t.orders.retry}
+              </Button>
+            </div>
           ) : orders.length === 0 ? (
             <div className="text-center py-16 px-4 rounded-2xl border border-layali-pink/20 bg-layali-surface">
               <Package className="w-12 h-12 mx-auto text-layali-pink mb-4" />

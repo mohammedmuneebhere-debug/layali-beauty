@@ -15,6 +15,7 @@ import { OrderSummaryCard } from '@/components/checkout/OrderSummaryCard';
 import { LocationMap } from '@/components/map/LocationMap';
 import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
+import { useCartSyncView } from '@/components/cart/useCartSyncView';
 import { formatSaudiPhoneDisplay } from '@/lib/address/saudi-phone';
 import {
   isLabeledStructuredAddress,
@@ -125,6 +126,7 @@ export default function CheckoutPage() {
     refresh,
     clearLocalCart,
   } = useCartStore();
+  const { waiting, failed, retry, error: cartError } = useCartSyncView();
   const [loading, setLoading] = useState(false);
   const [savingAddress, setSavingAddress] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -135,7 +137,6 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod');
   const [error, setError] = useState('');
-  const [cartReady, setCartReady] = useState(false);
   const [checkOrdersHint, setCheckOrdersHint] = useState(false);
   const placingRef = useRef(false);
   const orderPlacedRef = useRef(false);
@@ -164,23 +165,11 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
-    const finish = () => setCartReady(true);
-    const unsub = useCartStore.persist.onFinishHydration(finish);
-    if (useCartStore.persist.hasHydrated()) finish();
-    return unsub;
-  }, []);
-
-  useEffect(() => {
     submissionIdRef.current = getOrCreateSubmissionId();
   }, []);
 
   useEffect(() => {
-    if (!cartReady) return;
-    void refresh();
-  }, [cartReady, refresh]);
-
-  useEffect(() => {
-    if (!cartReady) return;
+    if (waiting || failed) return;
     if (placingRef.current || orderPlacedRef.current) return;
 
     async function init() {
@@ -206,18 +195,14 @@ export default function CheckoutPage() {
       await loadAddresses(user.id);
     }
 
-    // Persist restore only cartId — line items stay empty until Shopify refresh.
+    // Line items come from Shopify refresh — never treat persist cartId as a loaded cart.
     if (items.length === 0) {
-      if (cartId) {
-        void init();
-        return;
-      }
       router.push('/cart');
       return;
     }
 
     void init();
-  }, [cartReady, items.length, cartId, router]);
+  }, [waiting, failed, items.length, router]);
 
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId) || null;
 
@@ -445,8 +430,15 @@ export default function CheckoutPage() {
       <div className="max-w-4xl mx-auto px-4">
         <h1 className="font-serif text-heading-lg text-white mb-8">{t.checkout.title}</h1>
 
-        {!cartReady ? (
+        {waiting ? (
           <p className="text-white/45">Loading cart…</p>
+        ) : failed ? (
+          <div className="rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-6 text-center max-w-md">
+            <p className="text-sm text-red-200 mb-4">{cartError || t.cart.loadError}</p>
+            <Button type="button" onClick={() => void retry()}>
+              {t.cart.retry}
+            </Button>
+          </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-8">
           <div className="bg-layali-surface rounded-2xl p-6 border border-layali-pink/20 space-y-5">

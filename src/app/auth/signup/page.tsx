@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { navigateAfterAuth } from '@/lib/auth/navigate-after-auth';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -28,7 +28,6 @@ type FormData = z.infer<typeof schema>;
 type Step = 'details' | 'otp';
 
 export default function SignUpPage() {
-  const router = useRouter();
   const { t } = useLanguage();
   const [step, setStep] = useState<Step>('details');
   const [pendingData, setPendingData] = useState<FormData | null>(null);
@@ -95,8 +94,8 @@ export default function SignUpPage() {
 
     if (authData.session) {
       await upsertProfile(authData.user.id, data);
-      router.push('/survey');
-      setLoading(false);
+      await supabase.auth.getSession();
+      navigateAfterAuth('/survey');
       return;
     }
 
@@ -148,8 +147,8 @@ export default function SignUpPage() {
       await upsertProfile(user.id, pendingData);
     }
 
-    router.push('/survey');
-    setLoading(false);
+    await supabase.auth.getSession();
+    navigateAfterAuth('/survey');
   };
 
   const resendOtp = async () => {

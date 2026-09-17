@@ -2,15 +2,20 @@
 
 import Link from 'next/link';
 import { useRef } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { ArrowRight, Sparkles, Droplets, Leaf } from 'lucide-react';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { RitualCarousel } from '@/components/home/RitualCarousel';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { HeroStage } from '@/components/home/HeroStage';
+import { CinematicProductFilm } from '@/components/cinematic/CinematicProductFilm';
+import { CinematicLookbook } from '@/components/cinematic/CinematicLookbook';
+import { CinematicVideo } from '@/components/cinematic/CinematicVideo';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
+import type { BannerSlide } from '@/lib/banners';
+import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion';
 
 const CATEGORY_IMAGES: Record<string, string> = {
   makeup: '/categories/makeup.jpg',
@@ -21,15 +26,45 @@ const CATEGORY_IMAGES: Record<string, string> = {
   lenses: '/categories/lenses.jpg',
 };
 
+const CATEGORY_FILMS: Record<string, { src: string; poster: string; object: string }> = {
+  makeup: {
+    src: '/cinematic/hero-sponge.mp4',
+    poster: '/cinematic/hero-sponge-poster.jpg',
+    object: 'object-[50%_42%]',
+  },
+  haircare: {
+    src: '/cinematic/hero-hair.mp4',
+    poster: '/cinematic/hero-hair-poster.jpg',
+    object: 'object-center',
+  },
+  bodycare: {
+    src: '/cinematic/hero-body.mp4',
+    poster: '/cinematic/hero-body-poster.jpg',
+    object: 'object-[50%_28%]',
+  },
+  fragrance: {
+    src: '/cinematic/category-fragrance.mp4',
+    poster: '/cinematic/category-fragrance-poster.jpg',
+    object: 'object-center',
+  },
+  skincare: {
+    src: '/cinematic/category-skincare.mp4',
+    poster: '/cinematic/category-skincare-poster.jpg',
+    object: 'object-[50%_32%]',
+  },
+};
+
 export default function HomePageClient({
   heroProducts = [],
   categoryCovers = {},
+  landingBanners = [],
 }: {
   heroProducts?: CatalogProduct[];
   categoryCovers?: Record<string, string>;
+  landingBanners?: BannerSlide[];
 }) {
   const { t } = useLanguage();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -56,7 +91,7 @@ export default function HomePageClient({
       {/* Hero — concept UI */}
       <section
         ref={heroRef}
-        className="relative min-h-[100svh] overflow-hidden pt-16 lg:pt-20 section-glide-soft"
+        className="relative min-h-[100svh] overflow-hidden pt-16 lg:pt-20"
       >
         <motion.div style={{ y: yGlow }} className="absolute inset-0 pointer-events-none" aria-hidden>
           <div className="glow-orb w-[50vw] h-[50vw] max-w-[560px] max-h-[560px] left-[-8%] top-[20%] opacity-45" />
@@ -68,7 +103,7 @@ export default function HomePageClient({
           className="relative z-10 min-h-[calc(100svh-4rem)] lg:min-h-[calc(100svh-5rem)]"
         >
           <HeroStage />
-          <div className="pointer-events-none absolute inset-y-0 start-0 z-[2] hidden w-[min(52%,40rem)] bg-gradient-to-r from-black via-black/75 to-transparent lg:block" />
+          <div className="hero-copy-shade pointer-events-none absolute inset-y-0 start-0 z-[2] hidden w-[min(52%,40rem)] bg-gradient-to-r from-black via-black/75 to-transparent lg:block" />
           <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col justify-start px-4 pt-5 pb-36 sm:px-6 lg:min-h-[calc(100svh-5rem)] lg:justify-center lg:px-8 lg:py-24 lg:pb-24">
             <motion.div
               initial={{ opacity: 0, y: 24 }}
@@ -115,35 +150,51 @@ export default function HomePageClient({
         </div>
       </section>
 
-      {/* Shop by Category */}
-      <section className="py-20 section-glide border-t border-layali-pink/15">
+      {/* Shop by Category — Charlotte Tilbury / Ounass: merch path sits on the hero */}
+      <section className="relative pt-12 pb-6 sm:pt-16 sm:pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FadeIn className="text-center mb-12">
-            <h2 className="font-serif text-heading-lg text-white mb-4">{t.categories.title}</h2>
+          <FadeIn className="mb-6 sm:mb-8 flex items-end justify-between gap-6">
+            <h2 className="font-serif text-heading-lg text-white">{t.categories.title}</h2>
+            <Link
+              href="/shop"
+              prefetch
+              className="hidden sm:inline-flex items-center gap-2 text-nav uppercase tracking-[0.12em] text-white/70 transition-colors hover:text-layali-pink-light"
+            >
+              {t.footer.allProducts} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+            </Link>
           </FadeIn>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             {categories.map((cat, i) => {
+              const film = CATEGORY_FILMS[cat.href];
               const cover =
+                film?.poster ||
                 CATEGORY_IMAGES[cat.href] ||
                 categoryCovers[cat.href] ||
                 heroProducts.find((p) => p.category === cat.href && p.image_url)?.image_url;
               return (
-              <FadeIn key={cat.key} delay={i * 0.1}>
+              <FadeIn key={cat.key} delay={i * 0.08}>
                 <Link
                   href={`/shop?category=${cat.href}`}
                   className="block focus-ring rounded-2xl"
                 >
-                  <div className="aspect-square rounded-2xl bg-black/40 backdrop-blur-md border border-layali-pink/25 flex items-center justify-center card-hover relative overflow-hidden group">
+                  <div className="aspect-[4/5] lg:aspect-[3/4] rounded-2xl bg-black/40 backdrop-blur-md border border-layali-pink/25 flex items-end justify-start card-hover relative overflow-hidden group">
                     {cover ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={cover}
                         alt=""
-                        className="absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105"
+                        className={`absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105 ${film?.object || ''}`}
                       />
                     ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
-                    <span className="relative font-serif text-heading-sm text-white text-center px-2">
+                    {film ? (
+                      <CinematicVideo
+                        sources={[{ src: film.src, type: 'video/mp4' }]}
+                        poster={film.poster}
+                        className={`absolute inset-0 opacity-80 transition-transform duration-500 group-hover:scale-105 ${film.object}`}
+                      />
+                    ) : null}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <span className="relative px-3 pb-3 font-serif text-sm sm:text-heading-sm text-white">
                       {cat.label}
                     </span>
                   </div>
@@ -155,23 +206,21 @@ export default function HomePageClient({
         </div>
       </section>
 
-      <RitualCarousel />
-
-      {/* Why Layali */}
-      <section className="py-20 section-glide border-y border-layali-pink/15 relative overflow-hidden">
+      {/* Why Layali — right after categories */}
+      <section className="relative py-12 sm:py-16">
         <div className="glow-orb w-[400px] h-[400px] -right-32 top-0 opacity-50" aria-hidden />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FadeIn className="text-center mb-16">
-            <h2 className="font-serif text-heading-lg text-white mb-4">{t.why.title}</h2>
-            <p className="text-body-lg text-white/60 max-w-2xl mx-auto">{t.why.subtitle}</p>
+          <FadeIn className="mb-8 lg:mb-10">
+            <h2 className="font-serif text-heading-lg text-white mb-3">{t.why.title}</h2>
+            <p className="text-body-lg text-white/60 max-w-2xl">{t.why.subtitle}</p>
           </FadeIn>
 
-          <StaggerContainer className="grid md:grid-cols-3 gap-8">
+          <StaggerContainer className="grid md:grid-cols-3 gap-4 lg:gap-5">
             {features.map((feature) => (
               <StaggerItem key={feature.title}>
-                <div className="text-center p-8 rounded-2xl bg-black/45 backdrop-blur-md border border-layali-pink/20 card-hover h-full">
-                  <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-layali-pink-glow/20 border border-layali-pink/40 flex items-center justify-center shadow-[0_0_20px_rgba(212,46,124,0.25)]">
-                    <feature.icon className="w-7 h-7 text-layali-pink-light" />
+                <div className="h-full rounded-2xl border border-layali-pink/20 bg-black/45 p-6 text-start backdrop-blur-md card-hover sm:p-7">
+                  <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-layali-pink/40 bg-layali-pink-glow/20 shadow-[0_0_20px_rgba(212,46,124,0.25)]">
+                    <feature.icon className="h-6 w-6 text-layali-pink-light" />
                   </div>
                   <h3 className="font-serif text-heading-sm text-white mb-3">{feature.title}</h3>
                   <p className="text-body text-white/55">{feature.description}</p>
@@ -182,8 +231,10 @@ export default function HomePageClient({
         </div>
       </section>
 
-      {/* Find Your Ritual */}
-      <section className="py-20 section-glide-soft relative overflow-hidden">
+      <RitualCarousel initialProducts={heroProducts} />
+
+      {/* Find Your Ritual — after trending */}
+      <section className="relative py-14 sm:py-16 lg:py-20">
         <div
           className="glow-orb w-[600px] h-[600px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
           aria-hidden
@@ -193,7 +244,7 @@ export default function HomePageClient({
             <p className="font-script text-script-xl text-layali-pink-light mb-4 scale-75 origin-center">
               {t.survey.script}
             </p>
-            <h2 className="font-serif text-heading-lg text-white mb-6">{t.survey.title}</h2>
+            <h2 className="font-serif text-heading-lg text-white mb-5">{t.survey.title}</h2>
             <p className="text-body-lg text-white/65 mb-8 max-w-2xl mx-auto">{t.survey.body}</p>
             <Link
               href="/survey"
@@ -206,20 +257,24 @@ export default function HomePageClient({
         </div>
       </section>
 
-      {/* Campaign banners */}
-      <section className="py-10 sm:py-14 section-glide-soft">
+      <section className="py-6 sm:py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn>
             <DynamicBannerCarousel
               placement="landing_hero"
+              initialSlides={landingBanners}
               className="border border-layali-pink/20 shadow-[0_0_40px_rgba(212,46,124,0.12)]"
             />
           </FadeIn>
         </div>
       </section>
 
+      <CinematicProductFilm />
+
+      <CinematicLookbook />
+
       {/* Enter the Store */}
-      <section className="relative py-24 section-glide overflow-hidden text-center">
+      <section className="relative py-16 sm:py-20 text-center">
         <div
           className="glow-orb w-[520px] h-[520px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
           aria-hidden

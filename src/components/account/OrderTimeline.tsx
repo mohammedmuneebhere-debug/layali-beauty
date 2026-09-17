@@ -3,9 +3,8 @@
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
-import type { TimelineStepId, TimelineStepState } from '@/lib/account/order-types';
-
-const STEP_IDS: TimelineStepId[] = ['placed', 'processing', 'shipped', 'delivered'];
+import { formatDate } from '@/lib/utils';
+import { TIMELINE_STEP_IDS, type TimelineStepId, type TimelineStepState } from '@/lib/account/order-types';
 
 export function OrderTimeline({
   steps,
@@ -14,12 +13,12 @@ export function OrderTimeline({
   steps: { id: TimelineStepId; state: TimelineStepState; at?: string | null }[];
   compact?: boolean;
 }) {
-  const { t } = useLanguage();
+  const { t, locale } = useLanguage();
   const byId = new Map(steps.map((s) => [s.id, s]));
 
   return (
-    <ol className={cn('relative border-s border-white/15 ps-5', compact ? 'space-y-3' : 'space-y-4')}>
-      {STEP_IDS.map((id) => {
+    <ol className={cn('relative border-s border-white/15 ps-5', compact ? 'space-y-3' : 'space-y-5')}>
+      {TIMELINE_STEP_IDS.map((id) => {
         const step = byId.get(id);
         const state = step?.state || 'upcoming';
         const label = t.orders[id];
@@ -32,6 +31,7 @@ export function OrderTimeline({
                 state === 'current' && 'border-layali-pink bg-layali-pink-glow/30 text-layali-pink',
                 state === 'upcoming' && 'border-white/20 bg-black/40 text-white/30'
               )}
+              aria-hidden
             >
               {state === 'complete' ? <Check className="h-3 w-3" /> : null}
               {state === 'current' ? (
@@ -46,6 +46,9 @@ export function OrderTimeline({
             >
               {label}
             </p>
+            {step?.at && state !== 'upcoming' ? (
+              <p className="mt-0.5 text-xs text-white/40">{formatDate(step.at, locale)}</p>
+            ) : null}
           </li>
         );
       })}

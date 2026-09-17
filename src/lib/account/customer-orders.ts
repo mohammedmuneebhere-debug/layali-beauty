@@ -21,10 +21,14 @@ import type {
   CustomerOrderItem,
   CustomerOrderSummary,
   CustomerTracking,
+  FulfillmentStatusKey,
+  ShipmentStatusKey,
   TimelineStepId,
   TimelineStepState,
 } from '@/lib/account/order-types';
-import { createServiceClient, hasServiceRoleKey } from '@/lib/supabase/service';
+import { TIMELINE_STEP_IDS } from '@/lib/account/order-types';
+import { safeCustomerTrackingUrl } from '@/lib/account/safe-tracking-url';
+import { upsertOwnedShopifyOrderLink } from '@/lib/account/shopify-order-links';
 
 export type {
   CustomerOrderDetail,
@@ -52,6 +56,10 @@ function moneyAmount(
   };
 }
 
+function upper(value: string | null | undefined): string {
+  return (value || '').trim().toUpperCase();
+}
+
 function isCodOrder(node: ShopifyCustomerOrderNode): boolean {
   const tags = (node.tags || []).map((t) => t.toLowerCase());
   const gateways = (node.paymentGatewayNames || []).map((g) => g.toLowerCase());
@@ -60,48 +68,111 @@ function isCodOrder(node: ShopifyCustomerOrderNode): boolean {
   return true;
 }
 
-function fulfillmentShipped(node: ShopifyCustomerOrderNode): boolean {
-  const fulfillments = node.fulfillments || [];
-  const active = fulfillments.filter((f) => {
-    const status = (f.status || '').toUpperCase();
-    return status && status !== 'CANCELLED' && status !== 'ERROR' && status !== 'FAILURE';
-  });
-  if (!active.length) return false;
+type FulfillmentNode = NonNullable<ShopifyCustomerOrderNode['fulfillments']>[number];
 
-  const display = (node.displayFulfillmentStatus || '').toUpperCase();
-  if (['FULFILLED', 'PARTIALLY_FULFILLED', 'IN_PROGRESS'].includes(display)) return true;
+function isActiveFulfillment(f: FulfillmentNode): boolean {
+  const status = upper(f.status);
+  return status !== 'CANCELLED' && status !== 'ERROR' && status !== 'FAILURE';
+}
 
-  return active.some((f) => {
-    const st = (f.status || '').toUpperCase();
-    const ds = (f.displayStatus || '').toUpperCase();
-    const hasTracking = (f.trackingInfo || []).some((t) => Boolean(t.number || t.url));
-    if (hasTracking) return true;
-    if (st === 'SUCCESS') return true;
-    if (
-      [
-        'FULFILLED',
-        'IN_TRANSIT',
-        'OUT_FOR_DELIVERY',
-        'PICKED_UP',
-        'CONFIRMED',
-        'LABEL_PRINTED',
-        'LABEL_PURCHASED',
-        'READY_FOR_PICKUP',
-        'MARKED_AS_FULFILLED',
-      ].includes(ds)
-    ) {
-      return true;
-    }
-    return false;
+function activeFulfillments(node: ShopifyCustomerOrderNode): FulfillmentNode[] {
+  return (node.fulfillments || []).filter(isActiveFulfillment);
+}
+
+const DELIVERED_DISPLAY = new Set(['DELIVERED']);
+const OUT_FOR_DELIVERY_DISPLAY = new Set(['OUT_FOR_DELIVERY']);
+const SHIPPED_DISPLAY = new Set([
+  'IN_TRANSIT',
+  'FULFILLED',
+  'MARKED_AS_FULFILLED',
+  'PICKED_UP',
+  'READY_FOR_PICKUP',
+  'ATTEMPTED_DELIVERY',
+  'NOT_DELIVERED',
+  'OUT_FOR_DELIVERY',
+  'DELIVERED',
+]);
+
+function fulfillmentDelivered(node: ShopifyCustomerOrderNode): boolean {
+  return activeFulfillments(node).some((f) => {
+    if (f.deliveredAt) return true;
+    return DELIVERED_DISPLAY.has(upper(f.displayStatus));
   });
 }
 
-function fulfillmentDelivered(node: ShopifyCustomerOrderNode): boolean {
-  return (node.fulfillments || []).some((f) => {
-    if (f.deliveredAt) return true;
-    const ds = (f.displayStatus || '').toUpperCase();
-    return ds === 'DELIVERED';
+function fulfillmentOutForDelivery(node: ShopifyCustomerOrderNode): boolean {
+  return activeFulfillments(node).some((f) => OUT_FOR_DELIVERY_DISPLAY.has(upper(f.displayStatus)));
+}
+
+function fulfillmentShipped(node: ShopifyCustomerOrderNode): boolean {
+  const display = upper(node.displayFulfillmentStatus);
+  if (display === 'FULFILLED' || display === 'PARTIALLY_FULFILLED') return true;
+
+  return activeFulfillments(node).some((f) => {
+    const st = upper(f.status);
+    const ds = upper(f.displayStatus);
+    const hasTracking = (f.trackingInfo || []).some((t) => Boolean(t.number || t.url));
+    if (f.inTransitAt || f.deliveredAt) return true;
+    if (hasTracking) return true;
+    if (st === 'SUCCESS') return true;
+    return SHIPPED_DISPLAY.has(ds);
   });
+}
+
+function mapFulfillmentStatusKey(status: string | null | undefined): FulfillmentStatusKey | null {
+  switch (upper(status)) {
+    case 'PENDING':
+      return 'pending';
+    case 'OPEN':
+      return 'open';
+    case 'SUCCESS':
+      return 'success';
+    case 'CANCELLED':
+      return 'cancelled';
+    case 'ERROR':
+      return 'error';
+    case 'FAILURE':
+      return 'failure';
+    default:
+      return null;
+  }
+}
+
+function mapShipmentStatusKey(displayStatus: string | null | undefined): ShipmentStatusKey | null {
+  switch (upper(displayStatus)) {
+    case 'CONFIRMED':
+      return 'confirmed';
+    case 'IN_TRANSIT':
+      return 'in_transit';
+    case 'OUT_FOR_DELIVERY':
+      return 'out_for_delivery';
+    case 'DELIVERED':
+      return 'delivered';
+    case 'DELAYED':
+      return 'delayed';
+    case 'READY_FOR_PICKUP':
+      return 'ready_for_pickup';
+    case 'PICKED_UP':
+      return 'picked_up';
+    case 'ATTEMPTED_DELIVERY':
+      return 'attempted_delivery';
+    case 'FULFILLED':
+    case 'MARKED_AS_FULFILLED':
+      return 'fulfilled';
+    default:
+      return null;
+  }
+}
+
+function firstTimestamp(
+  fulfillments: FulfillmentNode[],
+  pick: (f: FulfillmentNode) => string | null | undefined
+): string | null {
+  for (const f of fulfillments) {
+    const value = pick(f);
+    if (value) return value;
+  }
+  return null;
 }
 
 export function mapTimeline(node: ShopifyCustomerOrderNode): {
@@ -109,48 +180,68 @@ export function mapTimeline(node: ShopifyCustomerOrderNode): {
   timeline: { id: TimelineStepId; state: TimelineStepState; at: string | null }[];
 } {
   const cancelled = Boolean(node.cancelledAt);
+  const financial = upper(node.displayFinancialStatus);
+  const fulfillment = upper(node.displayFulfillmentStatus);
+  const onHold = fulfillment === 'ON_HOLD';
+  const orderConfirmed = !cancelled && financial !== 'VOIDED' && node.confirmed !== false;
+
   const delivered = !cancelled && fulfillmentDelivered(node);
-  const shipped = delivered || (!cancelled && fulfillmentShipped(node));
-  const processing = !cancelled;
+  const outForDeliveryNow = !cancelled && fulfillmentOutForDelivery(node);
+  const shipped = !cancelled && (delivered || outForDeliveryNow || fulfillmentShipped(node));
+  const preparing =
+    !cancelled && orderConfirmed && !onHold && (shipped || !['', 'ON_HOLD'].includes(fulfillment));
 
-  let currentStep: TimelineStepId = 'processing';
-  if (delivered) currentStep = 'delivered';
-  else if (shipped) currentStep = 'shipped';
-  else if (processing) currentStep = 'processing';
+  let currentStep: TimelineStepId = 'placed';
+  if (!cancelled) {
+    if (delivered) currentStep = 'delivered';
+    else if (outForDeliveryNow) currentStep = 'out_for_delivery';
+    else if (shipped) currentStep = 'shipped';
+    else if (preparing) currentStep = 'preparing';
+    else if (orderConfirmed) currentStep = 'confirmed';
+  }
 
-  const shippedAt =
-    node.fulfillments?.find((f) => f.createdAt)?.createdAt || null;
-  const deliveredAt =
-    node.fulfillments?.find((f) => f.deliveredAt)?.deliveredAt || null;
+  const active = activeFulfillments(node);
+  const atById: Record<TimelineStepId, string | null> = {
+    placed: node.createdAt || null,
+    confirmed: orderConfirmed ? node.createdAt || null : null,
+    preparing: orderConfirmed ? node.createdAt || null : null,
+    shipped:
+      firstTimestamp(active, (f) => f.inTransitAt) || firstTimestamp(active, (f) => f.createdAt),
+    out_for_delivery: firstTimestamp(active, (f) =>
+      OUT_FOR_DELIVERY_DISPLAY.has(upper(f.displayStatus)) || f.deliveredAt
+        ? f.deliveredAt || f.inTransitAt || f.createdAt
+        : null
+    ),
+    delivered: firstTimestamp(active, (f) => f.deliveredAt),
+  };
 
-  const ids: TimelineStepId[] = ['placed', 'processing', 'shipped', 'delivered'];
   const reached: Record<TimelineStepId, boolean> = {
     placed: true,
-    processing,
+    confirmed: orderConfirmed,
+    preparing,
     shipped,
+    out_for_delivery: outForDeliveryNow || delivered,
     delivered,
   };
 
-  const timeline = ids.map((id) => {
+  const currentIndex = TIMELINE_STEP_IDS.indexOf(currentStep);
+
+  const timeline = TIMELINE_STEP_IDS.map((id, index) => {
     let state: TimelineStepState = 'upcoming';
     if (cancelled && id !== 'placed') {
       state = 'upcoming';
     } else if (id === currentStep) {
       state = 'current';
-    } else if (reached[id] && ids.indexOf(id) < ids.indexOf(currentStep)) {
+    } else if (reached[id] && index < currentIndex) {
       state = 'complete';
     } else if (delivered && id !== 'delivered') {
       state = 'complete';
     }
-    const at =
-      id === 'placed'
-        ? node.createdAt || null
-        : id === 'shipped'
-          ? shippedAt
-          : id === 'delivered'
-            ? deliveredAt
-            : node.createdAt || null;
-    return { id, state, at: state === 'upcoming' ? null : at };
+    return {
+      id,
+      state,
+      at: state === 'upcoming' ? null : atById[id],
+    };
   });
 
   if (!cancelled && currentStep === 'delivered') {
@@ -185,16 +276,55 @@ function mapItems(node: ShopifyCustomerOrderNode): CustomerOrderItem[] {
 function mapTracking(node: ShopifyCustomerOrderNode): CustomerTracking[] {
   const seen = new Set<string>();
   const out: CustomerTracking[] = [];
-  for (const f of node.fulfillments || []) {
-    for (const t of f.trackingInfo || []) {
-      const number = t.number?.trim() || null;
-      const url = t.url?.trim() || null;
-      const company = t.company?.trim() || null;
-      if (!number && !url) continue;
+
+  for (const f of activeFulfillments(node)) {
+    const fulfillmentStatusKey = mapFulfillmentStatusKey(f.status);
+    const shipmentStatusKey = mapShipmentStatusKey(f.displayStatus);
+    const estimatedDeliveryAt = f.estimatedDeliveryAt || null;
+    const deliveredAt = f.deliveredAt || null;
+    const infos = (f.trackingInfo || [])
+      .map((t) => ({
+        number: t.number?.trim() || null,
+        url: safeCustomerTrackingUrl(t.url),
+        company: t.company?.trim() || null,
+      }))
+      .filter((t) => t.number || t.url);
+
+    if (infos.length === 0) {
+      if (!fulfillmentStatusKey && !shipmentStatusKey && !estimatedDeliveryAt && !deliveredAt) {
+        continue;
+      }
+      const key = `status|${upper(f.status)}|${upper(f.displayStatus)}|${deliveredAt || ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        company: null,
+        number: null,
+        url: null,
+        fulfillmentStatusKey,
+        shipmentStatusKey,
+        estimatedDeliveryAt,
+        deliveredAt,
+      });
+      continue;
+    }
+
+    for (const t of infos) {
+      const number = t.number;
+      const url = t.url;
+      const company = t.company;
       const key = `${company || ''}|${number || ''}|${url || ''}`.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push({ company, number, url });
+      out.push({
+        company,
+        number,
+        url,
+        fulfillmentStatusKey,
+        shipmentStatusKey,
+        estimatedDeliveryAt,
+        deliveredAt,
+      });
     }
   }
   return out;
@@ -264,55 +394,24 @@ function mapDetail(
       : null,
     tracking: mapTracking(node),
     timeline,
+    estimatedDeliveryAt: firstTimestamp(activeFulfillments(node), (f) => f.estimatedDeliveryAt),
+    deliveredAt: firstTimestamp(activeFulfillments(node), (f) => f.deliveredAt),
   };
 }
 
 async function persistDiscoveredLinks(
-  supabase: SupabaseClient,
   userId: string,
   discovered: { id: string; name: string }[]
 ) {
   for (const order of discovered) {
     if (!isShopifyOrderGid(order.id)) continue;
-
-    const { data: existing } = await supabase
-      .from('shopify_order_links')
-      .select('supabase_user_id')
-      .eq('shopify_order_id', order.id)
-      .maybeSingle();
-
-    if (existing?.supabase_user_id && existing.supabase_user_id !== userId) {
-      continue;
-    }
-
-    const row = {
-      supabase_user_id: userId,
-      shopify_order_id: order.id,
-      shopify_order_name: order.name,
-      updated_at: new Date().toISOString(),
-    };
-
-    let { error } = await supabase
-      .from('shopify_order_links')
-      .upsert(row, { onConflict: 'shopify_order_id' });
-
-    if (error && hasServiceRoleKey()) {
-      const admin = createServiceClient();
-      const { data: owned } = await admin
-        .from('shopify_order_links')
-        .select('supabase_user_id')
-        .eq('shopify_order_id', order.id)
-        .maybeSingle();
-      if (owned?.supabase_user_id && owned.supabase_user_id !== userId) {
-        continue;
-      }
-      ({ error } = await admin.from('shopify_order_links').upsert(row, {
-        onConflict: 'shopify_order_id',
-      }));
-    }
-
-    if (error) {
-      console.error('shopify_order_links recovery upsert failed', error.message);
+    const result = await upsertOwnedShopifyOrderLink({
+      userId,
+      shopifyOrderId: order.id,
+      shopifyOrderName: order.name,
+    });
+    if (result === 'failed') {
+      console.error('shopify_order_links recovery upsert failed', order.id);
     }
   }
 }
@@ -344,8 +443,17 @@ async function loadOwnedLinksWithRecovery(
   try {
     const discovered = await fetchShopifyOrderRefsForUser(userId);
     if (!discovered.length) return links;
-    await persistDiscoveredLinks(supabase, userId, discovered);
+    await persistDiscoveredLinks(userId, discovered);
     links = await loadOwnedLinks(supabase, userId);
+    if (!links.some((l) => isShopifyOrderGid(l.shopify_order_id))) {
+      return discovered
+        .filter((order) => isShopifyOrderGid(order.id))
+        .map((order) => ({
+          shopify_order_id: order.id,
+          shopify_order_name: order.name,
+          created_at: null,
+        }));
+    }
   } catch (err) {
     console.error('Layali customer orders: ownership-tag recovery failed', err);
   }

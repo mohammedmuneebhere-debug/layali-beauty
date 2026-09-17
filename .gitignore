@@ -14,6 +14,9 @@
 /coverage
 /scripts/mobile-audit-out/
 
+# cinematic encode/debug frames — not production assets
+/public/cinematic/_inspect/
+
 # local probe / temp artifacts (do not ignore tracked migrate/audit scripts)
 /scripts/_tmp-*
 /scripts/*probe*

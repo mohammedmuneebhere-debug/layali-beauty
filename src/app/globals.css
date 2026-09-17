@@ -32,6 +32,7 @@
   --space-section: clamp(4.5rem, 8vw, 7.5rem);
   --background: #000000;
   --foreground: #ffffff;
+  --stage-content-wash: rgba(10, 2, 6, 0.34);
 }
 
 @media (prefers-color-scheme: light) {
@@ -85,6 +86,7 @@
 html {
   background: #000000;
   color-scheme: dark;
+  overflow-x: hidden;
 }
 
 body {
@@ -527,7 +529,6 @@ html[dir='rtl'] .rtl-flip {
   filter: blur(48px);
   animation: glow-breathe 7s ease-in-out infinite;
   pointer-events: none;
-  mix-blend-mode: screen;
 }
 
 .glow-halo {
@@ -680,30 +681,76 @@ html[dir='rtl'] .rtl-flip {
   border: 1px solid rgba(224, 122, 138, 0.15);
 }
 
-/* Content floating over fixed stage backdrops */
+/* Content floating over the still stage */
 .page-shell {
   position: relative;
   background: transparent;
   color: #ffffff;
 }
 
-.section-glide {
-  position: relative;
-  background: rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+/* One continuous veil over BG1. Lives on the fixed stage, not on scrolling sections. */
+.stage-content-wash {
+  background-color: var(--stage-content-wash);
 }
 
-.section-glide-soft {
-  position: relative;
-  background: rgba(0, 0, 0, 0.22);
+.hero-copy-shade {
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
 }
 
+.section-edge-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
+}
+
+.layali-stage {
+  isolation: isolate;
+  background: #000000;
+}
+
+.layali-stage-wash {
+  background:
+    radial-gradient(ellipse 78% 58% at 12% 16%, rgba(212, 46, 124, 0.2), transparent 58%),
+    radial-gradient(ellipse 52% 48% at 92% 76%, rgba(201, 168, 124, 0.12), transparent 54%),
+    radial-gradient(ellipse 92% 70% at 50% 108%, rgba(26, 8, 14, 0.9), #0a0206 64%),
+    #120408;
+}
+
+.layali-stage-photo {
+  opacity: 0.78;
+  transform: scale(1.02);
+  filter: saturate(0.96) brightness(0.82);
+  /* Dim the empty wall in the middle; keep arch, leaf shadows, and silk in the rim. */
+  -webkit-mask-image: radial-gradient(
+    ellipse 74% 68% at 50% 36%,
+    rgba(0, 0, 0, 0.38) 0%,
+    rgba(0, 0, 0, 0.5) 28%,
+    rgba(0, 0, 0, 0.82) 58%,
+    #000 78%
+  );
+  mask-image: radial-gradient(
+    ellipse 74% 68% at 50% 36%,
+    rgba(0, 0, 0, 0.38) 0%,
+    rgba(0, 0, 0, 0.5) 28%,
+    rgba(0, 0, 0, 0.82) 58%,
+    #000 78%
+  );
+}
+
+.layali-stage-veil {
+  background:
+    radial-gradient(ellipse 72% 62% at 50% 38%, rgba(8, 1, 4, 0.42) 0%, rgba(8, 1, 4, 0.08) 46%, transparent 72%),
+    linear-gradient(180deg, rgba(10, 2, 6, 0.28) 0%, rgba(8, 1, 4, 0.06) 42%, rgba(8, 1, 4, 0.78) 100%);
+}
+
+/* Neutralized: stacked plates created hard horizontal seams on the stage. */
+.section-glide,
+.section-glide-soft,
 .section-glide-strong {
   position: relative;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .animate-shimmer {

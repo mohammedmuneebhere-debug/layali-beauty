@@ -14,6 +14,7 @@ import {
   userSubmissionTag,
   type CreatedShopifyOrder,
 } from '@/lib/shopify/admin-orders';
+import { upsertOwnedShopifyOrderLink } from '@/lib/account/shopify-order-links';
 import { toShopifyAddressParts } from '@/lib/address/structured';
 
 export const runtime = 'nodejs';
@@ -124,7 +125,6 @@ function buildSuccess(params: {
 }
 
 async function linkShopifyOrder(params: {
-  supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
   order: CreatedShopifyOrder;
   submissionId: string;
@@ -137,13 +137,14 @@ async function linkShopifyOrder(params: {
     return;
   }
 
-  // Refuse to reassign another user's existing link.
-  const { data: existingLink } = await params.supabase
-    .from('shopify_order_links')
-    .select('supabase_user_id')
-    .eq('shopify_order_id', params.order.orderId)
-    .maybeSingle();
-  if (existingLink?.supabase_user_id && existingLink.supabase_user_id !== params.userId) {
+  const result = await upsertOwnedShopifyOrderLink({
+    userId: params.userId,
+    shopifyOrderId: params.order.orderId,
+    shopifyOrderName: params.order.orderName,
+    submissionId: params.submissionId,
+  });
+
+  if (result === 'refused_foreign') {
     console.error('shopify_order_links refused — order already linked to another user', {
       orderId: params.order.orderId,
       submissionId: params.submissionId,
@@ -151,36 +152,9 @@ async function linkShopifyOrder(params: {
     return;
   }
 
-  const row = {
-    supabase_user_id: params.userId,
-    shopify_order_id: params.order.orderId,
-    shopify_order_name: params.order.orderName,
-    submission_id: params.submissionId,
-    updated_at: new Date().toISOString(),
-  };
-
-  let { error: linkError } = await params.supabase
-    .from('shopify_order_links')
-    .upsert(row, { onConflict: 'shopify_order_id' });
-
-  // Migration may not be applied yet — retry without submission_id.
-  if (linkError && /submission_id/i.test(linkError.message || '')) {
-    ({ error: linkError } = await params.supabase.from('shopify_order_links').upsert(
-      {
-        supabase_user_id: row.supabase_user_id,
-        shopify_order_id: row.shopify_order_id,
-        shopify_order_name: row.shopify_order_name,
-        updated_at: row.updated_at,
-      },
-      { onConflict: 'shopify_order_id' }
-    ));
-  }
-
-  if (linkError) {
+  if (result === 'failed') {
     // Post-completion — never fail the customer response for link issues.
     console.error('shopify_order_links upsert failed', {
-      code: linkError.code,
-      message: linkError.message,
       orderId: params.order.orderId,
       submissionId: params.submissionId,
     });
@@ -301,7 +275,6 @@ export async function POST(req: NextRequest) {
         });
 
         await linkShopifyOrder({
-          supabase,
           userId: user.id,
           order: prior,
           submissionId,
@@ -451,7 +424,7 @@ export async function POST(req: NextRequest) {
             city,
             alreadyCompleted: true,
           });
-          await linkShopifyOrder({ supabase, userId: user.id, order: raced, submissionId });
+          await linkShopifyOrder({ userId: user.id, order: raced, submissionId });
           completedBySubmission.set(cacheKey, { at: Date.now(), response: success });
           return success;
         }
@@ -501,7 +474,6 @@ export async function POST(req: NextRequest) {
       // Non-authoritative link only — Shopify remains order SOT.
       // Link failures must not convert a completed Shopify order into a customer failure.
       await linkShopifyOrder({
-        supabase,
         userId: user.id,
         order,
         submissionId,
@@ -573,7 +545,6 @@ export async function POST(req: NextRequest) {
             alreadyCompleted: true,
           });
           await linkShopifyOrder({
-            supabase,
             userId: user.id,
             order: recovered,
             submissionId,

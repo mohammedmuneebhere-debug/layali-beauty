@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { navigateAfterAuth } from '@/lib/auth/navigate-after-auth';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,7 +19,6 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function AdminSignInPage() {
-  const router = useRouter();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -57,7 +56,9 @@ export default function AdminSignInPage() {
         return;
       }
 
-      router.push('/admin');
+      await supabase.auth.getSession();
+      navigateAfterAuth('/admin');
+      return;
     }
 
     setLoading(false);

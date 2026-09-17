@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { createClient } from '@/lib/supabase/client';
+import { navigateAfterAuth, safeAuthRedirect } from '@/lib/auth/navigate-after-auth';
 
 const schema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,7 +20,6 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 function SignInForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '';
   const [error, setError] = useState('');
@@ -46,6 +46,7 @@ function SignInForm() {
     }
 
     if (authData.user) {
+      await supabase.auth.getSession();
       const { data: profile } = await supabase
         .from('profiles')
         .select('onboarding_completed, role')
@@ -53,14 +54,15 @@ function SignInForm() {
         .single();
 
       if (profile?.role === 'admin') {
-        router.push('/admin');
-      } else if (!profile?.onboarding_completed) {
-        router.push('/survey');
-      } else if (redirectTo.startsWith('/')) {
-        router.push(redirectTo);
-      } else {
-        router.push('/shop');
+        navigateAfterAuth('/admin');
+        return;
       }
+      if (profile?.onboarding_completed === false) {
+        navigateAfterAuth('/survey');
+        return;
+      }
+      navigateAfterAuth(safeAuthRedirect(redirectTo, '/shop'));
+      return;
     }
 
     setLoading(false);

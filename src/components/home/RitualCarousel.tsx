@@ -28,9 +28,15 @@ function createDragState(): DragState {
   };
 }
 
-export function RitualCarousel() {
+export function RitualCarousel({
+  initialProducts = [],
+}: {
+  initialProducts?: TrendingCatalogProduct[];
+}) {
   const { t } = useLanguage();
-  const [products, setProducts] = useState<TrendingCatalogProduct[]>([]);
+  const [products, setProducts] = useState<TrendingCatalogProduct[]>(() =>
+    initialProducts.filter((p) => Boolean(p.handle))
+  );
   const scrollerRef = useRef<HTMLDivElement>(null);
   const drag = useRef<DragState>(createDragState());
   const ignoreClickTimer = useRef<number | null>(null);
@@ -41,7 +47,9 @@ export function RitualCarousel() {
       .then((json: { products?: TrendingCatalogProduct[] }) => {
         setProducts((json.products || []).filter((p) => Boolean(p.handle)));
       })
-      .catch(() => setProducts([]));
+      .catch(() => {
+        /* keep SSR products if the client refresh fails */
+      });
 
     return () => {
       if (ignoreClickTimer.current != null) {
@@ -120,17 +128,23 @@ export function RitualCarousel() {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-20 section-glide relative overflow-hidden border-t border-layali-pink/10">
+    <section className="relative pt-4 pb-8 sm:pt-6 sm:pb-10">
       <div className="glow-orb w-[420px] h-[420px] -right-24 top-10 opacity-45" aria-hidden />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <p className="text-meta tracking-[0.18em] uppercase text-layali-pink mb-3">
-          {t.ritual.eyebrow}
-        </p>
-        <h2 className="font-serif text-heading-lg text-white mb-3">{t.ritual.title}</h2>
-        <p className="text-body-lg text-white/60 max-w-xl">{t.ritual.subtitle}</p>
-        <p className="mt-6 text-eyebrow tracking-[0.22em] uppercase text-white/40">
-          III · {t.ritual.drag}
-        </p>
+      <div className="mx-auto mb-6 flex max-w-7xl items-end justify-between gap-6 px-4 sm:mb-8 sm:px-6 lg:px-8">
+        <div>
+          <p className="text-meta tracking-[0.18em] uppercase text-layali-pink mb-3">
+            {t.ritual.eyebrow}
+          </p>
+          <h2 className="font-serif text-heading-lg text-white mb-2">{t.ritual.title}</h2>
+          <p className="text-body-lg text-white/60 max-w-xl">{t.ritual.subtitle}</p>
+        </div>
+        <Link
+          href="/shop"
+          prefetch
+          className="hidden shrink-0 text-nav uppercase tracking-[0.12em] text-white/70 transition-colors hover:text-layali-pink-light sm:inline-flex"
+        >
+          {t.footer.allProducts}
+        </Link>
       </div>
 
       <div

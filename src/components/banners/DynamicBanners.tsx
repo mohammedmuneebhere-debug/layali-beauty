@@ -12,13 +12,18 @@ type CarouselProps = Omit<React.ComponentProps<typeof BannerCarousel>, 'slides'>
 
 export function DynamicBannerCarousel({
   placement,
+  initialSlides,
   ...props
-}: CarouselProps & { placement: BannerPlacement }) {
-  const [slides, setSlides] = useState<BannerSlide[]>([]);
+}: CarouselProps & { placement: BannerPlacement; initialSlides?: BannerSlide[] }) {
+  const [slides, setSlides] = useState<BannerSlide[]>(initialSlides || []);
 
   useEffect(() => {
     const supabase = createClient();
-    void fetchActiveBanners(supabase, placement).then(setSlides);
+    void fetchActiveBanners(supabase, placement)
+      .then(setSlides)
+      .catch(() => {
+        /* keep SSR / fallback slides */
+      });
   }, [placement]);
 
   if (slides.length === 0) return null;

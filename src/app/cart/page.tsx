@@ -10,6 +10,7 @@ import { FadeIn } from '@/components/ui/FadeIn';
 import { RitualRail } from '@/components/commerce/RitualRail';
 import { toast } from '@/components/ui/Toast';
 import { useCartStore } from '@/store/cart';
+import { useCartSyncView } from '@/components/cart/useCartSyncView';
 import { createClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
@@ -30,28 +31,19 @@ export default function CartPage() {
   const loading = useCartStore((s) => s.loading);
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
-  const refresh = useCartStore((s) => s.refresh);
   const setError = useCartStore((s) => s.setError);
+  const { waiting, failed, retry } = useCartSyncView();
   const [checkingAuth, setCheckingAuth] = useState(false);
-  const [cartReady, setCartReady] = useState(false);
   const [ritual, setRitual] = useState<ShopProduct[]>([]);
   const addItem = useCartStore((s) => s.addItem);
 
   useEffect(() => {
-    const finish = () => setCartReady(true);
-    const unsub = useCartStore.persist.onFinishHydration(finish);
-    if (useCartStore.persist.hasHydrated()) finish();
-    return unsub;
-  }, []);
-
-  useEffect(() => {
-    if (!cartReady) return;
-    void refresh();
+    if (waiting) return;
     track({ event: 'cart_view' });
-  }, [cartReady, refresh]);
+  }, [waiting]);
 
   useEffect(() => {
-    if (!cartReady || items.length === 0) {
+    if (waiting || items.length === 0) {
       void Promise.resolve().then(() => setRitual([]));
       return;
     }
@@ -76,7 +68,7 @@ export default function CartPage() {
     return () => {
       cancelled = true;
     };
-  }, [cartReady, items]);
+  }, [waiting, items]);
 
   const proceedToCheckout = async () => {
     setCheckingAuth(true);
@@ -96,10 +88,30 @@ export default function CartPage() {
     setCheckingAuth(false);
   };
 
-  if (!cartReady) {
+  if (waiting) {
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center py-20 pt-28 bg-transparent">
         <p className="text-white/45">Loading cart…</p>
+      </div>
+    );
+  }
+
+  if (failed) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center py-20 pt-28 bg-transparent">
+        <ShoppingBag className="w-14 h-14 text-layali-pink/60 mb-4" />
+        <h2 className="font-serif text-heading-md text-white mb-2">{t.cart.loadError}</h2>
+        <p className="text-sm text-red-300/90 mb-6 max-w-md text-center px-4">
+          {error || t.cart.loadError}
+        </p>
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <Button type="button" onClick={() => void retry()}>
+            {t.cart.retry}
+          </Button>
+          <Link href="/shop">
+            <Button variant="outline">{t.cart.continue}</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -110,9 +122,6 @@ export default function CartPage() {
         <ShoppingBag className="w-14 h-14 text-layali-pink/60 mb-4" />
         <h2 className="font-serif text-heading-md text-white mb-2">{t.cart.empty}</h2>
         <p className="text-white/45 mb-6">{t.cart.emptyHint}</p>
-        {error ? (
-          <p className="text-sm text-red-300/90 mb-4 max-w-md text-center px-4">{error}</p>
-        ) : null}
         <Link href="/shop">
           <Button>{t.cart.continue}</Button>
         </Link>
@@ -135,14 +144,23 @@ export default function CartPage() {
             className="mb-4 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-200 flex items-start justify-between gap-3"
           >
             <span>{error}</span>
-            <button
-              type="button"
-              className="text-red-200/80 hover:text-white shrink-0"
-              onClick={() => setError(null)}
-              aria-label="Dismiss"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                className="text-red-100 hover:text-white underline-offset-2 hover:underline"
+                onClick={() => void retry()}
+              >
+                {t.cart.retry}
+              </button>
+              <button
+                type="button"
+                className="text-red-200/80 hover:text-white"
+                onClick={() => setError(null)}
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         ) : null}
 

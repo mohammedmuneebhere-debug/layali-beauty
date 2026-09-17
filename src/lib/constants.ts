@@ -2,6 +2,12 @@ export const SITE_URL = 'https://www.layalibeautystore.com';
 
 export const CONTACT_EMAIL = 'layalibeautystore@gmail.com';
 
+/** Customer-facing Commercial Registration number. */
+export const CR_NUMBER = '1010955128';
+
+/** Customer-facing VAT registration number. */
+export const VAT_NUMBER = '311925554900003';
+
 /** Legacy fixed delivery fee (SAR) — used by email/order helpers only.
  * Cart/checkout do NOT use this: Storefront cart has no shipping until Shopify Checkout. */
 /**

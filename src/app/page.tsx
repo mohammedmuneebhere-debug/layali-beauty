@@ -10,7 +10,9 @@ import {
 import { SITE_URL } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/server';
 import { fetchTrendingProducts } from '@/lib/trending';
+import { fetchActiveBanners } from '@/lib/site-banners';
 import { getCatalogProducts, isShopifyConfigured } from '@/lib/shopify';
+import type { BannerSlide } from '@/lib/banners';
 
 export const metadata: Metadata = {
   title: {
@@ -70,11 +72,21 @@ const websiteJsonLd = {
 
 export default async function HomePage() {
   let heroProducts: Awaited<ReturnType<typeof fetchTrendingProducts>> = [];
+  let landingBanners: BannerSlide[] = [];
   let catalogProducts: Awaited<ReturnType<typeof getCatalogProducts>> = [];
   const categoryCovers: Record<string, string> = {};
   try {
     const supabase = await createClient();
-    heroProducts = await fetchTrendingProducts(supabase);
+    try {
+      heroProducts = await fetchTrendingProducts(supabase);
+    } catch {
+      heroProducts = [];
+    }
+    try {
+      landingBanners = await fetchActiveBanners(supabase, 'landing_hero');
+    } catch {
+      landingBanners = [];
+    }
   } catch {
     heroProducts = [];
   }
@@ -101,6 +113,7 @@ export default async function HomePage() {
       <HomePageClient
         heroProducts={heroProducts}
         categoryCovers={categoryCovers}
+        landingBanners={landingBanners}
       />
     </>
   );

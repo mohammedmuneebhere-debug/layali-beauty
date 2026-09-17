@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Mail } from 'lucide-react';
-import { CONTACT_EMAIL } from '@/lib/constants';
+import { CONTACT_EMAIL, CR_NUMBER, VAT_NUMBER } from '@/lib/constants';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 
 const CONTACT_PHONE_DISPLAY = '+966 56 453 6958';
@@ -197,7 +197,7 @@ export function Footer() {
   ];
 
   return (
-    <footer className="section-glide-strong text-white mt-auto border-t border-layali-pink/20 relative overflow-hidden">
+    <footer className="text-white mt-auto relative">
       <div className="glow-orb w-[220px] h-[220px] -bottom-28 -end-12 opacity-15" aria-hidden />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-7 pb-5 lg:pt-9 lg:pb-6">
@@ -278,11 +278,11 @@ export function Footer() {
           <div className="space-y-0.5 text-meta text-white/45 font-mono tracking-wide">
             <p>
               <span className="text-white/30">{t.footer.crNumber}:</span>{' '}
-              <span dir="ltr">7036159924</span>
+              <span dir="ltr">{CR_NUMBER}</span>
             </p>
             <p>
               <span className="text-white/30">{t.footer.vatNumber}:</span>{' '}
-              <span dir="ltr">311925554900003</span>
+              <span dir="ltr">{VAT_NUMBER}</span>
             </p>
           </div>
           <p className="text-meta text-white/40 sm:text-end">

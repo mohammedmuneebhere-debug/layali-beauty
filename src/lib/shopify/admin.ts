@@ -175,10 +175,14 @@ export type AdminFetchResult<T> = {
 export async function shopifyAdminFetch<T>(
   query: string,
   variables?: Record<string, unknown>,
-  options?: { retries?: number; allowPartialData?: boolean }
+  options?: { retries?: number; allowPartialData?: boolean; timeoutMs?: number }
 ): Promise<AdminFetchResult<T>> {
   const retries = options?.retries ?? 3;
   const allowPartialData = options?.allowPartialData === true;
+  const timeoutMs =
+    typeof options?.timeoutMs === 'number' && options.timeoutMs > 0
+      ? options.timeoutMs
+      : ADMIN_GRAPHQL_TIMEOUT_MS;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= retries; attempt++) {
@@ -194,13 +198,11 @@ export async function shopifyAdminFetch<T>(
         },
         body: JSON.stringify({ query, variables }),
         cache: 'no-store',
-        signal: AbortSignal.timeout(ADMIN_GRAPHQL_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (err) {
       lastError = isTimeoutError(err)
-        ? new Error(
-            `Shopify Admin GraphQL timed out after ${ADMIN_GRAPHQL_TIMEOUT_MS}ms`
-          )
+        ? new Error(`Shopify Admin GraphQL timed out after ${timeoutMs}ms`)
         : err instanceof Error
           ? err
           : new Error(String(err));

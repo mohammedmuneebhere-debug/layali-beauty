@@ -1,6 +1,7 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion';
 
 interface FadeInProps {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ interface FadeInProps {
 }
 
 export function FadeIn({ children, delay = 0, className, direction = 'up' }: FadeInProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
   const directions = {
     up: { y: 30, x: 0 },
     down: { y: -30, x: 0 },
@@ -43,7 +44,7 @@ export function StaggerContainer({
   /** Change this when content filters change so stagger re-animates cleanly */
   remountKey?: string | number;
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
 
   return (
     <motion.div
@@ -62,7 +63,7 @@ export function StaggerContainer({
 }
 
 export function StaggerItem({ children, className }: { children: React.ReactNode; className?: string }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = usePrefersReducedMotion();
 
   return (
     <motion.div
