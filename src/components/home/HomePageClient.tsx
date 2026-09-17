@@ -62,6 +62,11 @@ const CATEGORY_FILMS: Record<string, { src: string; poster: string; object: stri
     poster: '/cinematic/category-skincare-poster.jpg',
     object: 'object-[50%_32%]',
   },
+  lenses: {
+    src: '/cinematic/category-lenses.mp4',
+    poster: '/categories/lenses.jpg',
+    object: 'object-center',
+  },
 };
 
 export default function HomePageClient({
