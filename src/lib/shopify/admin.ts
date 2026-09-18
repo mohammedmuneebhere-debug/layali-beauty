@@ -175,7 +175,12 @@ export type AdminFetchResult<T> = {
 export async function shopifyAdminFetch<T>(
   query: string,
   variables?: Record<string, unknown>,
-  options?: { retries?: number; allowPartialData?: boolean; timeoutMs?: number }
+  options?: {
+    retries?: number;
+    allowPartialData?: boolean;
+    timeoutMs?: number;
+    revalidate?: number;
+  }
 ): Promise<AdminFetchResult<T>> {
   const retries = options?.retries ?? 3;
   const allowPartialData = options?.allowPartialData === true;
@@ -198,6 +203,9 @@ export async function shopifyAdminFetch<T>(
         },
         body: JSON.stringify({ query, variables }),
         cache: 'no-store',
+        ...(typeof options?.revalidate === 'number'
+          ? { next: { revalidate: options.revalidate } }
+          : {}),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (err) {

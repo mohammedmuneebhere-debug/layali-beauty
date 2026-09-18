@@ -5,12 +5,24 @@
 import { createHash } from 'node:crypto';
 import { LAYALI_DELIVERY_FEE } from '@/lib/checkout/pricing';
 import { shopifyAdminFetch } from './admin';
+import {
+  isResolvedShopifyOrder,
+  isShopifyOrderGid,
+  retryUntilResolvedOrder,
+} from './order-gid';
+
+export { isShopifyOrderGid } from './order-gid';
 
 /**
  * Customer account Shopify reads. Mutations keep the 90s / 3-retry Admin budget.
  * One 15s attempt so a customer is not held for ~90s×4 while Shopify is down.
  */
-const CUSTOMER_ORDER_ADMIN = { retries: 0, timeoutMs: 15_000, allowPartialData: true } as const;
+const CUSTOMER_ORDER_ADMIN = {
+  retries: 0,
+  timeoutMs: 15_000,
+  allowPartialData: true,
+  revalidate: 0,
+} as const;
 
 export type DraftOrderShippingAddress = {
   firstName: string;
@@ -693,12 +705,85 @@ export async function createCodDraftOrder(options: {
   };
 }
 
+export type CodOrderResolveContext = {
+  userId: string;
+  userEmail: string;
+  submissionId: string;
+};
+
+function unresolvedDraftConfirmation(draft: {
+  id: string;
+  name: string;
+  totalPrice?: string | number | null;
+  currencyCode?: string | null;
+}): CreatedShopifyOrder {
+  return {
+    draftOrderId: draft.id,
+    orderId: draft.id,
+    orderName: draft.name,
+    financialStatus: 'PENDING',
+    totalAmount: Number(draft.totalPrice || 0),
+    currencyCode: draft.currencyCode || 'SAR',
+    paymentGatewayNames: [],
+    orderUnresolved: true,
+  };
+}
+
+/**
+ * After draftOrderComplete, wait briefly for draft.order.id, then look up by
+ * user/submission tags. Never stores a DraftOrder GID as shopify_order_links.
+ */
+async function resolveOrderAfterDraftComplete(
+  draft: { id: string; name: string; totalPrice?: string | null; currencyCode?: string | null },
+  context?: CodOrderResolveContext,
+  opts?: { allowUnresolved?: boolean }
+): Promise<CreatedShopifyOrder> {
+  try {
+    const resolved = await retryUntilResolvedOrder(() => resolveCompletedDraftOrder(draft.id));
+    if (isResolvedShopifyOrder(resolved)) return resolved;
+  } catch (err) {
+    console.error('Layali COD: post-complete order resolve failed', {
+      draftOrderId: draft.id,
+      message: err instanceof Error ? err.message : String(err),
+    });
+    if (!opts?.allowUnresolved && !context) throw err;
+  }
+
+  if (context?.userId && context.userEmail && context.submissionId) {
+    try {
+      const tagged = await findCompletedCheckoutBySubmissionId(
+        context.submissionId,
+        context.userId,
+        context.userEmail
+      );
+      if (tagged && isShopifyOrderGid(tagged.orderId)) {
+        return { ...tagged, orderUnresolved: false };
+      }
+    } catch (err) {
+      console.error('Layali COD: tag fallback after complete failed', {
+        draftOrderId: draft.id,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  if (opts?.allowUnresolved) {
+    console.warn('Layali COD: Order GID unresolved after retry and tag fallback', {
+      draftOrderId: draft.id,
+    });
+    return unresolvedDraftConfirmation(draft);
+  }
+
+  throw new Error('Shopify Order GID was not available after draft completion');
+}
+
 /**
  * Completes a draft order as payment-pending (COD / unpaid).
- * Completion is authoritative; Order field resolution is a separate step.
+ * Completion is authoritative; Order GID resolution retries, then uses tags.
  */
 export async function completeCodDraftOrder(
-  draftOrderId: string
+  draftOrderId: string,
+  context?: CodOrderResolveContext
 ): Promise<CreatedShopifyOrder> {
   const { data } = await shopifyAdminFetch<{
     draftOrderComplete: {
@@ -730,35 +815,10 @@ export async function completeCodDraftOrder(
     throw new Error('Shopify did not return a completed draft order');
   }
 
-  const status = (payload.draftOrder.status || '').toUpperCase();
-  if (status !== 'COMPLETED') {
-    // Rare race: re-resolve; if still incomplete, surface failure (safe to investigate).
-    return resolveCompletedDraftOrder(payload.draftOrder.id);
-  }
-
-  try {
-    return await resolveCompletedDraftOrder(payload.draftOrder.id);
-  } catch (err) {
-    // Draft is already COMPLETED — never treat as create failure.
-    console.error('Layali COD: post-complete order resolve failed; returning draft confirmation', {
-      draftOrderId: payload.draftOrder.id,
-      message: err instanceof Error ? err.message : String(err),
-    });
-    return {
-      draftOrderId: payload.draftOrder.id,
-      orderId: payload.draftOrder.id,
-      orderName: payload.draftOrder.name,
-      financialStatus: 'PENDING',
-      totalAmount: Number(payload.draftOrder.totalPrice || 0),
-      currencyCode: payload.draftOrder.currencyCode || 'SAR',
-      paymentGatewayNames: [],
-      orderUnresolved: true,
-    };
-  }
-}
-
-export function isShopifyOrderGid(id: string | null | undefined): boolean {
-  return Boolean(id && id.startsWith('gid://shopify/Order/'));
+  const completed = (payload.draftOrder.status || '').toUpperCase() === 'COMPLETED';
+  return resolveOrderAfterDraftComplete(payload.draftOrder, context, {
+    allowUnresolved: completed,
+  });
 }
 
 /** Customer account history — additive Order reads only. Does not affect COD mutations. */
@@ -836,6 +896,12 @@ const CUSTOMER_ORDER_FIELDS = `#graphql
         company
         number
         url
+      }
+      events(first: 10) {
+        nodes {
+          status
+          happenedAt
+        }
       }
     }
   }
@@ -998,6 +1064,12 @@ export type ShopifyCustomerOrderNode = {
       number?: string | null;
       url?: string | null;
     }[];
+    events?: {
+      nodes?: {
+        status?: string | null;
+        happenedAt?: string | null;
+      }[];
+    } | null;
   }[];
 };
 

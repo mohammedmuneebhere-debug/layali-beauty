@@ -3,7 +3,8 @@
  * Never call from the browser. Service role only — customer JWTs cannot insert/update.
  */
 import { createServiceClient, hasServiceRoleKey } from '@/lib/supabase/service';
-import { isShopifyOrderGid } from '@/lib/shopify/admin-orders';
+import { decideOrderLinkWrite } from '@/lib/account/order-link-recovery';
+import { isShopifyOrderGid } from '@/lib/shopify/order-gid';
 
 export type OrderLinkUpsertResult = 'linked' | 'refused_foreign' | 'skipped' | 'failed';
 
@@ -49,9 +50,13 @@ export async function upsertOwnedShopifyOrderLink(params: {
     return 'failed';
   }
 
-  if (existing?.supabase_user_id && existing.supabase_user_id !== params.userId) {
-    return 'refused_foreign';
-  }
+  const decision = decideOrderLinkWrite({
+    actorUserId: params.userId,
+    shopifyOrderId: params.shopifyOrderId,
+    existingOwnerId: existing?.supabase_user_id || null,
+  });
+  if (decision === 'skipped') return 'skipped';
+  if (decision === 'refused_foreign') return 'refused_foreign';
 
   const patch: Record<string, unknown> = {
     shopify_order_name: shopifyOrderName,

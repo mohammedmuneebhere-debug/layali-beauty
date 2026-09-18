@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
+    "test:order-status": "node scripts/order-status-smoke.mjs",
+    "test:order-links": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/order-link-smoke.mts",
     "audit:mobile": "node scripts/mobile-audit.mjs",
     "audit:cart": "node scripts/cart-ui-audit.mjs",
     "migrate:products:dry-run": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types --env-file=.env.local scripts/migrate-products-to-shopify.mts --dry-run",

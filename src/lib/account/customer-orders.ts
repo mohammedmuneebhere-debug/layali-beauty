@@ -9,6 +9,7 @@ import {
   isShopifyOrderGid,
   type ShopifyCustomerOrderNode,
 } from '@/lib/shopify/admin-orders';
+import { mergeRecoveredOrderLinks, missingOwnedOrderRefs } from '@/lib/account/order-link-recovery';
 import { shopifyImageUrl } from '@/lib/shopify/image';
 import {
   displayOrderNumber,
@@ -21,14 +22,17 @@ import type {
   CustomerOrderItem,
   CustomerOrderSummary,
   CustomerTracking,
-  FulfillmentStatusKey,
-  ShipmentStatusKey,
-  TimelineStepId,
-  TimelineStepState,
 } from '@/lib/account/order-types';
-import { TIMELINE_STEP_IDS } from '@/lib/account/order-types';
 import { safeCustomerTrackingUrl } from '@/lib/account/safe-tracking-url';
 import { upsertOwnedShopifyOrderLink } from '@/lib/account/shopify-order-links';
+import {
+  activeFulfillments,
+  fulfillmentShipmentStatus,
+  mapCustomerFacingStatus,
+  mapFulfillmentStatusKey,
+  mapShipmentStatusKey,
+  mapTimeline,
+} from '@/lib/account/order-status-map';
 
 export type {
   CustomerOrderDetail,
@@ -39,6 +43,8 @@ export type {
   TimelineStepId,
   TimelineStepState,
 } from '@/lib/account/order-types';
+
+export { mapCustomerFacingStatus, mapTimeline } from '@/lib/account/order-status-map';
 
 type OrderLinkRow = {
   shopify_order_id: string;
@@ -68,191 +74,6 @@ function isCodOrder(node: ShopifyCustomerOrderNode): boolean {
   return true;
 }
 
-type FulfillmentNode = NonNullable<ShopifyCustomerOrderNode['fulfillments']>[number];
-
-function isActiveFulfillment(f: FulfillmentNode): boolean {
-  const status = upper(f.status);
-  return status !== 'CANCELLED' && status !== 'ERROR' && status !== 'FAILURE';
-}
-
-function activeFulfillments(node: ShopifyCustomerOrderNode): FulfillmentNode[] {
-  return (node.fulfillments || []).filter(isActiveFulfillment);
-}
-
-const DELIVERED_DISPLAY = new Set(['DELIVERED']);
-const OUT_FOR_DELIVERY_DISPLAY = new Set(['OUT_FOR_DELIVERY']);
-const SHIPPED_DISPLAY = new Set([
-  'IN_TRANSIT',
-  'FULFILLED',
-  'MARKED_AS_FULFILLED',
-  'PICKED_UP',
-  'READY_FOR_PICKUP',
-  'ATTEMPTED_DELIVERY',
-  'NOT_DELIVERED',
-  'OUT_FOR_DELIVERY',
-  'DELIVERED',
-]);
-
-function fulfillmentDelivered(node: ShopifyCustomerOrderNode): boolean {
-  return activeFulfillments(node).some((f) => {
-    if (f.deliveredAt) return true;
-    return DELIVERED_DISPLAY.has(upper(f.displayStatus));
-  });
-}
-
-function fulfillmentOutForDelivery(node: ShopifyCustomerOrderNode): boolean {
-  return activeFulfillments(node).some((f) => OUT_FOR_DELIVERY_DISPLAY.has(upper(f.displayStatus)));
-}
-
-function fulfillmentShipped(node: ShopifyCustomerOrderNode): boolean {
-  const display = upper(node.displayFulfillmentStatus);
-  if (display === 'FULFILLED' || display === 'PARTIALLY_FULFILLED') return true;
-
-  return activeFulfillments(node).some((f) => {
-    const st = upper(f.status);
-    const ds = upper(f.displayStatus);
-    const hasTracking = (f.trackingInfo || []).some((t) => Boolean(t.number || t.url));
-    if (f.inTransitAt || f.deliveredAt) return true;
-    if (hasTracking) return true;
-    if (st === 'SUCCESS') return true;
-    return SHIPPED_DISPLAY.has(ds);
-  });
-}
-
-function mapFulfillmentStatusKey(status: string | null | undefined): FulfillmentStatusKey | null {
-  switch (upper(status)) {
-    case 'PENDING':
-      return 'pending';
-    case 'OPEN':
-      return 'open';
-    case 'SUCCESS':
-      return 'success';
-    case 'CANCELLED':
-      return 'cancelled';
-    case 'ERROR':
-      return 'error';
-    case 'FAILURE':
-      return 'failure';
-    default:
-      return null;
-  }
-}
-
-function mapShipmentStatusKey(displayStatus: string | null | undefined): ShipmentStatusKey | null {
-  switch (upper(displayStatus)) {
-    case 'CONFIRMED':
-      return 'confirmed';
-    case 'IN_TRANSIT':
-      return 'in_transit';
-    case 'OUT_FOR_DELIVERY':
-      return 'out_for_delivery';
-    case 'DELIVERED':
-      return 'delivered';
-    case 'DELAYED':
-      return 'delayed';
-    case 'READY_FOR_PICKUP':
-      return 'ready_for_pickup';
-    case 'PICKED_UP':
-      return 'picked_up';
-    case 'ATTEMPTED_DELIVERY':
-      return 'attempted_delivery';
-    case 'FULFILLED':
-    case 'MARKED_AS_FULFILLED':
-      return 'fulfilled';
-    default:
-      return null;
-  }
-}
-
-function firstTimestamp(
-  fulfillments: FulfillmentNode[],
-  pick: (f: FulfillmentNode) => string | null | undefined
-): string | null {
-  for (const f of fulfillments) {
-    const value = pick(f);
-    if (value) return value;
-  }
-  return null;
-}
-
-export function mapTimeline(node: ShopifyCustomerOrderNode): {
-  currentStep: TimelineStepId;
-  timeline: { id: TimelineStepId; state: TimelineStepState; at: string | null }[];
-} {
-  const cancelled = Boolean(node.cancelledAt);
-  const financial = upper(node.displayFinancialStatus);
-  const fulfillment = upper(node.displayFulfillmentStatus);
-  const onHold = fulfillment === 'ON_HOLD';
-  const orderConfirmed = !cancelled && financial !== 'VOIDED' && node.confirmed !== false;
-
-  const delivered = !cancelled && fulfillmentDelivered(node);
-  const outForDeliveryNow = !cancelled && fulfillmentOutForDelivery(node);
-  const shipped = !cancelled && (delivered || outForDeliveryNow || fulfillmentShipped(node));
-  const preparing =
-    !cancelled && orderConfirmed && !onHold && (shipped || !['', 'ON_HOLD'].includes(fulfillment));
-
-  let currentStep: TimelineStepId = 'placed';
-  if (!cancelled) {
-    if (delivered) currentStep = 'delivered';
-    else if (outForDeliveryNow) currentStep = 'out_for_delivery';
-    else if (shipped) currentStep = 'shipped';
-    else if (preparing) currentStep = 'preparing';
-    else if (orderConfirmed) currentStep = 'confirmed';
-  }
-
-  const active = activeFulfillments(node);
-  const atById: Record<TimelineStepId, string | null> = {
-    placed: node.createdAt || null,
-    confirmed: orderConfirmed ? node.createdAt || null : null,
-    preparing: orderConfirmed ? node.createdAt || null : null,
-    shipped:
-      firstTimestamp(active, (f) => f.inTransitAt) || firstTimestamp(active, (f) => f.createdAt),
-    out_for_delivery: firstTimestamp(active, (f) =>
-      OUT_FOR_DELIVERY_DISPLAY.has(upper(f.displayStatus)) || f.deliveredAt
-        ? f.deliveredAt || f.inTransitAt || f.createdAt
-        : null
-    ),
-    delivered: firstTimestamp(active, (f) => f.deliveredAt),
-  };
-
-  const reached: Record<TimelineStepId, boolean> = {
-    placed: true,
-    confirmed: orderConfirmed,
-    preparing,
-    shipped,
-    out_for_delivery: outForDeliveryNow || delivered,
-    delivered,
-  };
-
-  const currentIndex = TIMELINE_STEP_IDS.indexOf(currentStep);
-
-  const timeline = TIMELINE_STEP_IDS.map((id, index) => {
-    let state: TimelineStepState = 'upcoming';
-    if (cancelled && id !== 'placed') {
-      state = 'upcoming';
-    } else if (id === currentStep) {
-      state = 'current';
-    } else if (reached[id] && index < currentIndex) {
-      state = 'complete';
-    } else if (delivered && id !== 'delivered') {
-      state = 'complete';
-    }
-    return {
-      id,
-      state,
-      at: state === 'upcoming' ? null : atById[id],
-    };
-  });
-
-  if (!cancelled && currentStep === 'delivered') {
-    for (const step of timeline) {
-      if (step.id !== 'delivered') step.state = 'complete';
-    }
-  }
-
-  return { currentStep: cancelled ? 'placed' : currentStep, timeline };
-}
-
 function mapItems(node: ShopifyCustomerOrderNode): CustomerOrderItem[] {
   return (node.lineItems?.nodes || []).map((line) => {
     const quantity = Number(line.quantity || 0) || 0;
@@ -279,7 +100,7 @@ function mapTracking(node: ShopifyCustomerOrderNode): CustomerTracking[] {
 
   for (const f of activeFulfillments(node)) {
     const fulfillmentStatusKey = mapFulfillmentStatusKey(f.status);
-    const shipmentStatusKey = mapShipmentStatusKey(f.displayStatus);
+    const shipmentStatusKey = mapShipmentStatusKey(fulfillmentShipmentStatus(f));
     const estimatedDeliveryAt = f.estimatedDeliveryAt || null;
     const deliveredAt = f.deliveredAt || null;
     const infos = (f.trackingInfo || [])
@@ -340,8 +161,7 @@ function mapSummary(
 
   const items = mapItems(node);
   const total = moneyAmount(node.totalPriceSet);
-  const { currentStep } = mapTimeline(node);
-  const cancelled = Boolean(node.cancelledAt);
+  const facing = mapCustomerFacingStatus(node);
   const financial = (node.displayFinancialStatus || '').toUpperCase();
   const paymentDue =
     isCodOrder(node) && !['PAID', 'PARTIALLY_PAID', 'REFUNDED', 'PARTIALLY_REFUNDED'].includes(financial);
@@ -357,9 +177,9 @@ function mapSummary(
     currencyCode: total.currencyCode,
     paymentMethod: 'cod',
     paymentDue,
-    cancelled,
-    currentStep: cancelled ? 'placed' : currentStep,
-    statusKey: cancelled ? 'cancelled' : currentStep,
+    cancelled: facing.cancelled,
+    currentStep: facing.currentStep,
+    statusKey: facing.statusKey,
   };
 }
 
@@ -394,8 +214,9 @@ function mapDetail(
       : null,
     tracking: mapTracking(node),
     timeline,
-    estimatedDeliveryAt: firstTimestamp(activeFulfillments(node), (f) => f.estimatedDeliveryAt),
-    deliveredAt: firstTimestamp(activeFulfillments(node), (f) => f.deliveredAt),
+    estimatedDeliveryAt:
+      activeFulfillments(node).find((f) => f.estimatedDeliveryAt)?.estimatedDeliveryAt || null,
+    deliveredAt: activeFulfillments(node).find((f) => f.deliveredAt)?.deliveredAt || null,
   };
 }
 
@@ -438,22 +259,18 @@ async function loadOwnedLinksWithRecovery(
   userId: string
 ): Promise<OrderLinkRow[]> {
   let links = await loadOwnedLinks(supabase, userId);
-  if (links.some((l) => isShopifyOrderGid(l.shopify_order_id))) return links;
 
   try {
     const discovered = await fetchShopifyOrderRefsForUser(userId);
-    if (!discovered.length) return links;
-    await persistDiscoveredLinks(userId, discovered);
+    const missing = missingOwnedOrderRefs(
+      links.map((row) => row.shopify_order_id),
+      discovered
+    );
+    if (!missing.length) return links;
+
+    await persistDiscoveredLinks(userId, missing);
     links = await loadOwnedLinks(supabase, userId);
-    if (!links.some((l) => isShopifyOrderGid(l.shopify_order_id))) {
-      return discovered
-        .filter((order) => isShopifyOrderGid(order.id))
-        .map((order) => ({
-          shopify_order_id: order.id,
-          shopify_order_name: order.name,
-          created_at: null,
-        }));
-    }
+    return mergeRecoveredOrderLinks(links, discovered);
   } catch (err) {
     console.error('Layali customer orders: ownership-tag recovery failed', err);
   }

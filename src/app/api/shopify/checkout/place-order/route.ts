@@ -453,7 +453,11 @@ export async function POST(req: NextRequest) {
 
       let order: CreatedShopifyOrder;
       try {
-        order = await completeCodDraftOrder(draftOrderId);
+        order = await completeCodDraftOrder(draftOrderId, {
+          userId: user.id,
+          userEmail: user.email!,
+          submissionId,
+        });
       } catch (completeErr) {
         // If complete failed but a completed draft now exists for this submission, recover.
         const recovered = await findCompletedCheckoutBySubmissionId(
