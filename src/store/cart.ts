@@ -386,19 +386,36 @@ export const useCartStore = create<CartState>()(
         const controller = new AbortController();
         refreshAbort = controller;
         const timeoutMs = cartFetchTimeoutMs();
-        const timer =
-          timeoutMs > 0
-            ? setTimeout(() => controller.abort(), timeoutMs)
-            : null;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
         set({ loading: true, syncStatus: 'loading', error: null });
 
         refreshInFlight = (async () => {
           try {
-            const res = await fetch(`/api/shopify/cart?cartId=${encodeURIComponent(cartId)}`, {
+            const request = fetch(`/api/shopify/cart?cartId=${encodeURIComponent(cartId)}`, {
               signal: controller.signal,
               cache: 'no-store',
             });
+            // AbortSignal alone can fail to reject a hung fetch (patched/browser fetch).
+            // Race a timeout so loading cannot stay true indefinitely.
+            const res =
+              timeoutMs > 0
+                ? await Promise.race([
+                    request,
+                    new Promise<Response>((_, reject) => {
+                      timeoutId = setTimeout(() => {
+                        controller.abort();
+                        const err = new Error('Unable to load cart. Please try again.');
+                        err.name = 'TimeoutError';
+                        reject(err);
+                      }, timeoutMs);
+                    }),
+                  ])
+                : await request;
+            if (timeoutId) {
+              clearTimeout(timeoutId);
+              timeoutId = null;
+            }
             const json = (await res.json()) as {
               cart?: ShopifyCart | null;
               error?: string;
@@ -437,7 +454,7 @@ export const useCartStore = create<CartState>()(
               error: cartLoadErrorMessage(err),
             });
           } finally {
-            if (timer) clearTimeout(timer);
+            if (timeoutId) clearTimeout(timeoutId);
             if (generation === refreshGeneration) {
               lastRefreshCompletedAt = Date.now();
               refreshInFlight = null;
@@ -454,14 +471,25 @@ export const useCartStore = create<CartState>()(
       // Next.js SSR: rehydrate once from CartHydrator so server/client first paint both wait.
       skipHydration: true,
       partialize: (s) => ({ cartId: s.cartId, countryCode: s.countryCode }),
-      // Never rehydrate line items / totals from localStorage — Shopify is SOT.
+      // Persist only restores cartId/country. Never wipe Shopify lines or bounce
+      // a finished/in-flight sync back to "loading" (that trapped Loading cart…).
       merge: (persisted, current) => {
         const p = (persisted || {}) as Partial<CartState>;
-        const cartId = typeof p.cartId === 'string' ? p.cartId : null;
+        const persistedCartId = typeof p.cartId === 'string' ? p.cartId : null;
+        const persistedCountry = typeof p.countryCode === 'string' ? p.countryCode : null;
+
+        if (current.hydrated || current.syncStatus === 'ready' || current.syncStatus === 'error') {
+          return {
+            ...current,
+            cartId: current.cartId ?? persistedCartId,
+            countryCode: current.countryCode ?? persistedCountry,
+          };
+        }
+
         return {
           ...current,
-          cartId,
-          countryCode: typeof p.countryCode === 'string' ? p.countryCode : null,
+          cartId: persistedCartId,
+          countryCode: persistedCountry,
           items: [],
           lines: [],
           totalQuantity: 0,
@@ -470,7 +498,7 @@ export const useCartStore = create<CartState>()(
           discounts: [],
           checkoutUrl: null,
           error: null,
-          syncStatus: cartId ? 'loading' : current.syncStatus,
+          syncStatus: persistedCartId ? 'loading' : current.syncStatus,
         };
       },
     }
@@ -498,19 +526,39 @@ function readPersistedCartSlice(): { cartId: string | null; countryCode: string 
 export function bootCartStore(): Promise<void> {
   if (cartStoreBoot) return cartStoreBoot;
   cartStoreBoot = (async () => {
-    const persisted = readPersistedCartSlice();
-    useCartStore.setState({
-      cartId: persisted.cartId,
-      countryCode: persisted.countryCode ?? useCartStore.getState().countryCode,
-      hydrated: true,
-      syncStatus: persisted.cartId ? 'loading' : 'ready',
-    });
     try {
-      void useCartStore.persist.rehydrate();
-    } catch {
-      // Persist is best-effort; Shopify refresh is the source of truth.
+      const persisted = readPersistedCartSlice();
+      useCartStore.setState({
+        cartId: persisted.cartId,
+        countryCode: persisted.countryCode ?? useCartStore.getState().countryCode,
+        hydrated: true,
+        syncStatus: persisted.cartId ? 'loading' : 'ready',
+      });
+      try {
+        void useCartStore.persist.rehydrate();
+      } catch {
+        // Persist is best-effort; Shopify refresh is the source of truth.
+      }
+      await useCartStore.getState().refresh({ force: true });
+    } catch (err) {
+      const cartId = useCartStore.getState().cartId;
+      useCartStore.setState({
+        hydrated: true,
+        loading: false,
+        syncStatus: cartId ? 'error' : 'ready',
+        error: cartId ? cartLoadErrorMessage(err) : null,
+      });
+    } finally {
+      const s = useCartStore.getState();
+      if (!s.hydrated || s.syncStatus === 'idle' || (s.syncStatus === 'loading' && !refreshInFlight)) {
+        useCartStore.setState({
+          hydrated: true,
+          loading: false,
+          syncStatus: s.cartId ? 'error' : 'ready',
+          error: s.cartId ? s.error || 'Unable to load cart. Please try again.' : null,
+        });
+      }
     }
-    await useCartStore.getState().refresh({ force: true });
   })();
   return cartStoreBoot;
 }

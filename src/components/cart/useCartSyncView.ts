@@ -14,10 +14,10 @@ export function useCartSyncView() {
   const error = useCartStore((s) => s.error);
   const refresh = useCartStore((s) => s.refresh);
 
+  // SSR and the first client paint both have hydrated=false. After boot,
+  // empty carts wait only while sync is idle/loading — never after ready/error.
   const waiting =
-    !hydrated ||
-    syncStatus === 'idle' ||
-    (syncStatus === 'loading' && items.length === 0);
+    !hydrated || (items.length === 0 && syncStatus !== 'ready' && syncStatus !== 'error');
   const failed = syncStatus === 'error' && items.length === 0;
 
   return {
