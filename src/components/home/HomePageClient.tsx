@@ -8,7 +8,7 @@ import { ArrowRight, Sparkles, Droplets, Leaf } from 'lucide-react';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { RitualCarousel } from '@/components/home/RitualCarousel';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
-import { HeroStage } from '@/components/home/HeroStage';
+import { HeroCampaignFeature } from '@/components/home/HeroCampaignFeature';
 import { CinematicVideo } from '@/components/cinematic/CinematicVideo';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
@@ -103,7 +103,7 @@ export default function HomePageClient({
 
   return (
     <div className="page-shell text-white">
-      {/* Hero — concept UI */}
+      {/* Hero */}
       <section
         ref={heroRef}
         className="relative min-h-[100svh] overflow-hidden pt-16 lg:pt-20"
@@ -117,40 +117,55 @@ export default function HomePageClient({
           style={reduceMotion ? undefined : { opacity }}
           className="relative z-10 min-h-[calc(100svh-4rem)] lg:min-h-[calc(100svh-5rem)]"
         >
-          <HeroStage />
-          <div className="hero-copy-shade pointer-events-none absolute inset-y-0 start-0 z-[2] hidden w-[min(52%,40rem)] bg-gradient-to-r from-black via-black/75 to-transparent lg:block" />
-          <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col justify-start px-4 pt-5 pb-36 sm:px-6 lg:min-h-[calc(100svh-5rem)] lg:justify-center lg:px-8 lg:py-24 lg:pb-24">
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.85 }}
-              className="relative z-10 max-w-2xl"
-            >
-              {t.hero.eyebrow ? (
-                <p className="text-meta tracking-[0.18em] text-layali-gold-light mb-2.5 lg:mb-6 uppercase">
-                  {t.hero.eyebrow}
+          <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-7xl flex-col justify-center px-4 py-16 sm:px-6 lg:min-h-[calc(100svh-5rem)] lg:px-8 lg:py-24">
+            <div className="grid w-full items-center gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)] lg:gap-8 xl:gap-10">
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.85 }}
+                className="relative z-10 max-w-2xl"
+              >
+                {t.hero.eyebrow ? (
+                  <p className="text-meta tracking-[0.18em] text-layali-gold-light mb-2.5 lg:mb-6 uppercase">
+                    {t.hero.eyebrow}
+                  </p>
+                ) : null}
+                <h1 className="font-serif text-hero max-lg:!text-[1.875rem] max-lg:!leading-[1.08] text-white mb-0.5 lg:mb-1">
+                  {t.hero.titleBeauty}
+                </h1>
+                <p className="font-serif text-hero max-lg:!text-[1.875rem] max-lg:!leading-[1.08] text-layali-pink-light mb-3 lg:mb-6">
+                  {t.hero.titleRedefined}
                 </p>
-              ) : null}
-              <h1 className="font-serif text-hero max-lg:!text-[1.875rem] max-lg:!leading-[1.08] text-white mb-0.5 lg:mb-1">{t.hero.titleBeauty}</h1>
-              <p className="font-serif text-hero max-lg:!text-[1.875rem] max-lg:!leading-[1.08] text-layali-pink-light mb-3 lg:mb-6">{t.hero.titleRedefined}</p>
-              <p className="text-body-lg max-lg:!text-[0.8125rem] max-lg:!leading-snug text-white/70 max-w-md mb-5 lg:mb-10">{t.hero.subtitle}</p>
-              <div className="flex flex-wrap items-center gap-3 lg:gap-5">
-                <Link
-                  href="/shop"
-                  prefetch
-                  className="inline-flex w-auto items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-5 py-2 text-[0.7rem] tracking-[0.08em] lg:px-8 lg:py-3.5 lg:text-nav lg:tracking-[0.1em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
-                >
-                  {t.hero.shopCta} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
-                </Link>
-                <Link
-                  href="/survey"
-                  prefetch
-                  className="text-[0.7rem] tracking-[0.1em] lg:text-nav lg:tracking-[0.12em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
-                >
-                  {t.hero.ritualCta}
-                </Link>
-              </div>
-            </motion.div>
+                <p className="text-body-lg max-lg:!text-[0.8125rem] max-lg:!leading-snug text-white/70 max-w-md mb-5 lg:mb-10">
+                  {t.hero.subtitle}
+                </p>
+                <div className="flex flex-wrap items-center gap-3 lg:gap-5">
+                  <Link
+                    href="/shop"
+                    prefetch
+                    className="inline-flex w-auto items-center justify-center gap-2 rounded-full font-medium uppercase transition-all duration-300 px-5 py-2 text-[0.7rem] tracking-[0.08em] lg:px-8 lg:py-3.5 lg:text-nav lg:tracking-[0.1em] bg-layali-pink-glow text-white hover:bg-layali-pink shadow-[0_0_20px_rgba(212,46,124,0.35)] btn-glow"
+                  >
+                    {t.hero.shopCta} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+                  </Link>
+                  <Link
+                    href="/survey"
+                    prefetch
+                    className="text-[0.7rem] tracking-[0.1em] lg:text-nav lg:tracking-[0.12em] uppercase text-white/80 hover:text-layali-pink-light transition-colors"
+                  >
+                    {t.hero.ritualCta}
+                  </Link>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.85, delay: 0.1 }}
+                className="relative z-10 flex w-full justify-center lg:justify-end"
+              >
+                <HeroCampaignFeature />
+              </motion.div>
+            </div>
           </div>
         </motion.div>
 
