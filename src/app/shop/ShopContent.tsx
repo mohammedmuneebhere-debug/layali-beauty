@@ -14,10 +14,38 @@ import { PRODUCT_CATEGORIES, STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
 import type { ShopProduct } from '@/lib/catalog';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
+import { PromoArtwork } from '@/components/home/PromoArtwork';
 import { collectVendors, PAGE_SIZE } from '@/lib/shop-filters';
 import { track } from '@/lib/track';
 
 const VALID_CATEGORIES = new Set<string>(STOREFRONT_NAV_CATEGORIES.map((c) => c.value));
+
+/** Category-specific campaign merch — only for makeup / skincare browsing */
+const CATEGORY_PROMO: Record<
+  string,
+  { src: string; alt: string; width: number; height: number }
+> = {
+  makeup: {
+    src: '/ads/layali-promo-makeup-editorial.jpg',
+    alt: 'Layali makeup — up to 50% off favourite brands',
+    width: 1024,
+    height: 523,
+  },
+  skincare: {
+    src: '/ads/layali-shop-skincare-banner.jpg',
+    alt: 'Layali skincare promotion — up to 30% off',
+    width: 1000,
+    height: 650,
+  },
+};
+
+/** General shop campaign strip (Image 2) — only when no category filter */
+const SHOP_CAMPAIGN_STRIP = {
+  src: '/ads/layali-promo-national-day-strip.png',
+  alt: 'Celebrate Saudi National Day — special offers on makeup and skincare',
+  width: 475,
+  height: 92,
+};
 
 function normalizeCategory(value: string | null | undefined) {
   if (!value) return '';
@@ -464,6 +492,31 @@ export default function ShopContent() {
         )}
 
         {!filtersOpen && <div className="flex flex-wrap gap-2 mb-8">{categoryChips}</div>}
+
+        {CATEGORY_PROMO[category] ? (
+          <div className="mb-8">
+            <PromoArtwork
+              src={CATEGORY_PROMO[category].src}
+              alt={CATEGORY_PROMO[category].alt}
+              href={`/shop?category=${category}`}
+              width={CATEGORY_PROMO[category].width}
+              height={CATEGORY_PROMO[category].height}
+            />
+          </div>
+        ) : !category ? (
+          <div className="mb-6 sm:mb-8">
+            <div className="mx-auto w-full max-w-3xl">
+              <PromoArtwork
+                src={SHOP_CAMPAIGN_STRIP.src}
+                alt={SHOP_CAMPAIGN_STRIP.alt}
+                href="/shop"
+                width={SHOP_CAMPAIGN_STRIP.width}
+                height={SHOP_CAMPAIGN_STRIP.height}
+                className="rounded-sm"
+              />
+            </div>
+          </div>
+        ) : null}
 
         {!loading && filtered.length > 0 && (
           <p className="text-sm text-white/45 mb-5">

@@ -8,6 +8,8 @@ import { ArrowRight, Sparkles, Droplets, Leaf } from 'lucide-react';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
 import { RitualCarousel } from '@/components/home/RitualCarousel';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
+import { NationalDayFeature } from '@/components/home/NationalDayFeature';
+import { PromoMerchSplit } from '@/components/home/PromoMerchSplit';
 import { HeroCampaignFeature } from '@/components/home/HeroCampaignFeature';
 import { CinematicVideo } from '@/components/cinematic/CinematicVideo';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
@@ -101,6 +103,11 @@ export default function HomePageClient({
     href: cat.value,
   }));
 
+  const makeupLabel =
+    (t.categories.makeup as string | undefined) ||
+    STOREFRONT_NAV_CATEGORIES.find((c) => c.value === 'makeup')?.label ||
+    'Makeup';
+
   return (
     <div className="page-shell text-white">
       {/* Hero */}
@@ -180,7 +187,7 @@ export default function HomePageClient({
         </div>
       </section>
 
-      {/* Shop by Category — Charlotte Tilbury / Ounass: merch path sits on the hero */}
+      {/* Shop by Category */}
       <section className="relative pt-12 pb-6 sm:pt-16 sm:pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn className="mb-6 sm:mb-8 flex items-end justify-between gap-6">
@@ -202,41 +209,61 @@ export default function HomePageClient({
                 categoryCovers[cat.href] ||
                 heroProducts.find((p) => p.category === cat.href && p.image_url)?.image_url;
               return (
-              <FadeIn key={cat.key} delay={i * 0.08}>
-                <Link
-                  href={`/shop?category=${cat.href}`}
-                  className="block focus-ring rounded-2xl"
-                >
-                  <div className="aspect-[4/5] lg:aspect-[3/4] rounded-2xl bg-black/55 border border-layali-pink/25 flex items-end justify-start card-hover relative overflow-hidden group">
-                    {film ? (
-                      <CinematicVideo
-                        sources={[{ src: film.src, type: 'video/mp4' }]}
-                        poster={film.poster}
-                        playbackMode="independent"
-                        className={`absolute inset-0 transition-transform duration-500 group-hover:scale-105 ${film.object}`}
-                      />
-                    ) : cover ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={cover}
-                        alt=""
-                        className={`absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105`}
-                      />
-                    ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                    <span className="relative px-3 pb-3 font-serif text-sm sm:text-heading-sm text-white">
-                      {cat.label}
-                    </span>
-                  </div>
-                </Link>
-              </FadeIn>
+                <FadeIn key={cat.key} delay={i * 0.08}>
+                  <Link
+                    href={`/shop?category=${cat.href}`}
+                    className="block focus-ring rounded-2xl"
+                  >
+                    <div className="aspect-[4/5] lg:aspect-[3/4] rounded-2xl bg-black/55 border border-layali-pink/25 flex items-end justify-start card-hover relative overflow-hidden group">
+                      {film ? (
+                        <CinematicVideo
+                          sources={[{ src: film.src, type: 'video/mp4' }]}
+                          poster={film.poster}
+                          playbackMode="independent"
+                          className={`absolute inset-0 transition-transform duration-500 group-hover:scale-105 ${film.object}`}
+                        />
+                      ) : cover ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={cover}
+                          alt=""
+                          className="absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : null}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      <span className="relative px-3 pb-3 font-serif text-sm sm:text-heading-sm text-white">
+                        {cat.label}
+                      </span>
+                    </div>
+                  </Link>
+                </FadeIn>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* Why Layali — right after categories */}
+      {/* Image 4 — primary National Day campaign */}
+      <NationalDayFeature priority />
+
+      {/* Product break between major creatives */}
+      <RitualCarousel initialProducts={heroProducts} />
+
+      {/* Makeup editorial feature */}
+      <PromoMerchSplit
+        artworkFirst
+        src="/ads/layali-promo-makeup-editorial.jpg"
+        alt="Layali makeup — up to 50% off favourite brands"
+        href="/shop?category=makeup"
+        width={1024}
+        height={523}
+        categoryLabel={makeupLabel}
+        shopAllLabel={t.footer.allProducts}
+        products={heroProducts}
+        category="makeup"
+      />
+
+      {/* Why Layali */}
       <section className="relative overflow-x-clip py-12 sm:py-16">
         <div className="glow-orb w-[400px] h-[400px] -right-32 top-0 opacity-50" aria-hidden />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -261,21 +288,35 @@ export default function HomePageClient({
         </div>
       </section>
 
-      <RitualCarousel initialProducts={heroProducts} />
-
-      {/* Find Your Ritual — after trending */}
+      {/* Find Your Ritual */}
       <section className="relative overflow-x-clip py-14 sm:py-16 lg:py-20">
         <div
-          className="glow-orb w-[600px] h-[600px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-55"
+          className="glow-orb w-[420px] h-[420px] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-40"
           aria-hidden
         />
-        <div className="relative max-w-4xl mx-auto px-4 text-center">
+        <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
           <FadeIn>
             <p className="font-script text-script-xl text-layali-pink-light mb-4 scale-75 origin-center">
               {t.survey.script}
             </p>
             <h2 className="font-serif text-heading-lg text-white mb-5">{t.survey.title}</h2>
             <p className="text-body-lg text-white/65 mb-8 max-w-2xl mx-auto">{t.survey.body}</p>
+
+            <div className="mx-auto mb-8 w-full max-w-3xl sm:mb-10 sm:max-w-4xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/ads/layali-promo-find-your-ritual.jpg"
+                alt="Celebrate Saudi National Day — special offers on makeup and skincare"
+                width={1024}
+                height={341}
+                decoding="async"
+                loading="lazy"
+                draggable={false}
+                className="mx-auto block h-auto w-full max-w-full rounded-sm object-contain"
+                style={{ aspectRatio: '1024 / 341' }}
+              />
+            </div>
+
             <Link
               href="/survey"
               prefetch

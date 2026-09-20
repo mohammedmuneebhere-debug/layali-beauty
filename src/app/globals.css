@@ -689,11 +689,6 @@ html[dir='rtl'] .rtl-flip {
   background-color: var(--stage-content-wash);
 }
 
-.hero-copy-shade {
-  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0%, #000 72%, transparent 100%);
-}
-
 .section-edge-fade {
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
   mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
