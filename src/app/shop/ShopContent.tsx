@@ -32,19 +32,19 @@ const CATEGORY_PROMO: Record<
     height: 523,
   },
   skincare: {
-    src: '/ads/layali-shop-skincare-banner.jpg',
-    alt: 'Layali skincare promotion — up to 30% off',
-    width: 1000,
-    height: 650,
+    src: '/ads/layali-promo-skincare-editorial.jpg',
+    alt: 'Layali skincare that feels like you — up to 30% off',
+    width: 1024,
+    height: 418,
   },
 };
 
-/** General shop campaign strip (Image 2) — only when no category filter */
-const SHOP_CAMPAIGN_STRIP = {
-  src: '/ads/layali-promo-national-day-strip.png',
+/** General shop Saudi National Day campaign — only when no category filter */
+const SHOP_CAMPAIGN_BANNER = {
+  src: '/ads/layali-promo-shop-national-day.jpg',
   alt: 'Celebrate Saudi National Day — special offers on makeup and skincare',
-  width: 475,
-  height: 92,
+  width: 1024,
+  height: 341,
 };
 
 function normalizeCategory(value: string | null | undefined) {
@@ -505,13 +505,13 @@ export default function ShopContent() {
           </div>
         ) : !category ? (
           <div className="mb-6 sm:mb-8">
-            <div className="mx-auto w-full max-w-3xl">
+            <div className="mx-auto w-full max-w-5xl">
               <PromoArtwork
-                src={SHOP_CAMPAIGN_STRIP.src}
-                alt={SHOP_CAMPAIGN_STRIP.alt}
+                src={SHOP_CAMPAIGN_BANNER.src}
+                alt={SHOP_CAMPAIGN_BANNER.alt}
                 href="/shop"
-                width={SHOP_CAMPAIGN_STRIP.width}
-                height={SHOP_CAMPAIGN_STRIP.height}
+                width={SHOP_CAMPAIGN_BANNER.width}
+                height={SHOP_CAMPAIGN_BANNER.height}
                 className="rounded-sm"
               />
             </div>
