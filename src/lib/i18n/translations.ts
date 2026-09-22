@@ -271,8 +271,6 @@ export const translations = {
       currentStatus: 'Status',
       payment: 'Payment',
       paymentDue: 'Payment due on delivery',
-      confirmedBody:
-        'Your order has been placed. Pay with Cash on Delivery when your package arrives.',
       confirmationUnavailable:
         'We could not load this confirmation. Your order was not placed again — check My Orders.',
       unconfirmedPlaceOrder:
@@ -776,8 +774,6 @@ export const translations = {
       currentStatus: 'الحالة',
       payment: 'الدفع',
       paymentDue: 'المبلغ يُدفع عند التوصيل',
-      confirmedBody:
-        'تم تقديم طلبكِ. ادفعي نقداً عند الاستلام عندما يصل الطلب.',
       confirmationUnavailable:
         'تعذّر عرض هذا التأكيد. لم يُنشأ طلب جديد — راجعي طلباتي.',
       unconfirmedPlaceOrder:

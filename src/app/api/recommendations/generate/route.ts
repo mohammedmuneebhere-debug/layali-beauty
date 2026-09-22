@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { loadRecommendationCatalog } from '@/lib/catalog';
 import { generatePersonalizedCombo } from '@/lib/ai-recommendation';
-import type { SurveyResponse } from '@/types/database';
+import type { RecommendationSurveyInput } from '@/lib/survey/types';
 
 /**
  * POST /api/recommendations/generate
@@ -12,7 +12,7 @@ import type { SurveyResponse } from '@/types/database';
 export async function POST(req: NextRequest) {
   try {
     const body = (await req.json()) as {
-      survey: Partial<SurveyResponse>;
+      survey: RecommendationSurveyInput;
       country?: string;
       city?: string;
     };

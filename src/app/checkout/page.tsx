@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { Package, Plus, MapPin, Banknote } from 'lucide-react';
+import { Plus, MapPin, Banknote } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import {
@@ -625,10 +625,6 @@ export default function CheckoutPage() {
               discounts={discounts}
               currencyCode={currencyCode}
             />
-            <div className="mt-4 p-3 rounded-xl bg-black flex items-center gap-2">
-              <Package className="w-5 h-5 text-layali-pink shrink-0" />
-              <span className="text-sm text-white/70">{t.checkout.confirmedBody}</span>
-            </div>
             {selectedAddress && (
               <div className="mt-4 text-sm text-white/60">
                 <p className="font-medium text-white">{t.checkout.deliveringTo}</p>
