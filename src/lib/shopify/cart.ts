@@ -1,4 +1,4 @@
-import { buildCartBuyerIdentity } from './buyer-country';
+import { buildCartBuyerIdentity, getDefaultCartCountryCode } from './buyer-country';
 import { isShopifyConfigured, shopifyFetch, ShopifyThrottleError } from './client';
 import { normalizeCart } from './normalize';
 import {
@@ -21,8 +21,23 @@ type MutationWarnings = {
   cart?: unknown;
 };
 
+type CartIdentityInput = {
+  email?: string;
+  countryCode?: string;
+  countryLabel?: string;
+};
+
 /** Cart mutations: never retry-storm Shopify (1 attempt). */
 const CART_FETCH = { cache: 'no-store' as const, revalidate: false as const, retries: 0 };
+
+/**
+ * Markets without sellable inventory (e.g. stale AE persist from older diagnostics)
+ * surface as sold-out on cartCreate. Fall back once to the default selling market.
+ */
+function isMerchandiseStockError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return /sold out|out of stock|not enough stock|MERCHANDISE_/i.test(message);
+}
 
 function assertNoUserErrors(userErrors: UserErrors | undefined, action: string) {
   if (userErrors?.length) {
@@ -146,6 +161,32 @@ export async function updateCartBuyerIdentity(
   return normalizeMutationCart('cartBuyerIdentityUpdate', data.cartBuyerIdentityUpdate);
 }
 
+async function createCartWithMarketFallback(
+  lines: { merchandiseId: string; quantity: number }[],
+  identity: CartIdentityInput
+): Promise<ShopifyCart> {
+  try {
+    return await createCart({
+      lines,
+      ...identity,
+    });
+  } catch (err) {
+    if (err instanceof ShopifyThrottleError) throw err;
+    if (!isMerchandiseStockError(err)) throw err;
+
+    const requested = buildCartBuyerIdentity(identity).countryCode;
+    const fallback = getDefaultCartCountryCode();
+    // Same market already failed — genuine OOS, do not mask.
+    if (requested === fallback) throw err;
+
+    return createCart({
+      lines,
+      email: identity.email,
+      countryCode: fallback,
+    });
+  }
+}
+
 /** Ensure a cart exists, then add one or more variant lines in a single Storefront write. */
 export async function addToShopifyCart(options: {
   cartId: string | null;
@@ -167,17 +208,14 @@ export async function addToShopifyCart(options: {
     throw new Error('At least one merchandiseId is required');
   }
 
-  const identity = {
+  const identity: CartIdentityInput = {
     email: options.email,
     countryCode: options.countryCode,
     countryLabel: options.countryLabel,
   };
 
   if (!options.cartId) {
-    return createCart({
-      lines,
-      ...identity,
-    });
+    return createCartWithMarketFallback(lines, identity);
   }
 
   try {
@@ -188,10 +226,19 @@ export async function addToShopifyCart(options: {
     const message = err instanceof Error ? err.message : '';
     // Only recreate when the cart id itself is unusable — not on stock/user errors.
     if (/not found|does not exist|expired|cart.*unavailable/i.test(message)) {
-      return createCart({
-        lines,
-        ...identity,
-      });
+      return createCartWithMarketFallback(lines, identity);
+    }
+    // Stale cart in a market without inventory: recreate under the selling market.
+    if (isMerchandiseStockError(err)) {
+      const requested = buildCartBuyerIdentity(identity).countryCode;
+      const fallback = getDefaultCartCountryCode();
+      if (requested !== fallback) {
+        return createCart({
+          lines,
+          email: identity.email,
+          countryCode: fallback,
+        });
+      }
     }
     throw err;
   }

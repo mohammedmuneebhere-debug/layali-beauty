@@ -27,13 +27,11 @@ const COUNTRY_TO_CODE: Record<string, string> = {
  *
  * Production default is SA (Saudi Arabia). Do not permanently override with AE.
  *
- * Proven Admin blocker (2026-09): SA cartCreate → MERCHANDISE_OUT_OF_STOCK / qty 0
- * even when Riyadh has stock, because:
- * 1) shop.shipsToCountries does not include SA
- * 2) Riyadh location shipsInventory === false (Hyderabad shipsInventory === true)
- * AE/IN carts succeed via India fulfillment. Fix in Shopify Admin:
- * Shipping → add SA zone + rates; Locations → Riyadh → ship inventory; attach
- * Riyadh to the SA delivery profile. Then remove any local SHOPIFY_CART_COUNTRY=AE.
+ * Observed 2026-09: AE/IN cartCreate returns MERCHANDISE_OUT_OF_STOCK for in-stock
+ * catalog items while SA cartCreate succeeds. Stale client persist of countryCode=AE
+ * (from older SHOPIFY_CART_COUNTRY=AE diagnostics) made Add to Cart fail with
+ * "Could not add this item" — especially on phones that still held that persist.
+ * addToShopifyCart falls back to this default market on stock errors.
  *
  * SHOPIFY_CART_COUNTRY is diagnostic-only (ISO 3166-1 alpha-2), not a product fix.
  */
