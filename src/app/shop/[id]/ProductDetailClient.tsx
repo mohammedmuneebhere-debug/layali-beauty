@@ -14,6 +14,7 @@ import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import type { ShopProduct, ShopVariant } from '@/lib/catalog';
 import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
+import { classifiedCategoryLabel } from '@/lib/shopify/category';
 import { pickSimilarProducts, vendorSearchQuery } from '@/lib/similar-products';
 import { pickRitualProducts } from '@/lib/ritual';
 import { track } from '@/lib/track';
@@ -324,7 +325,7 @@ export function ProductDetailClient({
 
             <div>
               <p className="text-meta uppercase tracking-[0.18em] text-layali-pink mb-3">
-                {product.vendor || product.category}
+                {product.vendor || classifiedCategoryLabel(product.category)}
               </p>
               <h1 className="font-serif text-heading-lg text-white mb-4">{product.name}</h1>
 

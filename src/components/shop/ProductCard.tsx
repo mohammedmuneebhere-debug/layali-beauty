@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { formatPrice, cn } from '@/lib/utils';
 import { shopifyImageUrl, SHOP_CARD_IMAGE_WIDTH } from '@/lib/shopify/image';
 import type { ShopProduct } from '@/lib/catalog';
+import { classifiedCategoryLabel } from '@/lib/shopify/category';
 
 export const ProductCard = memo(function ProductCard({
   product,
@@ -56,7 +57,7 @@ export const ProductCard = memo(function ProductCard({
         </div>
         <CardContent className="px-1 pt-4 pb-2">
           <p className="text-meta text-layali-pink uppercase tracking-[0.14em] mb-1.5 truncate">
-            {product.vendor || product.category}
+            {product.vendor || classifiedCategoryLabel(product.category)}
           </p>
           <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
             <h3 className="text-product-name text-white leading-snug line-clamp-2 min-w-0">

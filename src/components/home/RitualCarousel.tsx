@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import type { TrendingCatalogProduct } from '@/lib/trending';
+import { classifiedCategoryLabel } from '@/lib/shopify/category';
 
 const DRAG_THRESHOLD_PX = 8;
 const INTERACTIVE_SELECTOR = 'button, input, select, textarea, [data-no-nav]';
@@ -188,9 +189,11 @@ export function RitualCarousel({
                     </div>
                   )}
                 </div>
-                <p className="text-meta tracking-[0.14em] uppercase text-layali-pink mb-1">
-                  {product.category}
-                </p>
+                {classifiedCategoryLabel(product.category) ? (
+                  <p className="text-meta tracking-[0.14em] uppercase text-layali-pink mb-1">
+                    {classifiedCategoryLabel(product.category)}
+                  </p>
+                ) : null}
                 <h3 className="text-product-name text-white line-clamp-2 group-hover:text-layali-pink-light transition-colors">
                   {product.name}
                 </h3>

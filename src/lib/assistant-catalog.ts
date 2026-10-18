@@ -10,6 +10,7 @@ import {
   withProductMetadata,
   type ShopProduct,
 } from '@/lib/catalog';
+import { isStorefrontCategory, searchableCategory } from '@/lib/shopify/category';
 
 export const ASSISTANT_SEARCH_LIMIT = 24;
 const DETAIL_EXCERPT = 520;
@@ -246,7 +247,7 @@ export function queryTokens(query: string): string[] {
 }
 
 export function productHaystack(product: ShopProduct): string {
-  return `${product.name} ${product.category} ${product.vendor} ${product.description || ''} ${(product.tags || []).join(' ')} ${(product.benefits || []).join(' ')}`.toLowerCase();
+  return `${product.name} ${searchableCategory(product.category)} ${product.vendor} ${product.description || ''} ${(product.tags || []).join(' ')} ${(product.benefits || []).join(' ')}`.toLowerCase();
 }
 
 export function excerpt(text: string | null | undefined, max = DETAIL_EXCERPT): string {
@@ -445,7 +446,7 @@ export function reasonForProduct(
   const token = queryTokens(query).find((t) => textHasToken(product.name.toLowerCase(), t));
   if (token) return `Matched “${token}” in the product name.`;
   if (snippet) return snippet;
-  if (product.category) return `From the ${product.category} collection.`;
+  if (isStorefrontCategory(product.category)) return `From the ${product.category} collection.`;
   return 'From the live Layali catalog.';
 }
 
@@ -546,7 +547,7 @@ function bestForLabel(product: ShopProduct, concerns: CatalogConcern[]): string 
     if (matched) return matched.replace(/_/g, ' ');
   }
   if (product.benefits[0]) return product.benefits[0];
-  return product.category || 'Everyday use';
+  return isStorefrontCategory(product.category) ? product.category : 'Everyday use';
 }
 
 function keyBenefit(product: ShopProduct): string {
@@ -586,7 +587,9 @@ export function relevantDescription(product: ShopProduct, query: string): string
     const bits = [
       product.benefits[0],
       product.tags.slice(0, 3).join(', '),
-      product.category ? `${product.category} by ${product.vendor || 'Layali'}` : '',
+      isStorefrontCategory(product.category)
+        ? `${product.category} by ${product.vendor || 'Layali'}`
+        : '',
     ].filter(Boolean);
     return bits.join('. ') || '';
   }
