@@ -14,6 +14,12 @@ export const STOREFRONT_CATEGORY_SLUGS = [
 
 export type StorefrontCategorySlug = (typeof STOREFRONT_CATEGORY_SLUGS)[number];
 
+/**
+ * Products with no storefront type, collection, or tag.
+ * They stay on the unfiltered shop and do not join another department.
+ */
+export const UNCATEGORIZED_CATEGORY = 'uncategorized';
+
 const STOREFRONT_CATEGORY_SET = new Set<string>(STOREFRONT_CATEGORY_SLUGS);
 
 type CategorySource = {
@@ -79,9 +85,11 @@ export function isStorefrontCategory(value: string | null | undefined): value is
 }
 
 /**
- * Map a Shopify product onto a single storefront category slug.
- * Prefer live taxonomy (type / collection / tag), then lens title signals,
- * then a conservative default so untyped products remain visible.
+ * Map a Shopify product onto one storefront category slug.
+ * Prefer live taxonomy (type / collection / tag), then lens title signals.
+ * Missing taxonomy stays `uncategorized` so the product remains on All
+ * and is not filed under Skincare. Titles are not used except for lenses.
+ * A non-empty product type that is not a storefront slug is kept as-is.
  */
 export function resolveStorefrontCategory(product: CategorySource): string {
   if (isLensProduct(product)) return 'lenses';
@@ -99,5 +107,21 @@ export function resolveStorefrontCategory(product: CategorySource): string {
     if (isStorefrontCategory(slug)) return slug;
   }
 
-  return type || 'skincare';
+  return type || UNCATEGORIZED_CATEGORY;
+}
+
+/** Customer-facing department label. The uncategorized sentinel is not one. */
+export function classifiedCategoryLabel(category: string | null | undefined): string {
+  return isStorefrontCategory(category) ? category : '';
+}
+
+/**
+ * Category text that may be included in search.
+ * Real department slugs and non-slug product types stay searchable.
+ * The internal sentinel is omitted so it is not a product attribute.
+ */
+export function searchableCategory(category: string | null | undefined): string {
+  const value = (category || '').trim();
+  if (!value || normalizeSlug(value) === UNCATEGORIZED_CATEGORY) return '';
+  return value;
 }

@@ -6,6 +6,7 @@ import type {
   AssistantReply,
   AssistantRequest,
 } from '@/lib/assistant-types';
+import { isStorefrontCategory } from '@/lib/shopify/category';
 import {
   compareCatalogProducts,
   detectCategories,
@@ -252,7 +253,9 @@ function formatRecommendation(
   const topReason = reasonForProduct(top, query, budget, concerns);
   const whyBits = [
     top.benefits[0] ? top.benefits[0] : null,
-    top.category ? `${top.category}${top.vendor ? ` · ${top.vendor}` : ''}` : null,
+    isStorefrontCategory(top.category)
+      ? `${top.category}${top.vendor ? ` · ${top.vendor}` : ''}`
+      : null,
     `${Math.round(Number(top.price))} SAR`,
     top.available ? 'In stock' : 'Currently unavailable',
   ].filter(Boolean);
@@ -449,9 +452,10 @@ export async function answerWithCatalog(
   if (context.currentHandle && /worth buying|should i buy this|أشتريه/.test(effective.toLowerCase())) {
     const product = await getProductDetails(supabase, context.currentHandle);
     if (product) {
+      const category = isStorefrontCategory(product.category) ? product.category : undefined;
       const similar = await searchCatalogProducts(supabase, {
-        query: `${product.category} ${product.name}`,
-        category: product.category,
+        query: `${category || ''} ${product.name}`.trim(),
+        category,
         limit: 4,
       });
       const others = similar.filter((p) => p.id !== product.id).slice(0, 2);

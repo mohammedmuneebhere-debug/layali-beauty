@@ -15,7 +15,7 @@ import type { ShopProduct } from '@/lib/catalog';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { PromoArtwork } from '@/components/home/PromoArtwork';
-import { collectVendors, PAGE_SIZE } from '@/lib/shop-filters';
+import { collectVendors, filterShopProducts, PAGE_SIZE, paginateShopProducts } from '@/lib/shop-filters';
 import { track } from '@/lib/track';
 
 const VALID_CATEGORIES = new Set<string>(STOREFRONT_NAV_CATEGORIES.map((c) => c.value));
@@ -187,22 +187,12 @@ export default function ShopContent() {
   }, [products, category]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const min = minPrice ? Number(minPrice) : null;
-    const max = maxPrice ? Number(maxPrice) : null;
-
-    const next = products.filter((p) => {
-      if (category && p.category !== category) return false;
-      if (brand && (p.vendor || '').trim() !== brand) return false;
-      const price = Number(p.price);
-      if (min != null && !Number.isNaN(min) && price < min) return false;
-      if (max != null && !Number.isNaN(max) && price > max) return false;
-      if (q) {
-        const hay =
-          `${p.name} ${p.description || ''} ${p.category} ${p.vendor || ''}`.toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-      return true;
+    const next = filterShopProducts(products, {
+      category,
+      brand,
+      minPrice,
+      maxPrice,
+      search,
     });
 
     const sorted = [...next];
@@ -212,9 +202,7 @@ export default function ShopContent() {
     return sorted;
   }, [products, category, search, brand, minPrice, maxPrice, sort]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, totalPages);
-  const pageItems = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const { pageItems, currentPage, totalPages } = paginateShopProducts(filtered, page, PAGE_SIZE);
 
   const clearFilters = () => {
     setSearch('');

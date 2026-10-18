@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/server';
 import { fetchTrendingProducts } from '@/lib/trending';
 import { fetchActiveBanners } from '@/lib/site-banners';
 import type { BannerSlide } from '@/lib/banners';
+import { isStorefrontCategory } from '@/lib/shopify/category';
 
 export const metadata: Metadata = {
   title: {
@@ -90,7 +91,11 @@ export default async function HomePage() {
   }
 
   for (const product of heroProducts) {
-    if (product.category && product.image_url && !categoryCovers[product.category]) {
+    if (
+      isStorefrontCategory(product.category) &&
+      product.image_url &&
+      !categoryCovers[product.category]
+    ) {
       categoryCovers[product.category] = product.image_url;
     }
   }
