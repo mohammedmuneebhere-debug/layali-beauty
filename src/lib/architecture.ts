@@ -1,28 +1,22 @@
 /**
- * Layali data ownership (Phase 1)
+ * Layali data ownership
  *
- * Shopify = SINGLE SOURCE OF TRUTH for commerce
- *   products, variants, prices, inventory, collections,
- *   cart, orders, fulfillment
- *   (Layali custom COD checkout creates Shopify orders via Admin draft orders;
- *    hosted Shopify web checkout is not used for COD)
+ * Shopify is the source of truth for commerce and customer accounts:
+ * products, variants, prices, inventory, collections, cart, checkout,
+ * orders, customer identity, profile, and saved addresses.
  *
- * Supabase = SINGLE SOURCE OF TRUTH for Layali application data
- *   auth/profiles, surveys, AI recommendation history,
- *   regions/outlets, addresses, banners,
- *   trending selection/order (Shopify product GIDs + sort_order only),
- *   layali_product_metadata / regions / costs, shopify_order_links,
- *   shopify_product_links (legacy products.id → Shopify GID mapping)
+ * Shop and customer JSON metafields hold Layali-only records Shopify does
+ * not model: banners, curated combos, trending order, city availability,
+ * beauty notes, cost of goods, reviews, and support messages.
  *
- * Trending product title/images/price/inventory remain Shopify-owned.
- * Supabase does not duplicate those commerce fields.
+ * Staff access is an email allowlist (LAYALI_STAFF_EMAILS). A customer
+ * session never grants admin.
  *
- * Next.js = UI + orchestration (Shopify + Supabase clients)
- * Zustand = Shopify cart ID + UI/optimistic state only (not authoritative cart)
+ * Next.js orchestrates the Storefront API, Admin API, and Customer Account API.
  */
 
 export type CommerceOwner = 'shopify';
-export type AppDataOwner = 'supabase';
+export type AppDataOwner = 'shopify';
 
 export const OWNERSHIP = {
   products: 'shopify' as CommerceOwner,
@@ -33,16 +27,16 @@ export const OWNERSHIP = {
   cart: 'shopify' as CommerceOwner,
   checkout: 'shopify' as CommerceOwner,
   orders: 'shopify' as CommerceOwner,
-  profiles: 'supabase' as AppDataOwner,
-  surveys: 'supabase' as AppDataOwner,
-  regions: 'supabase' as AppDataOwner,
-  addresses: 'supabase' as AppDataOwner,
-  banners: 'supabase' as AppDataOwner,
-  trending: 'supabase' as AppDataOwner,
-  aiRecommendations: 'supabase' as AppDataOwner,
-  productMetadata: 'supabase' as AppDataOwner,
-  productRegions: 'supabase' as AppDataOwner,
-  productCosts: 'supabase' as AppDataOwner,
-  orderLinks: 'supabase' as AppDataOwner,
-  productLinks: 'supabase' as AppDataOwner,
+  profiles: 'shopify' as AppDataOwner,
+  surveys: 'shopify' as AppDataOwner,
+  regions: 'shopify' as AppDataOwner,
+  addresses: 'shopify' as AppDataOwner,
+  banners: 'shopify' as AppDataOwner,
+  trending: 'shopify' as AppDataOwner,
+  aiRecommendations: 'shopify' as AppDataOwner,
+  productMetadata: 'shopify' as AppDataOwner,
+  productRegions: 'shopify' as AppDataOwner,
+  productCosts: 'shopify' as AppDataOwner,
+  orderLinks: 'shopify' as AppDataOwner,
+  productLinks: 'shopify' as AppDataOwner,
 } as const;

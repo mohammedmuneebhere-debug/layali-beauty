@@ -8,11 +8,10 @@ import {
   OG_IMAGE_PATH,
 } from '@/lib/seo';
 import { SITE_URL } from '@/lib/constants';
-import { createClient } from '@/lib/supabase/server';
-import { fetchTrendingProducts } from '@/lib/trending';
-import { fetchActiveBanners } from '@/lib/site-banners';
-import type { BannerSlide } from '@/lib/banners';
 import { isStorefrontCategory } from '@/lib/shopify/category';
+import { fetchTrendingProducts } from '@/lib/trending-data';
+import { loadPlacementSlides } from '@/lib/content/banners';
+import type { BannerSlide } from '@/lib/banners';
 
 export const metadata: Metadata = {
   title: {
@@ -75,14 +74,13 @@ export default async function HomePage() {
   let landingBanners: BannerSlide[] = [];
   const categoryCovers: Record<string, string> = {};
   try {
-    const supabase = await createClient();
     try {
-      heroProducts = await fetchTrendingProducts(supabase);
+      heroProducts = await fetchTrendingProducts();
     } catch {
       heroProducts = [];
     }
     try {
-      landingBanners = await fetchActiveBanners(supabase, 'landing_hero');
+      landingBanners = await loadPlacementSlides('landing_hero');
     } catch {
       landingBanners = [];
     }

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { loadRecommendationCatalog } from '@/lib/catalog';
 import { generatePersonalizedCombo } from '@/lib/ai-recommendation';
 import type { RecommendationSurveyInput } from '@/lib/survey/types';
@@ -21,9 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'survey required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
     const { products, source, error } = await loadRecommendationCatalog({
-      supabase,
       country: body.country,
       city: body.city,
     });

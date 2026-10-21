@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Trash2, MapPin } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { AddressForm, addressDisplayLabel, addressDisplayLines, type AddressFormValues } from '@/components/address/AddressForm';
 import { LocationMap } from '@/components/map/LocationMap';
@@ -22,27 +21,28 @@ export default function AddressesPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  const load = async (uid: string) => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('addresses')
-      .select('*')
-      .eq('user_id', uid)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false });
-    setAddresses((data as Address[]) || []);
+  const load = async () => {
+    const response = await fetch('/api/account/addresses', { cache: 'no-store' });
+    if (response.status === 401) {
+      router.push('/auth/signin?redirect=/account/addresses');
+      return [];
+    }
+    const json = (await response.json()) as { addresses?: Address[] };
+    const list = json.addresses || [];
+    setAddresses(list);
+    return list;
   };
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      const me = await fetch('/api/account/me', { cache: 'no-store' });
+      const json = (await me.json()) as { signedIn?: boolean; customer?: { id: string } };
+      if (!json.signedIn || !json.customer) {
         router.push('/auth/signin?redirect=/account/addresses');
         return;
       }
-      setUserId(user.id);
-      await load(user.id);
+      setUserId(json.customer.id);
+      await load();
       setFetching(false);
     }
     init();
@@ -51,44 +51,45 @@ export default function AddressesPage() {
   const saveAddress = async (values: AddressFormValues) => {
     if (!userId) return;
     setLoading(true);
-    const supabase = createClient();
-
-    const { error } = await supabase.from('addresses').insert({
-      user_id: userId,
-      label: values.label,
-      custom_label: values.custom_label || null,
-      receiver_name: values.receiver_name,
-      receiver_phone: values.receiver_phone,
-      address_line: values.address_line,
-      city: values.city.trim(),
-      country: values.country.trim() || 'Saudi Arabia',
-      latitude: values.latitude,
-      longitude: values.longitude,
-      is_default: values.is_default || addresses.length === 0,
+    const response = await fetch('/api/account/addresses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        label: values.label,
+        custom_label: values.custom_label || null,
+        receiver_name: values.receiver_name,
+        receiver_phone: values.receiver_phone,
+        address_line: values.address_line,
+        city: values.city.trim(),
+        country: values.country.trim(),
+        latitude: values.latitude,
+        longitude: values.longitude,
+        is_default: values.is_default || addresses.length === 0,
+      }),
     });
-
+    const json = (await response.json().catch(() => ({}))) as { error?: string };
     setLoading(false);
-    if (error) {
-      alert(error.message);
+    if (!response.ok) {
+      alert(json.error || 'Could not save address');
       return;
     }
-
     setShowForm(false);
-    await load(userId);
+    await load();
   };
 
   const deleteAddress = async (id: string) => {
     if (!confirm('Delete this address?')) return;
-    const supabase = createClient();
-    await supabase.from('addresses').delete().eq('id', id);
-    if (userId) await load(userId);
+    await fetch(`/api/account/addresses/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await load();
   };
 
   const setDefault = async (id: string) => {
-    if (!userId) return;
-    const supabase = createClient();
-    await supabase.from('addresses').update({ is_default: true }).eq('id', id);
-    await load(userId);
+    await fetch(`/api/account/addresses/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_default: true }),
+    });
+    await load();
   };
 
   if (fetching) {

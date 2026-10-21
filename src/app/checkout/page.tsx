@@ -13,7 +13,6 @@ import {
 } from '@/components/address/AddressForm';
 import { OrderSummaryCard } from '@/components/checkout/OrderSummaryCard';
 import { LocationMap } from '@/components/map/LocationMap';
-import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { useCartSyncView } from '@/components/cart/useCartSyncView';
 import { formatSaudiPhoneDisplay } from '@/lib/address/saudi-phone';
@@ -143,16 +142,10 @@ export default function CheckoutPage() {
   const submissionIdRef = useRef('');
   const lastCheckoutPinKey = useRef('');
 
-  const loadAddresses = async (uid: string, selectId?: string) => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('addresses')
-      .select('*')
-      .eq('user_id', uid)
-      .order('is_default', { ascending: false })
-      .order('created_at', { ascending: false });
-
-    const list = (data as Address[]) || [];
+  const loadAddresses = async (selectId?: string) => {
+    const response = await fetch('/api/account/addresses', { cache: 'no-store' });
+    const json = (await response.json().catch(() => ({}))) as { addresses?: Address[] };
+    const list = json.addresses || [];
     setAddresses(list);
 
     setSelectedAddressId((current) => {
@@ -173,26 +166,19 @@ export default function CheckoutPage() {
     if (placingRef.current || orderPlacedRef.current) return;
 
     async function init() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
+      const response = await fetch('/api/account/me', { cache: 'no-store' });
+      const json = (await response.json()) as {
+        signedIn?: boolean;
+        customer?: { id: string; email: string } | null;
+      };
+      if (!json.signedIn || !json.customer) {
         router.push('/auth/signin?redirect=/checkout');
         return;
       }
 
-      setUserId(user.id);
-      setUserEmail(user.email || '');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.email) setUserEmail(profile.email);
-      await loadAddresses(user.id);
+      setUserId(json.customer.id);
+      setUserEmail(json.customer.email || '');
+      await loadAddresses();
     }
 
     // Line items come from Shopify refresh — never treat persist cartId as a loaded cart.
@@ -222,47 +208,41 @@ export default function CheckoutPage() {
       )
     );
 
-    const supabase = createClient();
-    await supabase
-      .from('addresses')
-      .update({
-        latitude: lat,
-        longitude: lng,
-      })
-      .eq('id', selectedAddressId);
+    await fetch(`/api/account/addresses/${encodeURIComponent(selectedAddressId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latitude: lat, longitude: lng }),
+    });
   };
 
   const saveAddress = async (values: AddressFormValues) => {
     if (!userId) return;
     setSavingAddress(true);
-    const supabase = createClient();
-
-    const { data, error: saveError } = await supabase
-      .from('addresses')
-      .insert({
-        user_id: userId,
+    const response = await fetch('/api/account/addresses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         label: values.label,
         custom_label: values.custom_label || null,
         receiver_name: values.receiver_name,
         receiver_phone: values.receiver_phone,
         address_line: values.address_line,
         city: values.city.trim(),
-        country: values.country.trim() || 'Saudi Arabia',
+        country: values.country.trim(),
         latitude: values.latitude,
         longitude: values.longitude,
         is_default: values.is_default || addresses.length === 0,
-      })
-      .select()
-      .single();
-
+      }),
+    });
+    const json = (await response.json().catch(() => ({}))) as { address?: Address; error?: string };
     setSavingAddress(false);
 
-    if (saveError || !data) {
-      alert(saveError?.message || 'Could not save address');
+    if (!response.ok || !json.address) {
+      alert(json.error || 'Could not save address');
       return;
     }
 
-    await loadAddresses(userId, data.id);
+    await loadAddresses(json.address.id);
     setShowNewAddress(false);
   };
 

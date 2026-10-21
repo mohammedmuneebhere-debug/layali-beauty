@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { loadShopCatalog, loadShopProductByParam } from '@/lib/catalog';
 import { isShopifyConfigured } from '@/lib/shopify';
+import { publicStorefrontFailure } from '@/lib/shopify/public-error';
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,9 +40,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ product, configured: true });
     }
 
-    const supabase = await createClient();
     const { products, source } = await loadShopCatalog({
-      supabase,
       category,
       query: q,
       country,
@@ -51,9 +49,10 @@ export async function GET(req: NextRequest) {
     });
     return NextResponse.json({ products, configured: true, source });
   } catch (err) {
-    console.error('Shopify products API error', err);
+    const failure = publicStorefrontFailure(err);
+    console.error('Shopify products API error', failure.code, failure.storefrontStatus);
     return NextResponse.json(
-      { products: [], configured: true, error: 'Unable to load products' },
+      { products: [], configured: true, ...failure },
       { status: 502 }
     );
   }

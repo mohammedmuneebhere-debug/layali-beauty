@@ -7,7 +7,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { formatPrice } from '@/lib/utils';
 import type { ShopProduct } from '@/lib/catalog';
@@ -26,11 +25,9 @@ export default function AdminProductsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
-    const [catalogRes, regionsRes, linksRes] = await Promise.all([
+    const [catalogRes, rulesRes] = await Promise.all([
       fetch('/api/shopify/products'),
-      supabase.from('regions').select('*').eq('is_active', true).order('country').order('city'),
-      supabase.from('layali_product_regions').select('shopify_product_id, region_id, is_available'),
+      fetch('/api/admin/catalog-rules', { cache: 'no-store' }),
     ]);
 
     const catalogJson = (await catalogRes.json()) as {
@@ -40,14 +37,17 @@ export default function AdminProductsPage() {
     };
     setConfigured(catalogJson.configured !== false);
     setProducts(catalogJson.products || []);
-    setRegions(regionsRes.data || []);
+    const rulesJson = (await rulesRes.json()) as {
+      regions?: Region[];
+      productRegions?: { shopifyProductId: string; regionId: string; isAvailable: boolean }[];
+    };
+    setRegions((rulesJson.regions || []).filter((region) => region.is_active));
 
     const map: Record<string, string[]> = {};
-    (linksRes.data || []).forEach((row) => {
-      if (!row.is_available) return;
-      const key = row.shopify_product_id as string;
-      if (!map[key]) map[key] = [];
-      map[key].push(row.region_id as string);
+    (rulesJson.productRegions || []).forEach((row) => {
+      if (!row.isAvailable) return;
+      if (!map[row.shopifyProductId]) map[row.shopifyProductId] = [];
+      map[row.shopifyProductId].push(row.regionId);
     });
     setRegionMap(map);
     setLoading(false);
@@ -75,23 +75,20 @@ export default function AdminProductsPage() {
     if (!selectedProductId) return;
     setSaving(true);
     setMessage('');
-    const supabase = createClient();
-
-    await supabase.from('layali_product_regions').delete().eq('shopify_product_id', selectedProductId);
-
-    if (selectedRegionIds.length > 0) {
-      const { error } = await supabase.from('layali_product_regions').insert(
-        selectedRegionIds.map((region_id) => ({
-          shopify_product_id: selectedProductId,
-          region_id,
-          is_available: true,
-        }))
-      );
-      if (error) {
-        setMessage(error.message);
-        setSaving(false);
-        return;
-      }
+    const response = await fetch('/api/admin/catalog-rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save-product-regions',
+        shopifyProductId: selectedProductId,
+        regionIds: selectedRegionIds,
+      }),
+    });
+    if (!response.ok) {
+      const json = (await response.json().catch(() => ({}))) as { error?: string };
+      setMessage(json.error || 'Could not save regional availability.');
+      setSaving(false);
+      return;
     }
 
     setRegionMap((prev) => ({ ...prev, [selectedProductId]: selectedRegionIds }));

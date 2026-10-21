@@ -1,5 +1,3 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 export const CATALOG_BUCKET = 'catalog';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
@@ -34,7 +32,6 @@ export function readImageDimensionsFromFile(
 }
 
 export async function uploadCatalogImage(
-  supabase: SupabaseClient,
   file: File,
   folder: 'products' | 'combos' | 'banners'
 ): Promise<{
@@ -56,21 +53,13 @@ export async function uploadCatalogImage(
     // optional
   }
 
-  const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const filePath = `${folder}/${crypto.randomUUID()}.${ext}`;
-
-  const { error } = await supabase.storage
-    .from(CATALOG_BUCKET)
-    .upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: false,
-      contentType: file.type,
-    });
-
-  if (error) {
-    return { url: null, error: error.message };
+  const form = new FormData();
+  form.set('file', file);
+  form.set('folder', folder);
+  const response = await fetch('/api/admin/uploads', { method: 'POST', body: form });
+  const json = (await response.json().catch(() => ({}))) as { url?: string; error?: string };
+  if (!response.ok || !json.url) {
+    return { url: null, error: json.error || 'Upload failed. Please try again.' };
   }
-
-  const { data } = supabase.storage.from(CATALOG_BUCKET).getPublicUrl(filePath);
-  return { url: data.publicUrl, error: null, width, height };
+  return { url: json.url, error: null, width, height };
 }

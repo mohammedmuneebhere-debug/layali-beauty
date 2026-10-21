@@ -11,7 +11,6 @@ import { RitualRail } from '@/components/commerce/RitualRail';
 import { toast } from '@/components/ui/Toast';
 import { useCartStore } from '@/store/cart';
 import { useCartSyncView } from '@/components/cart/useCartSyncView';
-import { createClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { pickRitualProducts } from '@/lib/ritual';
@@ -72,12 +71,9 @@ export default function CartPage() {
 
   const proceedToCheckout = async () => {
     setCheckingAuth(true);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const response = await fetch('/api/account/me', { cache: 'no-store' });
+    const json = (await response.json()) as { signedIn?: boolean };
+    if (!json.signedIn) {
       router.push('/auth/signin?redirect=/checkout');
       setCheckingAuth(false);
       return;

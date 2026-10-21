@@ -619,6 +619,7 @@ export async function findCompletedCheckoutBySubmissionId(
 
 export async function createCodDraftOrder(options: {
   email: string;
+  customerId?: string | null;
   note?: string | null;
   tags?: string[];
   shippingAddress: DraftOrderShippingAddress;
@@ -646,6 +647,7 @@ export async function createCodDraftOrder(options: {
   }>(DRAFT_ORDER_CREATE, {
     input: {
       email: options.email,
+      purchasingEntity: options.customerId ? { customerId: options.customerId } : undefined,
       note: options.note || null,
       tags: filterShopifyDraftOrderTags(
         options.tags || ['layali-cod', 'cash-on-delivery']
@@ -1101,6 +1103,94 @@ async function fetchCustomerOrderNodeBatch(
  * Input GIDs must already be ownership-checked. Never returns GIDs to callers
  * of the customer DTO mappers — this returns Admin nodes keyed internally.
  */
+const ORDERS_FOR_CUSTOMER = `#graphql
+  ${CUSTOMER_ORDER_FIELDS}
+  query LayaliOrdersForCustomer($query: String!) {
+    orders(first: 50, query: $query, sortKey: CREATED_AT, reverse: true) {
+      nodes {
+        ...LayaliCustomerOrderFields
+        customer { id }
+      }
+    }
+  }
+`;
+
+const ORDERS_FOR_CUSTOMER_MINIMAL = `#graphql
+  query LayaliOrdersForCustomerMinimal($query: String!) {
+    orders(first: 50, query: $query, sortKey: CREATED_AT, reverse: true) {
+      nodes {
+        id
+        name
+        createdAt
+        cancelledAt
+        confirmed
+        closed
+        displayFinancialStatus
+        displayFulfillmentStatus
+        tags
+        paymentGatewayNames
+        customer { id }
+        totalPriceSet { shopMoney { amount currencyCode } }
+        subtotalPriceSet { shopMoney { amount currencyCode } }
+        totalShippingPriceSet { shopMoney { amount currencyCode } }
+        shippingAddress {
+          name
+          phone
+          address1
+          address2
+          city
+          province
+          zip
+          country
+        }
+        lineItems(first: 50) {
+          nodes {
+            title
+            variantTitle
+            quantity
+            discountedUnitPriceSet { shopMoney { amount currencyCode } }
+            originalUnitPriceSet { shopMoney { amount currencyCode } }
+          }
+        }
+      }
+    }
+  }
+`;
+
+function customerNumericId(customerGid: string): string | null {
+  const match = customerGid.match(/Customer\/(\d+)$/);
+  return match?.[1] || null;
+}
+
+/**
+ * Orders whose Shopify customer is the verified Customer Account customer.
+ * A browser-supplied customer id is never accepted here.
+ */
+export async function fetchOrdersForShopifyCustomer(
+  customerGid: string
+): Promise<ShopifyCustomerOrderNode[]> {
+  const numericId = customerNumericId(customerGid);
+  if (!numericId) return [];
+  const query = `customer_id:${numericId}`;
+  const load = async (document: string) => {
+    const { data, errors } = await shopifyAdminFetch<{
+      orders: { nodes: (ShopifyCustomerOrderNode & { customer?: { id?: string | null } | null })[] };
+    }>(document, { query }, CUSTOMER_ORDER_ADMIN);
+    return { nodes: data?.orders?.nodes || [], errors };
+  };
+
+  let { nodes, errors } = await load(ORDERS_FOR_CUSTOMER);
+  if (errors?.length && nodes.length === 0) {
+    ({ nodes, errors } = await load(ORDERS_FOR_CUSTOMER_MINIMAL));
+  }
+  if (errors?.length) {
+    console.error('Layali customer orders query errors', {
+      messages: errors.map((error) => error.message),
+    });
+  }
+  return nodes.filter((node) => node.customer?.id === customerGid && node.id && node.name);
+}
+
 export async function fetchShopifyCustomerOrderNodes(
   orderGids: string[]
 ): Promise<Map<string, ShopifyCustomerOrderNode>> {

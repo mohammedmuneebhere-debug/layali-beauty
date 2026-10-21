@@ -23,8 +23,6 @@ import {
   toAssistantProduct,
   type CatalogConcern,
 } from '@/lib/assistant-catalog';
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 export type {
   AssistantComparison,
   AssistantHistoryTurn,
@@ -368,10 +366,7 @@ function qaMessage(copy: Copy, product: ShopProduct, query: string): AssistantRe
   };
 }
 
-export async function answerWithCatalog(
-  supabase: SupabaseClient,
-  request: AssistantRequest
-): Promise<AssistantReply> {
+export async function answerWithCatalog(request: AssistantRequest): Promise<AssistantReply> {
   const locale: Locale = request.locale === 'ar' ? 'ar' : 'en';
   const copy = COPY[locale];
   const history = request.history || [];
@@ -399,7 +394,7 @@ export async function answerWithCatalog(
   }
 
   if (isMedical(effective)) {
-    const found = await searchCatalogProducts(supabase, {
+    const found = await searchCatalogProducts({
       query: effective,
       maxPrice: budget ?? undefined,
       limit: 4,
@@ -414,10 +409,10 @@ export async function answerWithCatalog(
   const compareRefs = resolveCompareRefs(effective, context);
   if (wantsCompare(effective) || compareRefs.length >= 2) {
     if (compareRefs.length >= 2) {
-      const products = await loadProductsByRefs(supabase, compareRefs);
+      const products = await loadProductsByRefs(compareRefs);
       if (products.length >= 2) return formatComparison(copy, products, `${effective} ${historyBlob}`);
     }
-    const named = await searchCatalogProducts(supabase, { query: effective, limit: 4 });
+    const named = await searchCatalogProducts({ query: effective, limit: 4 });
     if (named.length >= 2 && /compar|vs|difference|الفرق|قارن/.test(effective.toLowerCase())) {
       return formatComparison(copy, named.slice(0, 3), effective);
     }
@@ -429,11 +424,11 @@ export async function answerWithCatalog(
   const qaRef = resolveQaRef(effective, context);
   if (isProductQa(effective) || refersToCurrent(effective) || refersToListed(effective)) {
     if (!qaRef) {
-      const found = await searchCatalogProducts(supabase, { query: effective, limit: 4 });
+      const found = await searchCatalogProducts({ query: effective, limit: 4 });
       if (found[0]) return qaMessage(copy, found[0], effective);
       return { message: copy.noCurrent, products: [] };
     }
-    const product = await getProductDetails(supabase, qaRef);
+    const product = await getProductDetails(qaRef);
     if (!product) return { message: copy.noCurrent, products: [] };
     return qaMessage(copy, product, effective);
   }
@@ -450,10 +445,10 @@ export async function answerWithCatalog(
   }
 
   if (context.currentHandle && /worth buying|should i buy this|أشتريه/.test(effective.toLowerCase())) {
-    const product = await getProductDetails(supabase, context.currentHandle);
+    const product = await getProductDetails(context.currentHandle);
     if (product) {
       const category = isStorefrontCategory(product.category) ? product.category : undefined;
-      const similar = await searchCatalogProducts(supabase, {
+      const similar = await searchCatalogProducts({
         query: `${category || ''} ${product.name}`.trim(),
         category,
         limit: 4,
@@ -471,7 +466,7 @@ export async function answerWithCatalog(
     }
   }
 
-  const found = await searchCatalogProducts(supabase, {
+  const found = await searchCatalogProducts({
     query: effective,
     category: categories.length === 1 ? categories[0] : undefined,
     maxPrice: budget ?? undefined,
@@ -491,10 +486,7 @@ export async function answerWithCatalog(
   return formatRecommendation(copy, found, effective, budget, concerns, intro);
 }
 
-export async function runAssistant(
-  supabase: SupabaseClient,
-  request: AssistantRequest
-): Promise<AssistantReply> {
+export async function runAssistant(request: AssistantRequest): Promise<AssistantReply> {
   const locale: Locale = request.locale === 'ar' ? 'ar' : 'en';
   const copy = COPY[locale];
   const raw = request.query.trim();
@@ -510,7 +502,7 @@ export async function runAssistant(
     const timer = setTimeout(() => controller.abort(), 22_000);
     try {
       const { runLailaLlm } = await import('@/lib/assistant-llm');
-      const llm = await runLailaLlm(supabase, request, controller.signal);
+      const llm = await runLailaLlm(request, controller.signal);
       if (llm) {
         console.info('[laila-llm] using Gemini/OpenRouter reply');
         return llm;
@@ -526,7 +518,7 @@ export async function runAssistant(
   }
 
   try {
-    return await answerWithCatalog(supabase, request);
+    return await answerWithCatalog(request);
   } catch (err) {
     console.error('Laila catalog advisor failed', err);
     return { message: copy.catalogTrouble, products: [] };

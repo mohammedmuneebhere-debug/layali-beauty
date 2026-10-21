@@ -3,7 +3,6 @@
  * Shopify remains the product source of truth; these helpers never invent SKUs.
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   loadShopCatalog,
   loadShopProductByParam,
@@ -315,10 +314,7 @@ export type SearchProductsInput = {
   limit?: number;
 };
 
-export async function searchCatalogProducts(
-  supabase: SupabaseClient,
-  input: SearchProductsInput
-): Promise<ShopProduct[]> {
+export async function searchCatalogProducts(input: SearchProductsInput): Promise<ShopProduct[]> {
   const limit = Math.min(Math.max(input.limit ?? 8, 1), 12);
   const categories = input.category ? [input.category] : detectCategories(input.query || '');
   const concerns = [
@@ -331,7 +327,6 @@ export async function searchCatalogProducts(
 
   // One bounded Storefront search — do not paginate collections here.
   const { products: raw } = await loadShopCatalog({
-    supabase,
     query: shopifyQuery,
     first: ASSISTANT_SEARCH_LIMIT,
     enrichMetadata: false,
@@ -354,7 +349,7 @@ export async function searchCatalogProducts(
 
   const top = scored.slice(0, limit);
   if (top.length === 0) return [];
-  return withProductMetadata(supabase, top);
+  return withProductMetadata(top);
 }
 
 function buildShopifyQuery(
@@ -450,23 +445,17 @@ export function reasonForProduct(
   return 'From the live Layali catalog.';
 }
 
-export async function loadProductsByRefs(
-  supabase: SupabaseClient,
-  refs: string[]
-): Promise<ShopProduct[]> {
+export async function loadProductsByRefs(refs: string[]): Promise<ShopProduct[]> {
   const unique = [...new Set(refs.map((r) => r.trim()).filter(Boolean))].slice(0, 8);
   const loaded = (await Promise.all(unique.map((ref) => loadShopProductByParam(ref)))).filter(
     (p) => p != null
   );
   if (loaded.length === 0) return [];
-  return withProductMetadata(supabase, loaded);
+  return withProductMetadata(loaded);
 }
 
-export async function getProductDetails(
-  supabase: SupabaseClient,
-  ref: string
-): Promise<ShopProduct | null> {
-  const [product] = await loadProductsByRefs(supabase, [ref]);
+export async function getProductDetails(ref: string): Promise<ShopProduct | null> {
+  const [product] = await loadProductsByRefs([ref]);
   return product || null;
 }
 

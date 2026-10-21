@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, Package, LogOut, Sparkles, MapPin } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { FadeIn } from '@/components/ui/FadeIn';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
@@ -18,31 +17,39 @@ export default function AccountPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
+      const response = await fetch('/api/account/me', { cache: 'no-store' });
+      const json = (await response.json()) as {
+        signedIn?: boolean;
+        customer?: {
+          fullName: string;
+          email: string;
+          city: string | null;
+          country: string | null;
+          phone: string | null;
+        } | null;
+      };
+      if (!json.signedIn || !json.customer) {
         router.push('/auth/signin');
         return;
       }
-
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      setProfile(data);
+      setProfile({
+        id: '',
+        email: json.customer.email,
+        full_name: json.customer.fullName,
+        role: 'user',
+        gender: null,
+        country: json.customer.country,
+        city: json.customer.city,
+        phone: json.customer.phone,
+        address: null,
+        onboarding_completed: true,
+        created_at: '',
+        updated_at: '',
+      });
       setLoading(false);
     }
     load();
   }, [router]);
-
-  const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push('/');
-  };
 
   if (loading) {
     return (
@@ -117,9 +124,11 @@ export default function AccountPage() {
             </Link>
           </div>
 
-          <Button variant="ghost" className="mt-8" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4" /> {t.account.signOut}
-          </Button>
+          <form action="/api/customer-account/logout" method="POST">
+            <Button type="submit" variant="ghost" className="mt-8">
+              <LogOut className="w-4 h-4" /> {t.account.signOut}
+            </Button>
+          </form>
         </FadeIn>
       </div>
     </div>

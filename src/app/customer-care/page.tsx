@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Star, MessageCircle, Mail, Send, Headphones } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { CONTACT_EMAIL } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -37,35 +36,24 @@ function CustomerCareContent() {
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      setUserId(user?.id ?? null);
+      const me = await fetch('/api/account/me', { cache: 'no-store' });
+      const meJson = (await me.json()) as { signedIn?: boolean; customer?: { id: string } };
+      const userId = meJson.signedIn ? meJson.customer?.id || null : null;
+      setUserId(userId);
 
-      const { data: reviewData } = await supabase
-        .from('customer_reviews')
-        .select('*, profile:profiles(full_name, city, country)')
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false });
-      setReviews((reviewData as CustomerReview[]) || []);
+      const reviewRes = await fetch('/api/admin/reviews?approved=1', { cache: 'no-store' });
+      const reviewJson = (await reviewRes.json()) as { reviews?: CustomerReview[] };
+      setReviews(reviewJson.reviews || []);
 
-      if (user) {
-        const { data: conv } = await supabase
-          .from('support_conversations')
-          .select('*')
-          .eq('user_id', user.id)
-          .eq('status', 'open')
-          .order('last_message_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (conv) {
-          setConversation(conv);
-          const { data: msgs } = await supabase
-            .from('support_messages')
-            .select('*, profile:profiles(full_name)')
-            .eq('conversation_id', conv.id)
-            .order('created_at', { ascending: true });
-          setMessages((msgs as SupportMessage[]) || []);
+      if (userId) {
+        const supportRes = await fetch('/api/support', { cache: 'no-store' });
+        const supportJson = (await supportRes.json()) as {
+          conversation?: SupportConversation | null;
+          messages?: SupportMessage[];
+        };
+        if (supportJson.conversation) {
+          setConversation(supportJson.conversation);
+          setMessages(supportJson.messages || []);
         }
       }
     }
@@ -74,37 +62,12 @@ function CustomerCareContent() {
 
   useEffect(() => {
     if (!conversation?.id) return;
-
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`support-${conversation.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'support_messages',
-          filter: `conversation_id=eq.${conversation.id}`,
-        },
-        async (payload) => {
-          const newMsg = payload.new as SupportMessage;
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', newMsg.sender_id)
-            .single();
-
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [...prev, { ...newMsg, profile: profile || undefined }];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const timer = window.setInterval(async () => {
+      const supportRes = await fetch('/api/support', { cache: 'no-store' });
+      const supportJson = (await supportRes.json()) as { messages?: SupportMessage[] };
+      if (supportJson.messages) setMessages(supportJson.messages);
+    }, 5000);
+    return () => window.clearInterval(timer);
   }, [conversation?.id]);
 
   useEffect(() => {
@@ -120,16 +83,12 @@ function CustomerCareContent() {
 
     setReviewLoading(true);
     setReviewSuccess('');
-    const supabase = createClient();
-
-    const { error } = await supabase.from('customer_reviews').insert({
-      user_id: userId,
-      rating: reviewForm.rating,
-      title: reviewForm.title,
-      content: reviewForm.content,
+    const response = await fetch('/api/admin/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reviewForm),
     });
-
-    if (!error) {
+    if (response.ok) {
       setReviewSuccess('Thank you! Your review has been submitted and will appear after approval.');
       setReviewForm({ rating: 5, title: '', content: '' });
     }
@@ -145,42 +104,16 @@ function CustomerCareContent() {
     if (!newMessage.trim()) return;
 
     setChatLoading(true);
-    const supabase = createClient();
-    let convId = conversation?.id;
-
-    if (!convId) {
-      const { data: newConv, error } = await supabase
-        .from('support_conversations')
-        .insert({ user_id: userId, subject: 'Customer inquiry' })
-        .select()
-        .single();
-
-      if (error || !newConv) {
-        setChatLoading(false);
-        return;
-      }
-      convId = newConv.id;
-      setConversation(newConv);
-    }
-
-    const { data: sent, error } = await supabase
-      .from('support_messages')
-      .insert({
-        conversation_id: convId,
-        sender_id: userId,
-        sender_role: 'user',
-        message: newMessage.trim(),
-      })
-      .select('*, profile:profiles(full_name)')
-      .single();
-
-    if (!error && sent) {
-      setMessages((prev) => [...prev, sent as SupportMessage]);
+    const response = await fetch('/api/support', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: newMessage.trim(), conversationId: conversation?.id }),
+    });
+    const json = (await response.json()) as { conversation?: SupportConversation; message?: SupportMessage };
+    if (response.ok && json.message) {
+      if (json.conversation) setConversation(json.conversation);
+      setMessages((prev) => [...prev, json.message as SupportMessage]);
       setNewMessage('');
-      await supabase
-        .from('support_conversations')
-        .update({ last_message_at: new Date().toISOString() })
-        .eq('id', convId);
     }
 
     setChatLoading(false);

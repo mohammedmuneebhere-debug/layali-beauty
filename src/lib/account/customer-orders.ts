@@ -1,22 +1,13 @@
 /**
  * Server-only customer order reads.
- * Ownership is always shopify_order_links for the authenticated user, then Shopify.
+ * Ownership is the Shopify order customer, matched to the Customer Account session.
  */
-import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  fetchShopifyCustomerOrderNodes,
-  fetchShopifyOrderRefsForUser,
-  isShopifyOrderGid,
+  fetchOrdersForShopifyCustomer,
   type ShopifyCustomerOrderNode,
 } from '@/lib/shopify/admin-orders';
-import { mergeRecoveredOrderLinks, missingOwnedOrderRefs } from '@/lib/account/order-link-recovery';
 import { shopifyImageUrl } from '@/lib/shopify/image';
-import {
-  displayOrderNumber,
-  isForbiddenOrderRef,
-  refsMatchOrderName,
-  toCustomerOrderRef,
-} from '@/lib/account/order-ref';
+import { displayOrderNumber, isForbiddenOrderRef, refsMatchOrderName, toCustomerOrderRef } from '@/lib/account/order-ref';
 import type {
   CustomerOrderDetail,
   CustomerOrderItem,
@@ -24,7 +15,6 @@ import type {
   CustomerTracking,
 } from '@/lib/account/order-types';
 import { safeCustomerTrackingUrl } from '@/lib/account/safe-tracking-url';
-import { upsertOwnedShopifyOrderLink } from '@/lib/account/shopify-order-links';
 import {
   activeFulfillments,
   fulfillmentShipmentStatus,
@@ -45,12 +35,6 @@ export type {
 } from '@/lib/account/order-types';
 
 export { mapCustomerFacingStatus, mapTimeline } from '@/lib/account/order-status-map';
-
-type OrderLinkRow = {
-  shopify_order_id: string;
-  shopify_order_name: string | null;
-  created_at: string | null;
-};
 
 function moneyAmount(
   set?: { shopMoney?: { amount: string; currencyCode: string } | null } | null
@@ -220,156 +204,23 @@ function mapDetail(
   };
 }
 
-async function persistDiscoveredLinks(
-  userId: string,
-  discovered: { id: string; name: string }[]
-) {
-  for (const order of discovered) {
-    if (!isShopifyOrderGid(order.id)) continue;
-    const result = await upsertOwnedShopifyOrderLink({
-      userId,
-      shopifyOrderId: order.id,
-      shopifyOrderName: order.name,
-    });
-    if (result === 'failed') {
-      console.error('shopify_order_links recovery upsert failed', order.id);
-    }
-  }
-}
-
-async function loadOwnedLinks(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<OrderLinkRow[]> {
-  const { data, error } = await supabase
-    .from('shopify_order_links')
-    .select('shopify_order_id, shopify_order_name, created_at')
-    .eq('supabase_user_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('shopify_order_links list failed', error.message);
-    throw Object.assign(new Error('unavailable'), { status: 502 });
-  }
-  return (data as OrderLinkRow[]) || [];
-}
-
-async function loadOwnedLinksWithRecovery(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<OrderLinkRow[]> {
-  let links = await loadOwnedLinks(supabase, userId);
-
-  try {
-    const discovered = await fetchShopifyOrderRefsForUser(userId);
-    const missing = missingOwnedOrderRefs(
-      links.map((row) => row.shopify_order_id),
-      discovered
-    );
-    if (!missing.length) return links;
-
-    await persistDiscoveredLinks(userId, missing);
-    links = await loadOwnedLinks(supabase, userId);
-    return mergeRecoveredOrderLinks(links, discovered);
-  } catch (err) {
-    console.error('Layali customer orders: ownership-tag recovery failed', err);
-  }
-  return links;
-}
-
-function nodeForLink(
-  nodes: Map<string, ShopifyCustomerOrderNode>,
-  gid: string
-): ShopifyCustomerOrderNode | undefined {
-  const direct = nodes.get(gid);
-  if (direct) return direct;
-  const suffix = gid.match(/Order\/(\d+)/)?.[1];
-  if (!suffix) return undefined;
-  for (const [key, node] of nodes) {
-    if (key.endsWith(`/${suffix}`)) return node;
-  }
-  return undefined;
-}
-
-export async function listCustomerOrders(
-  supabase: SupabaseClient,
-  userId: string
-): Promise<CustomerOrderSummary[]> {
-  const links = await loadOwnedLinksWithRecovery(supabase, userId);
-  const gids = links.map((l) => l.shopify_order_id).filter((id) => isShopifyOrderGid(id));
-  const nodes = gids.length ? await fetchShopifyCustomerOrderNodes(gids) : new Map();
-
-  console.info('Layali customer orders list', {
-      linkRows: links.length,
-    validGids: gids.length,
-    fetched: nodes.size,
-  });
-
-  if (gids.length && nodes.size === 0) {
-    throw Object.assign(new Error('unavailable'), { status: 502 });
-  }
-
+export async function listCustomerOrders(customerGid: string): Promise<CustomerOrderSummary[]> {
+  const nodes = await fetchOrdersForShopifyCustomer(customerGid);
   const orders: CustomerOrderSummary[] = [];
-  for (const link of links) {
-    if (!isShopifyOrderGid(link.shopify_order_id)) continue;
-    const node = nodeForLink(nodes, link.shopify_order_id);
-    if (!node) continue;
-    const summary = mapSummary(node, link.created_at);
+  for (const node of nodes) {
+    const summary = mapSummary(node, node.createdAt || null);
     if (summary) orders.push(summary);
   }
   return orders;
 }
 
-function isOwnedOrderGid(ownedGids: Set<string>, gid: string): boolean {
-  if (ownedGids.has(gid)) return true;
-  const suffix = gid.match(/Order\/(\d+)/)?.[1];
-  if (!suffix) return false;
-  for (const owned of ownedGids) {
-    if (owned.endsWith(`/${suffix}`)) return true;
-  }
-  return false;
-}
-
 export async function getCustomerOrder(
-  supabase: SupabaseClient,
-  userId: string,
+  customerGid: string,
   orderRef: string
 ): Promise<CustomerOrderDetail | null> {
   if (isForbiddenOrderRef(orderRef)) return null;
-
-  const links = await loadOwnedLinksWithRecovery(supabase, userId);
-  const ownedGids = new Set(
-    links.map((l) => l.shopify_order_id).filter((id) => isShopifyOrderGid(id))
-  );
-  if (!ownedGids.size) return null;
-
-  const named = links.find((row) => refsMatchOrderName(row.shopify_order_name, orderRef));
-  const gidsToFetch =
-    named && isShopifyOrderGid(named.shopify_order_id)
-      ? [named.shopify_order_id]
-      : [...ownedGids];
-
-  const nodes = await fetchShopifyCustomerOrderNodes(gidsToFetch);
-
-  let matchedGid: string | null =
-    named && isShopifyOrderGid(named.shopify_order_id) ? named.shopify_order_id : null;
-  let node = matchedGid ? nodeForLink(nodes, matchedGid) : undefined;
-
-  if (!node || !refsMatchOrderName(node.name, orderRef)) {
-    node = undefined;
-    matchedGid = null;
-    for (const [gid, candidate] of nodes) {
-      if (!isOwnedOrderGid(ownedGids, gid)) continue;
-      if (!refsMatchOrderName(candidate.name, orderRef)) continue;
-      node = candidate;
-      matchedGid = gid;
-      break;
-    }
-  }
-
-  if (!node || !matchedGid || !isOwnedOrderGid(ownedGids, matchedGid)) return null;
-  const link =
-    links.find((l) => l.shopify_order_id === matchedGid) ||
-    links.find((l) => nodeForLink(nodes, l.shopify_order_id) === node);
-  return mapDetail(node, link?.created_at || null);
+  const nodes = await fetchOrdersForShopifyCustomer(customerGid);
+  const node = nodes.find((candidate) => refsMatchOrderName(candidate.name, orderRef));
+  if (!node) return null;
+  return mapDetail(node, node.createdAt || null);
 }

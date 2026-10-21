@@ -42,6 +42,14 @@ export class ShopifyThrottleError extends Error {
   }
 }
 
+/** GraphQL rejected the query. The message is generic so it can be returned to the browser. */
+export class ShopifyStorefrontQueryError extends Error {
+  constructor() {
+    super('Shopify Storefront query rejected');
+    this.name = 'ShopifyStorefrontQueryError';
+  }
+}
+
 /**
  * Server-side Storefront API fetch. Never call from client with secrets.
  *
@@ -109,7 +117,7 @@ export async function shopifyFetch<T>(
       );
     }
     if (json.errors?.length) {
-      throw new Error(json.errors.map((e) => e.message).join('; '));
+      throw new ShopifyStorefrontQueryError();
     }
     if (!json.data) {
       throw new Error('Shopify Storefront returned no data');

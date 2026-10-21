@@ -15,7 +15,6 @@ import { cn, formatPrice } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { displayOrderNumber } from '@/lib/account/order-ref';
 import { clearCheckoutOrderNavigating } from '@/lib/checkout/post-order-nav';
-import { createClient } from '@/lib/supabase/client';
 
 type LegacyConfirmedOrder = {
   name?: string;
@@ -112,20 +111,10 @@ function ConfirmationContent() {
 
     async function loadCustomerName() {
       try {
-        const supabase = createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user || cancelled) return;
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name')
-          .eq('id', user.id)
-          .single();
-
-        if (cancelled) return;
-        setCustomerName(greetingName(profile?.full_name));
+        const response = await fetch('/api/account/me', { cache: 'no-store' });
+        const json = (await response.json()) as { signedIn?: boolean; customer?: { fullName?: string } };
+        if (!json.signedIn || cancelled) return;
+        setCustomerName(greetingName(json.customer?.fullName));
       } catch {
         // Name is optional — keep anonymous congratulations.
       }

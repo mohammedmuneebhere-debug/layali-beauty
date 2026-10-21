@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { countCatalogProducts, isShopifyConfigured } from '@/lib/shopify';
+import { publicStorefrontFailure } from '@/lib/shopify/public-error';
 
 export async function GET() {
   try {
@@ -9,7 +10,11 @@ export async function GET() {
     const count = await countCatalogProducts();
     return NextResponse.json({ count, configured: true });
   } catch (err) {
-    console.error('Shopify product count error', err);
-    return NextResponse.json({ count: 0, error: 'Unable to count products' }, { status: 502 });
+    const failure = publicStorefrontFailure(err);
+    console.error('Shopify product count error', failure.code, failure.storefrontStatus);
+    return NextResponse.json(
+      { count: 0, error: 'Unable to count products', code: failure.code, storefrontStatus: failure.storefrontStatus },
+      { status: 502 }
+    );
   }
 }

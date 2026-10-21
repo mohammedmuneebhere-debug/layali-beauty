@@ -3,8 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, ImageIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { createClient } from '@/lib/supabase/client';
-import { BANNER_PLACEMENTS, fetchAllBanners } from '@/lib/site-banners';
+import { BANNER_PLACEMENTS } from '@/lib/site-banners';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -35,9 +34,9 @@ export default function AdminBannersPage() {
   const placement = watch('placement');
 
   const loadData = async () => {
-    const supabase = createClient();
-    const rows = await fetchAllBanners(supabase);
-    setBanners(rows);
+    const response = await fetch('/api/admin/banners', { cache: 'no-store' });
+    const json = (await response.json()) as { banners?: SiteBanner[] };
+    setBanners(json.banners || []);
   };
 
   useEffect(() => {
@@ -85,7 +84,6 @@ export default function AdminBannersPage() {
     }
 
     setLoading(true);
-    const supabase = createClient();
     const payload = {
       placement: data.placement,
       image_url: imageUrl,
@@ -101,11 +99,11 @@ export default function AdminBannersPage() {
       updated_at: new Date().toISOString(),
     };
 
-    if (editing) {
-      await supabase.from('site_banners').update(payload).eq('id', editing.id);
-    } else {
-      await supabase.from('site_banners').insert(payload);
-    }
+    await fetch('/api/admin/banners', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editing ? { ...payload, id: editing.id } : payload),
+    });
 
     setShowForm(false);
     setEditing(null);
@@ -117,8 +115,7 @@ export default function AdminBannersPage() {
 
   const deleteBanner = async (id: string) => {
     if (!confirm('Delete this banner?')) return;
-    const supabase = createClient();
-    await supabase.from('site_banners').delete().eq('id', id);
+    await fetch(`/api/admin/banners?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     await loadData();
   };
 

@@ -4,7 +4,6 @@
  * Final replies must go through submitAnswer (or parseable JSON) and a lightweight check.
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ShopProduct } from '@/lib/catalog';
 import type {
   AssistantPageContext,
@@ -363,7 +362,6 @@ function messageText(content: unknown): string {
 }
 
 export async function runLailaLlm(
-  supabase: SupabaseClient,
   request: AssistantRequest,
   signal?: AbortSignal
 ): Promise<AssistantReply | null> {
@@ -389,7 +387,7 @@ export async function runLailaLlm(
   ].filter((v): v is string => Boolean(v));
 
   if (prefetchRefs.length) {
-    remember(await loadProductsByRefs(supabase, prefetchRefs));
+    remember(await loadProductsByRefs(prefetchRefs));
   }
 
   const current = context.currentHandle ? catalogProducts.get(context.currentHandle) : undefined;
@@ -432,7 +430,7 @@ export async function runLailaLlm(
   const executeCatalogTool = async (name: string, args: Record<string, unknown>) => {
     if (name === 'searchProducts') {
       usedCatalogTool = true;
-      const products = await searchCatalogProducts(supabase, {
+      const products = await searchCatalogProducts({
         query: typeof args.query === 'string' ? args.query : request.query,
         category: typeof args.category === 'string' ? args.category : undefined,
         concern: typeof args.concern === 'string' ? args.concern : undefined,
@@ -446,7 +444,7 @@ export async function runLailaLlm(
     if (name === 'getProductDetails') {
       usedCatalogTool = true;
       const ref = typeof args.ref === 'string' ? args.ref : '';
-      const product = ref ? await getProductDetails(supabase, ref) : null;
+      const product = ref ? await getProductDetails(ref) : null;
       if (product) remember([product]);
       return product ? compactProduct(product) : { error: 'Product not found in the catalog.' };
     }
@@ -457,7 +455,6 @@ export async function runLailaLlm(
         : [];
       const question = typeof args.question === 'string' ? args.question : request.query;
       const products = await loadProductsByRefs(
-        supabase,
         handles.length >= 2 ? handles : context.compareHandles || []
       );
       remember(products, true);

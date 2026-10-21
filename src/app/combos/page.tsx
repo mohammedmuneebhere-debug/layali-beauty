@@ -5,7 +5,6 @@ import { ShoppingBag, Shield, Sparkles } from 'lucide-react';
 import { Card, CardImage, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/FadeIn';
-import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
 import { comboItemsToCartLines } from '@/lib/recommendation';
@@ -15,7 +14,7 @@ import type { Combo } from '@/types/database';
 /**
  * Hybrid combos:
  * - Shopify collection/product_type "combo" (commerce bundles)
- * - Layali curated + AI combos from Supabase with shopify_items GIDs
+ * - Layali curated combos stored on the shop, with Shopify variant ids
  */
 export default function CombosPage() {
   const [shopCombos, setShopCombos] = useState<ShopProduct[]>([]);
@@ -27,20 +26,15 @@ export default function CombosPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
       const [shopRes, layaliRes] = await Promise.all([
         fetch('/api/shopify/products?category=combo'),
-        supabase
-          .from('combos')
-          .select('*')
-          .eq('is_active', true)
-          .eq('gender', 'female')
-          .order('created_at', { ascending: false }),
+        fetch('/api/content/combos', { cache: 'no-store' }),
       ]);
 
       const shopJson = (await shopRes.json()) as { products?: ShopProduct[] };
+      const layaliJson = (await layaliRes.json()) as { combos?: Combo[] };
       setShopCombos(shopJson.products || []);
-      setLayaliCombos((layaliRes.data as Combo[]) || []);
+      setLayaliCombos((layaliJson.combos || []).filter((combo) => combo.gender === 'female'));
       setLoading(false);
     }
     void load();

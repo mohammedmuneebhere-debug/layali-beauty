@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { runAssistant, type AssistantHistoryTurn, type AssistantPageContext } from '@/lib/assistant';
 import { isShopifyConfigured } from '@/lib/shopify';
 
@@ -109,8 +108,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const supabase = await createClient();
-    const reply = await runAssistant(supabase, { query, locale, history, context });
+    const reply = await runAssistant({ query, locale, history, context });
     return NextResponse.json(reply);
   } catch (err) {
     console.error('Assistant ask error', err);

@@ -190,8 +190,8 @@ export default function AdminTrendingPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Select up to {TRENDING_MAX} Shopify products and assign unique positions 1–
-            {TRENDING_MAX}. This page stores only Shopify product IDs and order in
-            Supabase. Title, price, images, and inventory stay in Shopify.
+            {TRENDING_MAX}. This page stores only Shopify product IDs and order on
+            the shop. Title, price, images, and inventory stay in Shopify.
           </p>
         </div>
         <div className="flex items-center gap-3 shrink-0">

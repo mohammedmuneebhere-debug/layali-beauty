@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { MessageCircle, Send, CheckCircle, Star, Trash2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { formatDate } from '@/lib/utils';
 import type { CustomerReview, SupportConversation, SupportMessage } from '@/types/database';
@@ -19,39 +18,28 @@ export default function AdminSupportPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const loadConversations = async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('support_conversations')
-      .select('*, profile:profiles(full_name, email, city, country)')
-      .order('last_message_at', { ascending: false });
-    setConversations((data as SupportConversation[]) || []);
+    const response = await fetch('/api/support?scope=admin', { cache: 'no-store' });
+    const json = (await response.json()) as { conversations?: SupportConversation[] };
+    setConversations(json.conversations || []);
   };
 
   const loadPendingReviews = async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('customer_reviews')
-      .select('*, profile:profiles(full_name, city, country)')
-      .eq('is_approved', false)
-      .order('created_at', { ascending: false });
-    setPendingReviews((data as CustomerReview[]) || []);
+    const response = await fetch('/api/admin/reviews', { cache: 'no-store' });
+    const json = (await response.json()) as { reviews?: CustomerReview[] };
+    setPendingReviews(json.reviews || []);
   };
 
   const loadMessages = async (conversationId: string) => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('support_messages')
-      .select('*, profile:profiles(full_name)')
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
-    setMessages((data as SupportMessage[]) || []);
+    const response = await fetch('/api/support?scope=admin', { cache: 'no-store' });
+    const json = (await response.json()) as { messages?: SupportMessage[] };
+    setMessages((json.messages || []).filter((message) => message.conversation_id === conversationId));
   };
 
   useEffect(() => {
     async function init() {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      setAdminId(user?.id ?? null);
+      const me = await fetch('/api/account/me', { cache: 'no-store' });
+      const json = (await me.json()) as { customer?: { id: string } };
+      setAdminId(json.customer?.id ?? null);
       await loadConversations();
       await loadPendingReviews();
     }
@@ -66,36 +54,10 @@ export default function AdminSupportPage() {
       loadMessages(conversationId);
     });
 
-    const supabase = createClient();
-    const channel = supabase
-      .channel(`admin-support-${conversationId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'support_messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        async (payload) => {
-          const newMsg = payload.new as SupportMessage;
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', newMsg.sender_id)
-            .single();
-
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [...prev, { ...newMsg, profile: profile || undefined }];
-          });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const timer = window.setInterval(() => {
+      void loadMessages(conversationId);
+    }, 5000);
+    return () => window.clearInterval(timer);
   }, [selected?.id]);
 
   useEffect(() => {
@@ -107,48 +69,46 @@ export default function AdminSupportPage() {
     if (!selected || !adminId || !reply.trim()) return;
 
     setLoading(true);
-    const supabase = createClient();
-
-    const { data: sent, error } = await supabase
-      .from('support_messages')
-      .insert({
-        conversation_id: selected.id,
-        sender_id: adminId,
-        sender_role: 'admin',
+    const response = await fetch('/api/support', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        role: 'admin',
+        conversationId: selected.id,
         message: reply.trim(),
-      })
-      .select('*, profile:profiles(full_name)')
-      .single();
-
-    if (!error && sent) {
-      setMessages((prev) => [...prev, sent as SupportMessage]);
+      }),
+    });
+    const json = (await response.json()) as { message?: SupportMessage };
+    if (response.ok && json.message) {
+      setMessages((prev) => [...prev, json.message as SupportMessage]);
       setReply('');
-      await supabase
-        .from('support_conversations')
-        .update({ last_message_at: new Date().toISOString() })
-        .eq('id', selected.id);
       loadConversations();
     }
     setLoading(false);
   };
 
   const closeConversation = async (id: string) => {
-    const supabase = createClient();
-    await supabase.from('support_conversations').update({ status: 'closed' }).eq('id', id);
+    await fetch('/api/support', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status: 'closed' }),
+    });
     loadConversations();
     if (selected?.id === id) setSelected(null);
   };
 
   const approveReview = async (id: string) => {
-    const supabase = createClient();
-    await supabase.from('customer_reviews').update({ is_approved: true }).eq('id', id);
+    await fetch('/api/admin/reviews', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, is_approved: true }),
+    });
     loadPendingReviews();
   };
 
   const deleteReview = async (id: string) => {
     if (!confirm('Delete this review?')) return;
-    const supabase = createClient();
-    await supabase.from('customer_reviews').delete().eq('id', id);
+    await fetch(`/api/admin/reviews?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     loadPendingReviews();
   };
 

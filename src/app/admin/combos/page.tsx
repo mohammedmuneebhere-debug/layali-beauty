@@ -8,7 +8,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Search, AlertTriangle } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -36,12 +35,12 @@ export default function AdminCombosPage() {
   const { register, handleSubmit, reset, setValue } = useForm();
 
   const load = async () => {
-    const supabase = createClient();
     const [combosRes, catalogRes] = await Promise.all([
-      supabase.from('combos').select('*').order('created_at', { ascending: false }),
+      fetch('/api/admin/combos', { cache: 'no-store' }),
       fetch('/api/shopify/products'),
     ]);
-    setCombos((combosRes.data as Combo[]) || []);
+    const combosJson = (await combosRes.json()) as { combos?: Combo[] };
+    setCombos(combosJson.combos || []);
     const catalogJson = (await catalogRes.json()) as {
       products?: ShopProduct[];
       configured?: boolean;
@@ -141,13 +140,7 @@ export default function AdminCombosPage() {
       setLegacyNeedsMigration(false);
     } else {
       setSelectedLines([]);
-      // Historical UUID-only combos cannot be auto-mapped
-      const supabase = createClient();
-      const { data } = await supabase
-        .from('combo_products')
-        .select('product_id')
-        .eq('combo_id', combo.id);
-      setLegacyNeedsMigration((data || []).length > 0);
+      setLegacyNeedsMigration(false);
     }
 
     setShowForm(true);
@@ -156,7 +149,6 @@ export default function AdminCombosPage() {
   const onSubmit = async (data: Record<string, unknown>) => {
     setLoading(true);
     setFormError(null);
-    const supabase = createClient();
 
     if (selectedLines.length === 0) {
       setFormError('Select at least one Shopify product/variant for this curated combo.');
@@ -189,59 +181,18 @@ export default function AdminCombosPage() {
       shopify_items: shopifyItems,
     };
 
-    let comboId = editing?.id;
-    let errorMessage: string | null = null;
-
-    if (editing) {
-      const { error } = await supabase.from('combos').update(payload).eq('id', editing.id);
-      if (error) {
-        if (String(error.message).toLowerCase().includes('shopify_items')) {
-          delete payload.shopify_items;
-          const retry = await supabase.from('combos').update(payload).eq('id', editing.id);
-          errorMessage = retry.error?.message || null;
-          if (!retry.error) {
-            setFormError(
-              'Combo saved without shopify_items. Run the Phase 3 SQL migration, then re-save.'
-            );
-          }
-        } else {
-          errorMessage = error.message;
-        }
-      }
-    } else {
-      const { data: created, error } = await supabase
-        .from('combos')
-        .insert(payload)
-        .select('id')
-        .single();
-      if (error || !created) {
-        if (error && String(error.message).toLowerCase().includes('shopify_items')) {
-          delete payload.shopify_items;
-          const retry = await supabase.from('combos').insert(payload).select('id').single();
-          if (retry.data) {
-            comboId = retry.data.id;
-            setFormError(
-              'Combo created without shopify_items. Run the Phase 3 SQL migration, then edit and re-save.'
-            );
-          } else {
-            errorMessage = retry.error?.message || error.message;
-          }
-        } else {
-          errorMessage = error?.message || 'Could not create combo';
-        }
-      } else {
-        comboId = created.id;
-      }
-    }
-
-    if (errorMessage) {
-      setFormError(errorMessage);
+    const response = await fetch('/api/admin/combos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editing ? { ...payload, id: editing.id } : payload),
+    });
+    const json = (await response.json().catch(() => ({}))) as { error?: string; combo?: { id: string } };
+    if (!response.ok) {
+      setFormError(json.error || 'Could not save combo');
       setLoading(false);
       return;
     }
-
-    // Do not write combo_products (legacy UUID FK). Leave historical rows intact.
-    void comboId;
+    void json.combo?.id;
 
     setShowForm(false);
     setEditing(null);
@@ -254,8 +205,7 @@ export default function AdminCombosPage() {
 
   const deleteCombo = async (id: string) => {
     if (!confirm('Delete this combo?')) return;
-    const supabase = createClient();
-    await supabase.from('combos').delete().eq('id', id);
+    await fetch(`/api/admin/combos?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     await load();
   };
 
@@ -298,8 +248,8 @@ export default function AdminCombosPage() {
               <div className="mb-4 flex gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <p>
-                  This combo only has legacy Supabase product UUID links. Those cannot be mapped
-                  automatically. Select Shopify products below to migrate it.
+                  This combo only has old product ids that are not Shopify variants.
+                  Select Shopify products below to attach it.
                 </p>
               </div>
             )}

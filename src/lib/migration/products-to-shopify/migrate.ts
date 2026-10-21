@@ -1,4 +1,6 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+/* Legacy reader shape. The Supabase client package is no longer a dependency. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SupabaseClient = any;
 import type { Product } from '@/types/database';
 import {
   createShopifyProductViaProductSet,

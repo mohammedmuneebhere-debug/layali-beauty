@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -15,9 +14,9 @@ export default function AdminRegionsPage() {
   const [city, setCity] = useState('');
 
   const load = async () => {
-    const supabase = createClient();
-    const { data } = await supabase.from('regions').select('*').order('country');
-    setRegions(data || []);
+    const response = await fetch('/api/admin/catalog-rules', { cache: 'no-store' });
+    const json = (await response.json()) as { regions?: Region[] };
+    setRegions(json.regions || []);
   };
 
   useEffect(() => {
@@ -28,23 +27,32 @@ export default function AdminRegionsPage() {
 
   const addRegion = async () => {
     if (!country || !city) return;
-    const supabase = createClient();
-    await supabase.from('regions').insert({ country, city });
+    await fetch('/api/admin/catalog-rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'add-region', country, city }),
+    });
     setCountry('');
     setCity('');
     load();
   };
 
   const toggleActive = async (id: string, is_active: boolean) => {
-    const supabase = createClient();
-    await supabase.from('regions').update({ is_active: !is_active }).eq('id', id);
+    await fetch('/api/admin/catalog-rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'toggle-region', id }),
+    });
     load();
   };
 
   const deleteRegion = async (id: string) => {
     if (!confirm('Delete this region?')) return;
-    const supabase = createClient();
-    await supabase.from('regions').delete().eq('id', id);
+    await fetch('/api/admin/catalog-rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete-region', id }),
+    });
     load();
   };
 

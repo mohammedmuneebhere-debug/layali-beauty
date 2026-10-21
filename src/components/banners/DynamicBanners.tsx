@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { fetchActiveBanners } from '@/lib/site-banners';
 import type { BannerPlacement } from '@/types/database';
 import type { BannerSlide } from '@/lib/banners';
 import { BannerCarousel } from '@/components/banners/BannerCarousel';
@@ -18,9 +16,11 @@ export function DynamicBannerCarousel({
   const [slides, setSlides] = useState<BannerSlide[]>(initialSlides || []);
 
   useEffect(() => {
-    const supabase = createClient();
-    void fetchActiveBanners(supabase, placement)
-      .then(setSlides)
+    void fetch(`/api/content/banners?placement=${placement}`)
+      .then((response) => response.json())
+      .then((json: { slides?: BannerSlide[] }) => {
+        if (json.slides) setSlides(json.slides);
+      })
       .catch(() => {
         /* keep SSR / fallback slides */
       });
@@ -40,8 +40,9 @@ export function DynamicPromoGrid({
   const [items, setItems] = useState<BannerSlide[]>([]);
 
   useEffect(() => {
-    const supabase = createClient();
-    void fetchActiveBanners(supabase, placement).then(setItems);
+    void fetch(`/api/content/banners?placement=${placement}`)
+      .then((response) => response.json())
+      .then((json: { slides?: BannerSlide[] }) => setItems(json.slides || []));
   }, [placement]);
 
   if (items.length === 0) return null;

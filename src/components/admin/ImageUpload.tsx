@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { Upload, X, ImageIcon } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { uploadCatalogImage, readImageDimensionsFromFile } from '@/lib/storage';
 import { cn } from '@/lib/utils';
 
@@ -23,8 +22,7 @@ export function ImageUpload({ value, onChange, folder, label = 'Product Image', 
     setUploading(true);
     setError('');
 
-    const supabase = createClient();
-    const { url, error: uploadError, width, height } = await uploadCatalogImage(supabase, file, folder);
+    const { url, error: uploadError, width, height } = await uploadCatalogImage(file, folder);
 
     if (uploadError || !url) {
       setError(uploadError || 'Upload failed. Please try again.');

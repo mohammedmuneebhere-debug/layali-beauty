@@ -7,7 +7,6 @@ import { Filter, Search, X, ChevronLeft, ChevronRight, PackageOpen } from 'lucid
 import { FadeIn } from '@/components/ui/FadeIn';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { toast } from '@/components/ui/Toast';
-import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { cn } from '@/lib/utils';
 import { PRODUCT_CATEGORIES, STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
@@ -107,29 +106,22 @@ export default function ShopContent() {
 
     async function load() {
       setLoading(true);
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const me = await fetch('/api/account/me', { cache: 'no-store' });
+      const meJson = (await me.json()) as {
+        signedIn?: boolean;
+        customer?: { city: string | null; country: string | null } | null;
+      };
 
       const gender = 'female';
       let city = '';
       let country = '';
 
-      if (user) {
+      if (meJson.signedIn && meJson.customer) {
         if (!cancelled) setIsGuest(false);
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('city, country')
-          .eq('id', user.id)
-          .single();
-
-        if (profile) {
-          city = profile.city || '';
-          country = profile.country || '';
-          if (city && country && !cancelled) {
-            setUserRegion({ gender, city, country });
-          }
+        city = meJson.customer.city || '';
+        country = meJson.customer.country || '';
+        if (city && country && !cancelled) {
+          setUserRegion({ gender, city, country });
         }
       } else if (!cancelled) {
         setIsGuest(true);

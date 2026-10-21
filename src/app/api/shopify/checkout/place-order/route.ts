@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getCustomerContext } from '@/lib/auth/current-customer';
+import { listCustomerAddresses } from '@/lib/account/address-book';
 import { getCart, isShopifyConfigured } from '@/lib/shopify';
 import { isShopifyAdminConfigured } from '@/lib/shopify/admin';
 import {
@@ -7,15 +8,16 @@ import {
   completeCodDraftOrder,
   createCodDraftOrder,
   findCompletedCheckoutBySubmissionId,
-  isShopifyOrderGid,
   resolveCompletedDraftOrder,
   submissionTag,
   userOwnershipTag,
   userSubmissionTag,
   type CreatedShopifyOrder,
 } from '@/lib/shopify/admin-orders';
-import { upsertOwnedShopifyOrderLink } from '@/lib/account/shopify-order-links';
 import { toShopifyAddressParts } from '@/lib/address/structured';
+import { codCheckoutCountryDecision } from '@/lib/shopify/customer-account-api';
+import { assessDeliveryCharge } from '@/lib/checkout/delivery-charge';
+import { checkoutCustomerCode, checkoutCustomerMessage, redactCheckoutLog } from '@/lib/checkout/customer-error';
 import { checkoutPayableTotal, LAYALI_DELIVERY_FEE } from '@/lib/checkout/pricing';
 
 export const runtime = 'nodejs';
@@ -81,19 +83,6 @@ function idempotencyKey(userId: string, submissionId: string): string {
   return `${userId}:${submissionId}`;
 }
 
-/**
- * Map address country text to ISO code.
- * Unknown/empty/unrecognized values return null — never silently become SA.
- */
-function mapCountryToCode(country?: string | null): string | null {
-  const key = (country || '').trim().toLowerCase();
-  if (!key) return null;
-  if (key === 'sa' || key.includes('saudi')) return 'SA';
-  if (key === 'ae' || key.includes('emirates') || key === 'uae') return 'AE';
-  if (/^[a-z]{2}$/.test(key)) return key.toUpperCase();
-  return null;
-}
-
 function buildSuccess(params: {
   order: CreatedShopifyOrder;
   receiverName: string;
@@ -125,43 +114,6 @@ function buildSuccess(params: {
   };
 }
 
-async function linkShopifyOrder(params: {
-  userId: string;
-  order: CreatedShopifyOrder;
-  submissionId: string;
-}) {
-  if (!isShopifyOrderGid(params.order.orderId)) {
-    console.warn('shopify_order_links skipped — Order GID unresolved', {
-      draftOrderId: params.order.draftOrderId,
-      submissionId: params.submissionId,
-    });
-    return;
-  }
-
-  const result = await upsertOwnedShopifyOrderLink({
-    userId: params.userId,
-    shopifyOrderId: params.order.orderId,
-    shopifyOrderName: params.order.orderName,
-    submissionId: params.submissionId,
-  });
-
-  if (result === 'refused_foreign') {
-    console.error('shopify_order_links refused — order already linked to another user', {
-      orderId: params.order.orderId,
-      submissionId: params.submissionId,
-    });
-    return;
-  }
-
-  if (result === 'failed') {
-    // Post-completion — never fail the customer response for link issues.
-    console.error('shopify_order_links upsert failed', {
-      orderId: params.order.orderId,
-      submissionId: params.submissionId,
-    });
-  }
-}
-
 export async function POST(req: NextRequest) {
   pruneIdempotencyCache();
 
@@ -178,12 +130,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user?.id || !user.email) {
+    const context = await getCustomerContext();
+    if (!context.signedIn) {
       return NextResponse.json(
         {
           ok: false,
@@ -194,6 +142,8 @@ export async function POST(req: NextRequest) {
         { status: 401 }
       );
     }
+    const user = { id: context.customer.id, email: context.customer.email };
+    const accessToken = context.accessToken;
 
     const body = (await req.json()) as PlaceOrderBody;
     const cartId = body.cartId?.trim();
@@ -256,15 +206,11 @@ export async function POST(req: NextRequest) {
       const prior = await findCompletedCheckoutBySubmissionId(
         submissionId,
         user.id,
-        user.email!
+        user.email
       );
       if (prior) {
-        const { data: addressForPrior } = await supabase
-          .from('addresses')
-          .select('*')
-          .eq('id', addressId)
-          .eq('user_id', user.id)
-          .maybeSingle();
+        const addresses = await listCustomerAddresses(accessToken, user.id);
+        const addressForPrior = addresses.find((row) => row.id === addressId);
 
         const success = buildSuccess({
           order: prior,
@@ -275,16 +221,10 @@ export async function POST(req: NextRequest) {
           alreadyCompleted: true,
         });
 
-        await linkShopifyOrder({
-          userId: user.id,
-          order: prior,
-          submissionId,
-        });
-
         completedBySubmission.set(cacheKey, { at: Date.now(), response: success });
         console.info('Layali COD idempotent hit — existing completed checkout', {
           submissionId,
-          userId: user.id,
+          userId: redactCheckoutLog(user.id),
           orderName: prior.orderName,
           orderUnresolved: prior.orderUnresolved || false,
         });
@@ -317,14 +257,10 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const { data: address, error: addressError } = await supabase
-        .from('addresses')
-        .select('*')
-        .eq('id', addressId)
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const addresses = await listCustomerAddresses(accessToken, user.id);
+      const address = addresses.find((row) => row.id === addressId);
 
-      if (addressError || !address) {
+      if (!address) {
         throw Object.assign(new Error('Please select a valid delivery address.'), {
           status: 400,
           code: 'invalid_address',
@@ -336,7 +272,7 @@ export async function POST(req: NextRequest) {
       const phone = String(address.receiver_phone || '').trim();
       const addressLine = String(address.address_line || '').trim();
       const city = String(address.city || '').trim();
-      const countryCode = mapCountryToCode(address.country);
+      const countryDecision = codCheckoutCountryDecision(address.country);
 
       if (receiverName.length < 2 || phone.length < 8 || addressLine.length < 5 || !city) {
         throw Object.assign(
@@ -345,11 +281,12 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (countryCode !== 'SA') {
-        throw Object.assign(
-          new Error('Cash on Delivery checkout currently supports Saudi Arabia addresses only.'),
-          { status: 400, code: 'unsupported_country', retrySafe: true }
-        );
+      if (!countryDecision.ok) {
+        throw Object.assign(new Error(countryDecision.message), {
+          status: 400,
+          code: countryDecision.code,
+          retrySafe: true,
+        });
       }
 
       const shippingParts = toShopifyAddressParts({ address_line: addressLine, city });
@@ -379,7 +316,7 @@ export async function POST(req: NextRequest) {
         'Payment: Cash on Delivery',
         notes ? `Customer notes: ${notes}` : '',
         pinNote,
-        `Layali user: ${user.id}`,
+        `Layali customer: ${user.id}`,
         `Layali submission: ${submissionId}`,
       ].filter(Boolean);
 
@@ -389,7 +326,8 @@ export async function POST(req: NextRequest) {
 
       try {
         const draft = await createCodDraftOrder({
-          email: user.email!,
+          email: user.email,
+          customerId: user.id,
           note: noteParts.join('\n'),
           tags: [
             'layali-cod',
@@ -408,20 +346,23 @@ export async function POST(req: NextRequest) {
           })),
         });
         const expectedTotal = checkoutPayableTotal(cart.total.amount);
-        const shippingMissing =
-          draft.shippingPrice < LAYALI_DELIVERY_FEE - 0.004 &&
-          draft.totalPrice + 0.004 < expectedTotal;
-        if (shippingMissing) {
-          console.error('Layali COD: draft total does not include delivery fee', {
+        const deliveryAssessment = assessDeliveryCharge({
+          merchandiseTotal: cart.total.amount,
+          draftShipping: draft.shippingPrice,
+          draftTotal: draft.totalPrice,
+        });
+        if (deliveryAssessment !== 'ok') {
+          console.error('Layali COD: delivery charge was not a single fee', {
             draftOrderId: draft.draftOrderId,
             draftTotal: draft.totalPrice,
             shippingPrice: draft.shippingPrice,
             expectedTotal,
             expectedShipping: LAYALI_DELIVERY_FEE,
+            deliveryAssessment,
           });
           throw Object.assign(new Error('Could not place your order. Please try again.'), {
             status: 502,
-            code: 'order_failed',
+            code: 'delivery_charge',
             retrySafe: true,
           });
         }
@@ -433,7 +374,7 @@ export async function POST(req: NextRequest) {
         const raced = await findCompletedCheckoutBySubmissionId(
           submissionId,
           user.id,
-          user.email!
+          user.email
         );
         if (raced) {
           const success = buildSuccess({
@@ -444,7 +385,6 @@ export async function POST(req: NextRequest) {
             city,
             alreadyCompleted: true,
           });
-          await linkShopifyOrder({ userId: user.id, order: raced, submissionId });
           completedBySubmission.set(cacheKey, { at: Date.now(), response: success });
           return success;
         }
@@ -454,8 +394,8 @@ export async function POST(req: NextRequest) {
       let order: CreatedShopifyOrder;
       try {
         order = await completeCodDraftOrder(draftOrderId, {
-          userId: user.id,
-          userEmail: user.email!,
+          userId: redactCheckoutLog(user.id),
+          userEmail: user.email,
           submissionId,
         });
       } catch (completeErr) {
@@ -463,7 +403,7 @@ export async function POST(req: NextRequest) {
         const recovered = await findCompletedCheckoutBySubmissionId(
           submissionId,
           user.id,
-          user.email!
+          user.email
         );
         if (recovered) {
           order = recovered;
@@ -494,14 +434,6 @@ export async function POST(req: NextRequest) {
         totalAmount: order.totalAmount || draftTotal,
         currencyCode: order.currencyCode || draftCurrency,
       };
-
-      // Non-authoritative link only — Shopify remains order SOT.
-      // Link failures must not convert a completed Shopify order into a customer failure.
-      await linkShopifyOrder({
-        userId: user.id,
-        order,
-        submissionId,
-      });
 
       const success = buildSuccess({
         order,
@@ -553,15 +485,11 @@ export async function POST(req: NextRequest) {
         const recovered = await findCompletedCheckoutBySubmissionId(
           submissionId,
           user.id,
-          user.email!
+          user.email
         ).catch(() => null);
         if (recovered) {
-          const { data: address } = await supabase
-            .from('addresses')
-            .select('*')
-            .eq('id', addressId)
-            .eq('user_id', user.id)
-            .maybeSingle();
+          const addresses = await listCustomerAddresses(accessToken, user.id).catch(() => []);
+          const address = addresses.find((row) => row.id === addressId);
           const success = buildSuccess({
             order: recovered,
             receiverName: String(address?.receiver_name || 'Customer'),
@@ -570,31 +498,23 @@ export async function POST(req: NextRequest) {
             city: String(address?.city || ''),
             alreadyCompleted: true,
           });
-          await linkShopifyOrder({
-            userId: user.id,
-            order: recovered,
-            submissionId,
-          });
           completedBySubmission.set(cacheKey, { at: Date.now(), response: success });
           console.warn('Layali COD recovered completed order after error path', {
-            submissionId,
-            userId: user.id,
+            submissionId: redactCheckoutLog(submissionId),
             orderName: recovered.orderName,
-            originalError: message,
+            originalError: redactCheckoutLog(message),
           });
           return NextResponse.json(success);
         }
       }
 
-      const safeMessage = accessDenied
-        ? 'Order placement is not configured yet. Please contact support.'
-        : message;
-      const safeCode = accessDenied ? 'missing_admin_scopes' : code;
+      const safeMessage = checkoutCustomerMessage(code, message, accessDenied);
+      const safeCode = checkoutCustomerCode(code, accessDenied);
 
       console.error('Layali COD place-order failed', {
         code: safeCode,
-        message,
-        submissionId,
+        message: redactCheckoutLog(message),
+        submissionId: redactCheckoutLog(submissionId),
         retrySafe: accessDenied ? false : retrySafe,
       });
 
@@ -612,7 +532,10 @@ export async function POST(req: NextRequest) {
       inflightBySubmission.delete(cacheKey);
     }
   } catch (err) {
-    console.error('Layali COD place-order unexpected error', err);
+    console.error(
+      'Layali COD place-order unexpected error',
+      redactCheckoutLog(err instanceof Error ? err.message : 'error')
+    );
     return NextResponse.json(
       {
         ok: false,

@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sparkles, Check, ArrowRight, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { createClient } from '@/lib/supabase/client';
 import { useCartStore } from '@/store/cart';
 import { formatPrice } from '@/lib/utils';
-import type { AIRecommendation, AIRecommendationProduct } from '@/types/database';
+import type { AIRecommendation } from '@/types/database';
 import { isVariantGid } from '@/lib/recommendation';
 import { track } from '@/lib/track';
 import {
@@ -17,15 +16,10 @@ import {
   setSingleField,
   toggleMultiField,
   toRecommendationSurvey,
-  toSurveyResponseRow,
   withShoppingIntent,
 } from '@/lib/survey/answers';
 import { flowForIntent, questionStepCount, SHOPPING_FOR_OPTIONS } from '@/lib/survey/flows';
 import type { RitualSurveyAnswers, ShoppingIntent } from '@/lib/survey/types';
-
-function recommendationLines(rec: AIRecommendation): AIRecommendationProduct[] {
-  return rec.products;
-}
 
 function purchasableVariantIds(rec: AIRecommendation): string[] {
   return rec.products
@@ -93,24 +87,18 @@ export default function SurveyPage() {
   const handleFinish = async () => {
     setLoading(true);
     setCatalogMessage(null);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const me = await fetch('/api/account/me', { cache: 'no-store' });
+    const meJson = (await me.json()) as {
+      signedIn?: boolean;
+      customer?: { country: string | null; city: string | null; gender: string | null } | null;
+    };
+    if (!meJson.signedIn || !meJson.customer) {
       router.push('/auth/signin');
       return;
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('gender, country, city')
-      .eq('id', user.id)
-      .single();
-
-    const country = profile?.country || undefined;
-    const city = profile?.city || undefined;
+    const country = meJson.customer.country || undefined;
+    const city = meJson.customer.city || undefined;
     const surveyPayload = toRecommendationSurvey(answers);
 
     const genRes = await fetch('/api/recommendations/generate', {
@@ -151,86 +139,11 @@ export default function SurveyPage() {
       );
     }
 
-    const { data: surveyRow } = await supabase
-      .from('survey_responses')
-      .insert({
-        user_id: user.id,
-        ...toSurveyResponseRow(surveyPayload),
-      })
-      .select('id')
-      .single();
-
-    const lines = recommendationLines(aiRec);
-    const comboPrice = lines.reduce((sum, p) => sum + Number(p.price || 0), 0);
-    const shopifyItems = lines.map((p) => ({
-      shopify_product_id: p.shopify_product_id,
-      shopify_variant_id: p.shopify_variant_id,
-      name: p.name,
-      price: p.price || 0,
-      handle: p.handle || '',
-      image_url: p.image_url || null,
-      reason: p.reason,
-      available: p.available !== false,
-      quantity: 1,
-    }));
-
-    const comboPayload: Record<string, unknown> = {
-      name: 'Your Personalized Combo',
-      description: aiRec.summary,
-      price: comboPrice > 0 ? comboPrice * 0.85 : 0,
-      compare_at_price: comboPrice > 0 ? comboPrice : null,
-      gender: profile?.gender || 'female',
-      is_ai_generated: true,
-      dermatologist_verified: false,
-      shopify_items: shopifyItems,
-      image_url: lines[0]?.image_url || null,
-    };
-
-    let { data: combo, error: comboError } = await supabase
-      .from('combos')
-      .insert(comboPayload)
-      .select()
-      .single();
-
-    if (comboError && String(comboError.message).toLowerCase().includes('shopify_items')) {
-      delete comboPayload.shopify_items;
-      const retry = await supabase.from('combos').insert(comboPayload).select().single();
-      combo = retry.data;
-      comboError = retry.error;
-    }
-
-    if (comboError) {
-      console.error('Failed to save AI combo row', comboError.message);
-    }
-
-    const personalizedPayload: Record<string, unknown> = {
-      user_id: user.id,
-      survey_id: surveyRow?.id || null,
-      combo_id: combo?.id || null,
-      ai_recommendation: aiRec,
-      recommendation_items: shopifyItems,
-      dermatologist_verified: false,
-      dermatologist_name: '',
-    };
-
-    let { error: pcError } = await supabase
-      .from('personalized_combos')
-      .insert(personalizedPayload);
-
-    if (pcError && String(pcError.message).toLowerCase().includes('recommendation_items')) {
-      delete personalizedPayload.recommendation_items;
-      const retry = await supabase.from('personalized_combos').insert(personalizedPayload);
-      pcError = retry.error;
-    }
-
-    if (pcError) {
-      console.error('Failed to save personalized combo', pcError.message);
-    }
-
-    await supabase
-      .from('profiles')
-      .update({ onboarding_completed: true })
-      .eq('id', user.id);
+    await fetch('/api/account/ritual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ survey: surveyPayload, recommendation: aiRec }),
+    });
 
     setShowResults(true);
     setLoading(false);

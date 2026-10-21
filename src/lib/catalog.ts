@@ -1,13 +1,10 @@
 /**
  * Storefront catalog adapter.
  * Shopify is the authoritative product catalog when configured.
- * Regional filtering uses Supabase layali_product_regions (Shopify GIDs).
- *
- * Catalog fetches use shopifyFetch default revalidate (~60s). Omit `first`
- * for a full cursor-paginated catalog (shop brand filters need all vendors).
+ * Optional city rules live in the Shopify shop record. An empty rule list shows every product.
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { readCatalogRules } from '@/lib/content/store';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
 import {
   fetchShopifyProductsByIds,
@@ -74,85 +71,49 @@ function toShopProduct(p: CatalogProduct, extras?: { benefits?: string[]; is_fea
 }
 
 async function loadMetadataMap(
-  supabase: SupabaseClient,
   productIds: string[]
 ): Promise<Map<string, { benefits: string[]; is_featured: boolean }>> {
   const map = new Map<string, { benefits: string[]; is_featured: boolean }>();
   if (productIds.length === 0) return map;
-
-  const { data, error } = await supabase
-    .from('layali_product_metadata')
-    .select('shopify_product_id, beauty_attributes, ai_tags, notes')
-    .in('shopify_product_id', productIds);
-
-  if (error) {
-    console.warn('layali_product_metadata unavailable:', error.message);
-    return map;
-  }
-
-  for (const row of data || []) {
-    const benefits = [
-      ...((row.beauty_attributes as string[] | null) || []),
-      ...((row.ai_tags as string[] | null) || []),
-    ];
-    map.set(row.shopify_product_id as string, {
-      benefits,
-      is_featured: false,
+  const rules = await readCatalogRules();
+  for (const row of rules.metadata) {
+    if (!productIds.includes(row.shopifyProductId)) continue;
+    map.set(row.shopifyProductId, {
+      benefits: row.benefits || [],
+      is_featured: Boolean(row.featured),
     });
   }
   return map;
 }
 
-export async function withProductMetadata(
-  supabase: SupabaseClient,
-  products: ShopProduct[]
-): Promise<ShopProduct[]> {
-  const meta = await loadMetadataMap(
-    supabase,
-    products.map((p) => p.shopifyProductId)
-  );
-  return products.map((p) => {
-    const m = meta.get(p.shopifyProductId);
-    if (!m) return p;
+export async function withProductMetadata(products: ShopProduct[]): Promise<ShopProduct[]> {
+  const meta = await loadMetadataMap(products.map((product) => product.shopifyProductId));
+  return products.map((product) => {
+    const extra = meta.get(product.shopifyProductId);
+    if (!extra) return product;
     return {
-      ...p,
-      benefits: [...new Set([...p.benefits, ...m.benefits, ...p.tags])],
-      is_featured: m.is_featured || p.is_featured,
+      ...product,
+      benefits: [...new Set([...product.benefits, ...extra.benefits, ...product.tags])],
+      is_featured: extra.is_featured || product.is_featured,
     };
   });
 }
 
 export async function filterByRegion(
-  supabase: SupabaseClient,
   products: ShopProduct[],
   country: string,
   city: string
 ): Promise<ShopProduct[]> {
-  const regionId = await getRegionId(supabase, country, city);
+  const regionId = await getRegionId(country, city);
   if (!regionId) return products;
-
-  const { data, error } = await supabase
-    .from('layali_product_regions')
-    .select('shopify_product_id')
-    .eq('region_id', regionId)
-    .eq('is_available', true);
-
-  if (error) {
-    console.warn('layali_product_regions unavailable:', error.message);
-    return products;
-  }
-
-  if (!data || data.length === 0) {
-    // No regional rows configured yet — do not hide the catalog
-    return products;
-  }
-
-  const allowed = new Set(data.map((r) => r.shopify_product_id));
-  return products.filter((p) => allowed.has(p.shopifyProductId));
+  const rules = await readCatalogRules();
+  const rows = rules.productRegions.filter((row) => row.regionId === regionId && row.isAvailable);
+  if (rows.length === 0) return products;
+  const allowed = new Set(rows.map((row) => row.shopifyProductId));
+  return products.filter((product) => allowed.has(product.shopifyProductId));
 }
 
 export async function loadShopCatalog(options: {
-  supabase: SupabaseClient;
   category?: string;
   country?: string;
   city?: string;
@@ -175,28 +136,11 @@ export async function loadShopCatalog(options: {
   let products = catalog.map((p) => toShopProduct(p));
 
   if (options.country && options.city) {
-    products = await filterByRegion(
-      options.supabase,
-      products,
-      options.country,
-      options.city
-    );
+    products = await filterByRegion(products, options.country, options.city);
   }
 
   if (options.enrichMetadata !== false) {
-    const meta = await loadMetadataMap(
-      options.supabase,
-      products.map((p) => p.shopifyProductId)
-    );
-    products = products.map((p) => {
-      const m = meta.get(p.shopifyProductId);
-      if (!m) return p;
-      return {
-        ...p,
-        benefits: [...new Set([...p.benefits, ...m.benefits, ...p.tags])],
-        is_featured: m.is_featured || p.is_featured,
-      };
-    });
+    products = await withProductMetadata(products);
   }
 
   return { products, source: 'shopify' };
@@ -225,7 +169,6 @@ export function toRecommendationProducts(products: ShopProduct[]): Recommendatio
  * Single list fetch (not N+1).
  */
 export async function loadRecommendationCatalog(options: {
-  supabase: SupabaseClient;
   country?: string;
   city?: string;
 }): Promise<{
@@ -243,7 +186,6 @@ export async function loadRecommendationCatalog(options: {
 
   try {
     const { products, source } = await loadShopCatalog({
-      supabase: options.supabase,
       country: options.country,
       city: options.city,
       enrichMetadata: true,

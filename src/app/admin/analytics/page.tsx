@@ -9,7 +9,6 @@ import {
   ShoppingCart,
   Percent,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatPrice } from '@/lib/utils';
@@ -120,24 +119,19 @@ export default function AdminAnalyticsPage() {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const supabase = createClient();
-      const [catalogRes, costsRes, ordersRes] = await Promise.all([
+      const [catalogRes, boardRes] = await Promise.all([
         fetch('/api/shopify/products'),
-        supabase.from('layali_product_costs').select('shopify_product_id, cost_price'),
-        supabase
-          .from('orders')
-          .select(
-            'id, status, total_amount, delivery_fee, created_at, items:order_items(product_id, combo_id, name, price, cost_price, quantity)'
-          )
-          .order('created_at', { ascending: false }),
+        fetch('/api/admin/orders', { cache: 'no-store' }),
       ]);
 
       const catalogJson = (await catalogRes.json()) as { products?: ShopProduct[] };
+      const board = (await boardRes.json()) as {
+        analytics?: AnalyticsOrderRow[];
+        costs?: { shopifyProductId: string; costPrice: number }[];
+      };
       const costMap = new Map<string, number>();
-      (costsRes.data || []).forEach((row) => {
-        if (row.shopify_product_id != null && row.cost_price != null) {
-          costMap.set(row.shopify_product_id as string, Number(row.cost_price));
-        }
+      (board.costs || []).forEach((row) => {
+        costMap.set(row.shopifyProductId, Number(row.costPrice));
       });
 
       const catalogProducts: AnalyticsCatalogProduct[] = (catalogJson.products || []).map(
@@ -149,7 +143,7 @@ export default function AdminAnalyticsPage() {
       );
 
       setProducts(catalogProducts);
-      setOrders((ordersRes.data as AnalyticsOrderRow[]) || []);
+      setOrders(board.analytics || []);
       setLoading(false);
     };
 

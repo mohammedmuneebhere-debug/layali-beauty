@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Eye, Truck, MapPin } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { ORDER_STATUS_LABELS } from '@/lib/constants';
 import { Button } from '@/components/ui/Button';
@@ -26,12 +25,9 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
 
   const loadOrders = async () => {
-    const supabase = createClient();
-    const { data } = await supabase
-      .from('orders')
-      .select('*, profile:profiles(full_name, email, phone), items:order_items(*), tracking:order_tracking(*), address:addresses(latitude, longitude, address_line)')
-      .order('created_at', { ascending: false });
-    setOrders((data as Order[]) || []);
+    const response = await fetch('/api/admin/orders', { cache: 'no-store' });
+    const json = (await response.json()) as { orders?: Order[] };
+    setOrders(json.orders || []);
     setLoading(false);
   };
 
@@ -41,17 +37,18 @@ export default function AdminOrdersPage() {
     });
   }, []);
 
-  // NOTE: New checkouts go to Shopify. This page still shows legacy Supabase orders
-  // until shopify_order_links + Admin API history replace it. Do not use for new commerce.
+  // Shopify orders for this shop. Status notes are stored on the shop record and copied onto the order note.
 
   const updateStatus = async (orderId: string, status: OrderStatus) => {
-    const supabase = createClient();
     const previous = orders.find((o) => o.id === orderId);
-    await supabase.from('orders').update({ status }).eq('id', orderId);
-    await supabase.from('order_tracking').insert({
-      order_id: orderId,
-      status,
-      message: statusMessage || `Order ${status}`,
+    await fetch('/api/admin/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: orderId,
+        status,
+        message: statusMessage || `Order ${status}`,
+      }),
     });
 
     if (status === 'delivered' && previous?.profile?.email) {
@@ -89,15 +86,15 @@ export default function AdminOrdersPage() {
 
   const addTracking = async (orderId: string) => {
     if (!trackingNumber) return;
-    const supabase = createClient();
-    await supabase.from('orders').update({
-      tracking_number: trackingNumber,
-      status: 'shipped',
-    }).eq('id', orderId);
-    await supabase.from('order_tracking').insert({
-      order_id: orderId,
-      status: 'shipped',
-      message: `Tracking number: ${trackingNumber}`,
+    await fetch('/api/admin/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: orderId,
+        status: 'shipped',
+        trackingNumber,
+        message: `Tracking number: ${trackingNumber}`,
+      }),
     });
     setTrackingNumber('');
     loadOrders();
@@ -106,8 +103,7 @@ export default function AdminOrdersPage() {
   return (
     <div>
       <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-        <strong>Migration notice:</strong> New orders are created in Shopify Checkout. This screen
-        still lists legacy Supabase COD orders for reference. Manage fulfillment in{' '}
+        <strong>Shopify orders.</strong> This list is the live shop. Status notes are saved for the Layali team and copied onto the Shopify order. Carrier fulfillment can still be completed in{' '}
         <a
           href="https://admin.shopify.com"
           target="_blank"
@@ -116,7 +112,7 @@ export default function AdminOrdersPage() {
         >
           Shopify Admin
         </a>
-        . A lightweight <code>shopify_order_links</code> mapping will power account order history next.
+        . A customer sees an order only when Shopify has attached it to their customer account.
       </div>
       <h1 className="text-2xl font-bold text-gray-900 mb-8">Order Management</h1>
 

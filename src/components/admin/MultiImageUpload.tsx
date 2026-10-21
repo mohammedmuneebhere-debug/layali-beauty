@@ -2,7 +2,6 @@
 
 import { useRef, useState } from 'react';
 import { Upload, X } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { uploadCatalogImage } from '@/lib/storage';
 import { cn } from '@/lib/utils';
 
@@ -36,12 +35,11 @@ export function MultiImageUpload({
 
     setUploading(true);
     setError('');
-    const supabase = createClient();
     const selected = Array.from(files).slice(0, remaining);
     const uploaded: string[] = [];
 
     for (const file of selected) {
-      const { url, error: uploadError } = await uploadCatalogImage(supabase, file, folder);
+      const { url, error: uploadError } = await uploadCatalogImage(file, folder);
       if (uploadError || !url) {
         setError(uploadError || 'Upload failed. Please try again.');
         continue;

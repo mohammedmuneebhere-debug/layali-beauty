@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { ShoppingCart, Package, Users, TrendingUp } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 import { formatPrice } from '@/lib/utils';
 import { ORDER_STATUS_LABELS } from '@/lib/constants';
 
@@ -33,30 +32,24 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-
-      const [ordersRes, countRes, recentRes] = await Promise.all([
-        supabase.from('orders').select('id, status, total_amount'),
+      const [boardRes, countRes] = await Promise.all([
+        fetch('/api/admin/orders', { cache: 'no-store' }),
         fetch('/api/shopify/products/count'),
-        supabase
-          .from('orders')
-          .select('id, status, total_amount, created_at, profile:profiles(full_name)')
-          .order('created_at', { ascending: false })
-          .limit(5),
       ]);
-
+      const board = (await boardRes.json()) as {
+        orders?: { id: string; status: string; total_amount: number; created_at: string; profile?: { full_name: string } }[];
+      };
       const countJson = (await countRes.json()) as {
         count?: number;
         configured?: boolean;
       };
-
-      const orders = ordersRes.data || [];
-      const recent = (recentRes.data || []).map((order) => ({
+      const orders = board.orders || [];
+      const recent = orders.slice(0, 5).map((order) => ({
         id: order.id,
         status: order.status,
         total_amount: Number(order.total_amount),
         created_at: order.created_at,
-        profile: Array.isArray(order.profile) ? order.profile[0] : order.profile,
+        profile: order.profile,
       }));
 
       setStats({
@@ -89,8 +82,8 @@ export default function AdminDashboard() {
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Dashboard</h1>
       <p className="text-sm text-gray-500 mb-8">
-        Product count comes from Shopify. Order cards still reflect legacy Supabase COD orders
-        until Shopify order links land in a later phase.
+        Product count and recent orders come from Shopify. An order appears here when
+        Shopify has attached it to a customer, or when it is in the latest admin order list.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

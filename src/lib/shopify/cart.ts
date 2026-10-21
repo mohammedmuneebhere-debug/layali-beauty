@@ -1,4 +1,4 @@
-import { buildCartBuyerIdentity, getDefaultCartCountryCode } from './buyer-country';
+import { cartMarketIdentity, cartMarketRetry } from './buyer-country';
 import { isShopifyConfigured, shopifyFetch, ShopifyThrottleError } from './client';
 import { normalizeCart } from './normalize';
 import {
@@ -79,11 +79,14 @@ export async function createCart(options?: {
     throw new Error('Shopify is not configured');
   }
 
-  const buyerIdentity = buildCartBuyerIdentity({
+  const market = cartMarketIdentity({
     email: options?.email,
     countryCode: options?.countryCode,
     countryLabel: options?.countryLabel,
   });
+  const buyerIdentity: { countryCode?: string; email?: string } = {};
+  if (market.email) buyerIdentity.email = market.email;
+  if (market.countryCode) buyerIdentity.countryCode = market.countryCode;
 
   const data = await shopifyFetch<{
     cartCreate: MutationWarnings;
@@ -154,7 +157,10 @@ export async function updateCartBuyerIdentity(
   cartId: string,
   options?: { email?: string; countryCode?: string; countryLabel?: string }
 ): Promise<ShopifyCart> {
-  const buyerIdentity = buildCartBuyerIdentity(options);
+  const market = cartMarketIdentity(options);
+  const buyerIdentity: { countryCode?: string; email?: string } = {};
+  if (market.email) buyerIdentity.email = market.email;
+  if (market.source !== 'unknown' && market.countryCode) buyerIdentity.countryCode = market.countryCode;
   const data = await shopifyFetch<{
     cartBuyerIdentityUpdate: MutationWarnings;
   }>(CART_BUYER_IDENTITY_UPDATE, { cartId, buyerIdentity }, CART_FETCH);
@@ -174,15 +180,13 @@ async function createCartWithMarketFallback(
     if (err instanceof ShopifyThrottleError) throw err;
     if (!isMerchandiseStockError(err)) throw err;
 
-    const requested = buildCartBuyerIdentity(identity).countryCode;
-    const fallback = getDefaultCartCountryCode();
-    // Same market already failed — genuine OOS, do not mask.
-    if (requested === fallback) throw err;
+    const retry = cartMarketRetry(identity);
+    if (!retry.retry) throw err;
 
     return createCart({
       lines,
       email: identity.email,
-      countryCode: fallback,
+      countryCode: retry.countryCode,
     });
   }
 }
@@ -230,13 +234,12 @@ export async function addToShopifyCart(options: {
     }
     // Stale cart in a market without inventory: recreate under the selling market.
     if (isMerchandiseStockError(err)) {
-      const requested = buildCartBuyerIdentity(identity).countryCode;
-      const fallback = getDefaultCartCountryCode();
-      if (requested !== fallback) {
+      const retry = cartMarketRetry(identity);
+      if (retry.retry) {
         return createCart({
           lines,
           email: identity.email,
-          countryCode: fallback,
+          countryCode: retry.countryCode,
         });
       }
     }
