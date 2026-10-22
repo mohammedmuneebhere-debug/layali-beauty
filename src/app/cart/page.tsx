@@ -74,7 +74,7 @@ export default function CartPage() {
     const response = await fetch('/api/account/me', { cache: 'no-store' });
     const json = (await response.json()) as { signedIn?: boolean };
     if (!json.signedIn) {
-      router.push('/auth/signin?redirect=/checkout');
+      router.push('/auth/signin?redirect=/cart');
       setCheckingAuth(false);
       return;
     }

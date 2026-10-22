@@ -199,6 +199,7 @@ export async function handleCustomerAccountStart(input: {
   env: NodeJS.ProcessEnv;
   fetchImpl?: FetchImpl;
   now?: number;
+  loginHint?: string;
 }): Promise<FlowResult> {
   const ready = configuredWww(input.requestUrl, input.env);
   if (!ready.ok) {
@@ -225,6 +226,7 @@ export async function handleCustomerAccountStart(input: {
       state,
       nonce,
       codeChallenge: pkceS256Challenge(verifier),
+      loginHint: input.loginHint,
     });
   } catch {
     return unavailable('authorize_url');

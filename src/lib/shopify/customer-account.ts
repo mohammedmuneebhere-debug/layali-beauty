@@ -10,7 +10,7 @@ import { isMyshopifyHost, normalizeShopHost } from '@/lib/shopify/staging-catalo
 
 export { configuredStagingOrigin };
 
-export const CUSTOMER_ACCOUNT_START_PATH = '/api/customer-account/start';
+export { CUSTOMER_ACCOUNT_START_PATH } from '@/lib/auth/customer-account-start';
 export const CUSTOMER_ACCOUNT_CALLBACK_PATH = '/api/customer-account/callback';
 export const CUSTOMER_ACCOUNT_LOGOUT_PATH = '/api/customer-account/logout';
 export const CUSTOMER_ACCOUNT_SESSION_PATH = '/api/customer-account/session';
@@ -206,6 +206,11 @@ export function assertOpenIdDiscovery(
   return { issuer, authorizationEndpoint, tokenEndpoint, endSessionEndpoint, jwksUri };
 }
 
+function isAuthorizeLoginHint(value: string): boolean {
+  if (!value || value.length > 254 || /[\s\u0000-\u001F\u007F]/.test(value)) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 export function buildAuthorizeUrl(params: {
   authorizationEndpoint: string;
   storeDomain: string;
@@ -214,6 +219,7 @@ export function buildAuthorizeUrl(params: {
   state: string;
   nonce: string;
   codeChallenge: string;
+  loginHint?: string;
 }): string {
   const url = assertAuthorizationEndpoint(params.authorizationEndpoint, params.storeDomain);
   url.searchParams.set('client_id', params.clientId);
@@ -225,6 +231,9 @@ export function buildAuthorizeUrl(params: {
   url.searchParams.set('code_challenge', params.codeChallenge);
   url.searchParams.set('code_challenge_method', 'S256');
   url.searchParams.set('region_country', 'SA');
+  if (params.loginHint && isAuthorizeLoginHint(params.loginHint)) {
+    url.searchParams.set('login_hint', params.loginHint);
+  }
   return url.toString();
 }
 

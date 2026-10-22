@@ -11,6 +11,7 @@
     "test:order-status": "node scripts/order-status-smoke.mjs",
     "test:order-links": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/order-link-smoke.mts",
     "test:signin": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/signin-error-smoke.mts",
+    "test:signup": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/signup-flow-smoke.mts",
     "test:staging-shopify": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/staging-shopify-smoke.mts",
     "test:order-email-access": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/order-email-access-smoke.mts",
     "test:catalog-error": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/catalog-error-smoke.mts",

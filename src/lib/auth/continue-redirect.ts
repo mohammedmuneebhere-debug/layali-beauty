@@ -14,6 +14,8 @@ export function continueRedirectPath(input: {
   ) {
     return '/admin';
   }
+  const safe = safeAuthRedirect(requested, '');
+  if (safe) return safe;
   if (!input.onboardingCompleted) return '/survey';
-  return safeAuthRedirect(requested, '/shop');
+  return '/shop';
 }

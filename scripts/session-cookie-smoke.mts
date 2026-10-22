@@ -66,6 +66,17 @@ assert('an admin orders query remains a commit target', safeSessionCommitReturn(
 assert('staff continue opens admin', continueRedirectPath({ signedIn: true, staff: true, onboardingCompleted: true, requested: '/admin/orders?tab=open' }) === '/admin');
 assert('staff continue ignores a hostile return', continueRedirectPath({ signedIn: true, staff: true, onboardingCompleted: true, requested: '/%5Cevil.com' }) === '/shop');
 assert('a new customer continues to the survey', continueRedirectPath({ signedIn: true, staff: false, onboardingCompleted: false, requested: '/%5Cevil.com' }) === '/survey');
+assert('incomplete onboarding keeps a cart return', continueRedirectPath({ signedIn: true, staff: false, onboardingCompleted: false, requested: '/cart' }) === '/cart');
+assert('incomplete onboarding keeps a checkout return', continueRedirectPath({ signedIn: true, staff: false, onboardingCompleted: false, requested: '/checkout' }) === '/checkout');
+assert('incomplete onboarding without a return opens the survey', continueRedirectPath({ signedIn: true, staff: false, onboardingCompleted: false, requested: '' }) === '/survey');
+assert('completed onboarding without a return opens the shop', continueRedirectPath({ signedIn: true, staff: false, onboardingCompleted: true, requested: '' }) === '/shop');
+assert('staff without a return still opens admin before the survey', continueRedirectPath({ signedIn: true, staff: true, onboardingCompleted: false, requested: '' }) === '/admin');
+assert('staff checkout return stays on checkout', continueRedirectPath({ signedIn: true, staff: true, onboardingCompleted: false, requested: '/checkout?step=address' }) === '/checkout?step=address');
+
+const cartPage = fs.readFileSync('src/app/cart/page.tsx', 'utf8');
+const checkoutPage = fs.readFileSync('src/app/checkout/page.tsx', 'utf8');
+assert('cart sign-in returns to the cart', cartPage.includes("'/auth/signin?redirect=/cart'"));
+assert('checkout sign-in keeps the checkout destination', checkoutPage.includes("'/auth/signin?redirect=/checkout'"));
 
 assert('commit return does not loop through itself', safeSessionCommitReturn('/api/customer-account/commit-session') === '/account');
 assert('commit return does not loop through continue', safeSessionCommitReturn('/auth/continue') === '/account');
