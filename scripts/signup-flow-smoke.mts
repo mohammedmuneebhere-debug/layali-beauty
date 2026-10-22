@@ -9,6 +9,7 @@ import path from 'node:path';
 import { customerAccountStartUrl, customerAccountSignupStartPath, isCustomerAccountSignupStartPath } from '@/lib/auth/customer-account-start';
 import { normalizeSignupDraft } from '@/lib/auth/signup-fields';
 import { applySignupIntent, openSignupIntent, sealSignupIntent } from '@/lib/auth/signup-intent';
+import { handleSignupIntent } from '@/lib/auth/signup-intent-request';
 import { buildAuthorizeUrl, CUSTOMER_ACCOUNT_START_PATH } from '@/lib/shopify/customer-account';
 import {
   clearCustomerAccountDiscoveryCache,
@@ -19,6 +20,14 @@ const DOMAIN = 'new-store.myshopify.com';
 const SHOP_ID = '123456';
 const ORIGIN = 'https://www.layalibeautystore.com';
 const STAGING = 'https://layali-preview.vercel.app';
+const STAGING_SITE = 'https://staging.layalibeautystore.com';
+const SIGNUP_URL_PATH = '/api/customer-account/signup-intent';
+const SIGNUP_BODY = JSON.stringify({
+  fullName: 'Layla Nasser',
+  phone: '0551234567',
+  email: 'layla@example.com',
+  returnTo: '/cart',
+});
 
 let failed = 0;
 
@@ -29,6 +38,35 @@ function assert(name: string, condition: boolean) {
   }
   failed += 1;
   console.error(`FAIL ${name}`);
+}
+
+const SIGNUP_ENV = {
+  SHOPIFY_STORE_DOMAIN: DOMAIN,
+  SHOPIFY_CUSTOMER_ACCOUNT_CLIENT_ID: 'public-client',
+  SHOPIFY_CUSTOMER_ACCOUNT_SHOP_ID: SHOP_ID,
+  SHOPIFY_CUSTOMER_ACCOUNT_SESSION_SECRET: 's'.repeat(40),
+  LAYALI_STAGING_ORIGIN: STAGING_SITE,
+};
+
+async function postSignup(input: {
+  url: string;
+  origin?: string | null;
+  host?: string;
+  forwardedHost?: string;
+  body?: unknown;
+}) {
+  let reads = 0;
+  const result = await handleSignupIntent({
+    requestUrl: input.url,
+    originHeader: input.origin ?? null,
+    headers: { host: input.host, forwardedHost: input.forwardedHost },
+    env: SIGNUP_ENV,
+    readBody: async () => {
+      reads += 1;
+      return input.body ?? null;
+    },
+  });
+  return { ...result, reads };
 }
 
 function filesUnder(dir: string): string[] {
@@ -254,14 +292,120 @@ assert('a hostile login hint is omitted', !hostileAuthorize.includes('login_hint
 
 const continueRoute = source('src/app/api/customer-account/continue/route.ts');
 const intentRoute = source('src/app/api/customer-account/signup-intent/route.ts');
+const intentHandler = source('src/lib/auth/signup-intent-request.ts');
 assert(
   'continue applies the sealed signup cookie only after the customer session exists',
   continueRoute.includes('applySignupIntent') &&
     continueRoute.includes('verifiedEmail: context.customer.email') &&
     continueRoute.includes('CUSTOMER_ACCOUNT_SIGNUP_COOKIE') &&
     intentRoute.includes('httpOnly: true') &&
-    intentRoute.includes('sealSignupIntent') &&
-    !intentRoute.includes('login_hint')
+    intentRoute.includes('if (result.cookie)') &&
+    intentHandler.includes('sealSignupIntent') &&
+    !intentRoute.includes('login_hint') &&
+    !intentHandler.includes('login_hint')
+);
+const originCall = intentHandler.lastIndexOf('trustedSignupOrigin');
+const bodyCall = intentHandler.lastIndexOf('input.readBody');
+const draftCall = intentHandler.lastIndexOf('normalizeSignupDraft');
+const sealCall = intentHandler.lastIndexOf('sealSignupIntent');
+assert(
+  'signup origin is checked before the draft is read or sealed',
+  originCall > 0 &&
+    originCall < bodyCall &&
+    originCall < draftCall &&
+    originCall < sealCall &&
+    intentHandler.includes('cookie: null')
+);
+
+const signupDraft = JSON.parse(SIGNUP_BODY) as unknown;
+const stagingSignup = await postSignup({
+  url: `${STAGING_SITE}${SIGNUP_URL_PATH}`,
+  origin: STAGING_SITE,
+  host: 'evil.example',
+  forwardedHost: 'www.layalibeautystore.com',
+  body: signupDraft,
+});
+const stagingOpened = stagingSignup.cookie ? openSignupIntent(stagingSignup.cookie.value, 's'.repeat(40)) : null;
+assert(
+  'trusted staging origin can store the signup cookie',
+  stagingSignup.status === 200 &&
+    stagingSignup.reads === 1 &&
+    stagingSignup.body.nextPath === '/api/customer-account/start?signup=1&return=%2Fcart' &&
+    stagingSignup.cookie?.name === 'layali_ca_signup' &&
+    stagingSignup.cookie.maxAge === 600 &&
+    stagingOpened?.email === 'layla@example.com'
+);
+
+const productionSignup = await postSignup({
+  url: `${ORIGIN}${SIGNUP_URL_PATH}`,
+  origin: ORIGIN,
+  host: 'staging.layalibeautystore.com',
+  forwardedHost: 'https://evil.example',
+  body: signupDraft,
+});
+assert(
+  'trusted production origin stays on www when host headers disagree',
+  productionSignup.status === 200 &&
+    productionSignup.cookie?.name === 'layali_ca_signup' &&
+    productionSignup.cookie.maxAge === 600
+);
+
+const apexOrigin = await postSignup({
+  url: `https://layalibeautystore.com${SIGNUP_URL_PATH}`,
+  origin: 'https://layalibeautystore.com',
+  body: signupDraft,
+});
+assert('apex origin is not a second production origin', apexOrigin.status === 403 && apexOrigin.cookie === null && apexOrigin.reads === 0);
+
+const foreignOrigin = await postSignup({
+  url: `${ORIGIN}${SIGNUP_URL_PATH}`,
+  origin: 'https://evil.example',
+  host: 'www.layalibeautystore.com',
+  forwardedHost: STAGING_SITE,
+  body: signupDraft,
+});
+assert(
+  'foreign origin returns 403 and sets no signup cookie',
+  foreignOrigin.status === 403 && foreignOrigin.cookie === null && foreignOrigin.reads === 0
+);
+
+const invalidBodyForeign = await postSignup({
+  url: `${STAGING_SITE}${SIGNUP_URL_PATH}`,
+  origin: 'https://evil.example',
+  body: { email: 'not-an-email' },
+});
+assert(
+  'a foreign origin is rejected before signup validation',
+  invalidBodyForeign.status === 403 && invalidBodyForeign.cookie === null && invalidBodyForeign.reads === 0
+);
+
+const missingOrigin = await postSignup({
+  url: `${ORIGIN}${SIGNUP_URL_PATH}`,
+  body: signupDraft,
+});
+const malformedOrigins = [
+  'null',
+  'not a url',
+  `${ORIGIN}/auth/signup`,
+  'http://www.layalibeautystore.com',
+  'https://user:pass@www.layalibeautystore.com',
+  'https://www.layalibeautystore.com.evil.example',
+];
+const malformed = await Promise.all(
+  malformedOrigins.map((origin) =>
+    postSignup({
+      url: `${ORIGIN}${SIGNUP_URL_PATH}`,
+      origin,
+      body: signupDraft,
+    })
+  )
+);
+assert(
+  'missing or malformed origin is rejected without a signup cookie',
+  missingOrigin.status === 403 &&
+    missingOrigin.cookie === null &&
+    missingOrigin.reads === 0 &&
+    malformed.every((response) => response.status === 403 && response.cookie === null && response.reads === 0)
 );
 
 if (failed > 0) {
