@@ -58,6 +58,9 @@ export const translations = {
         'Our most-loved picks right now — carefully selected to make you glow.',
       drag: 'Drag to explore',
     },
+    categoryShelf: {
+      title: 'From Each Category',
+    },
     why: {
       title: 'Why Layali?',
       subtitle:
@@ -560,6 +563,9 @@ export const translations = {
       subtitle:
         'اختياراتنا الأكثر حباً الآن — مختارة بعناية ليمنحكِ توهجاً مميزاً.',
       drag: 'اسحبي للاستكشاف',
+    },
+    categoryShelf: {
+      title: 'من كل فئة',
     },
     why: {
       title: 'لماذا Layali؟',

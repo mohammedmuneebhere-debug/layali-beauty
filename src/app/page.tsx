@@ -8,6 +8,8 @@ import {
   OG_IMAGE_PATH,
 } from '@/lib/seo';
 import { SITE_URL } from '@/lib/constants';
+import { loadShopCatalog, type ShopProduct } from '@/lib/catalog';
+import { selectHomepageShelves } from '@/lib/homepage-products';
 import { isStorefrontCategory } from '@/lib/shopify/category';
 import { fetchTrendingProducts } from '@/lib/trending-data';
 import { loadPlacementSlides } from '@/lib/content/banners';
@@ -72,6 +74,7 @@ const websiteJsonLd = {
 export default async function HomePage() {
   let heroProducts: Awaited<ReturnType<typeof fetchTrendingProducts>> = [];
   let landingBanners: BannerSlide[] = [];
+  let catalogProducts: ShopProduct[] = [];
   const categoryCovers: Record<string, string> = {};
   try {
     try {
@@ -84,9 +87,16 @@ export default async function HomePage() {
     } catch {
       landingBanners = [];
     }
+    try {
+      catalogProducts = (await loadShopCatalog({})).products;
+    } catch {
+      catalogProducts = [];
+    }
   } catch {
     heroProducts = [];
   }
+
+  const shelves = selectHomepageShelves(catalogProducts);
 
   for (const product of heroProducts) {
     if (
@@ -108,6 +118,9 @@ export default async function HomePage() {
         heroProducts={heroProducts}
         categoryCovers={categoryCovers}
         landingBanners={landingBanners}
+        trendingProducts={shelves.trending}
+        makeupProducts={shelves.makeup}
+        skincareProducts={shelves.skincare}
       />
     </>
   );

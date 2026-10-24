@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import { FadeIn } from '@/components/ui/FadeIn';
+import { HomeProductGrid } from '@/components/home/HomeProductGrid';
 import { PromoArtwork } from '@/components/home/PromoArtwork';
 import { formatPrice } from '@/lib/utils';
+import type { ShopProduct } from '@/lib/catalog';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
 
 type PromoMerchSplitProps = {
@@ -19,6 +21,8 @@ type PromoMerchSplitProps = {
   shopAllLabel: string;
   products: CatalogProduct[];
   category: string;
+  /** Catalog products shown under the artwork. Same records the shop already lists. */
+  shelf?: ShopProduct[];
 };
 
 /**
@@ -36,6 +40,7 @@ export function PromoMerchSplit({
   shopAllLabel,
   products,
   category,
+  shelf,
 }: PromoMerchSplitProps) {
   const preview = products
     .filter((p) => p.category === category && p.image_url && p.handle)
@@ -46,6 +51,31 @@ export function PromoMerchSplit({
       <PromoArtwork src={src} alt={alt} href={href} width={width} height={height} />
     </FadeIn>
   );
+
+  if (shelf) {
+    return (
+      <section className="relative overflow-x-clip py-10 sm:py-14 lg:py-16">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <FadeIn className="mb-5 flex items-end justify-between gap-4 sm:mb-6">
+            <h2 className="font-serif text-heading-md text-white sm:text-heading-lg">{categoryLabel}</h2>
+            <Link
+              href={href}
+              prefetch
+              className="inline-flex shrink-0 items-center gap-1.5 text-nav uppercase tracking-[0.12em] text-white/70 transition-colors hover:text-layali-pink-light"
+            >
+              {shopAllLabel} <ArrowRight className="h-4 w-4 rtl:rotate-180" />
+            </Link>
+          </FadeIn>
+          <div className="mx-auto w-full max-w-5xl">{artwork}</div>
+          {shelf.length > 0 ? (
+            <div className="mt-8 sm:mt-10">
+              <HomeProductGrid products={shelf} />
+            </div>
+          ) : null}
+        </div>
+      </section>
+    );
+  }
 
   const merch = (
     <FadeIn className="min-w-0 flex flex-col justify-center">

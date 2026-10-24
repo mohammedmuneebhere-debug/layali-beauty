@@ -14,7 +14,14 @@ import type { ShopProduct } from '@/lib/catalog';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { DynamicBannerCarousel } from '@/components/banners/DynamicBanners';
 import { PromoArtwork } from '@/components/home/PromoArtwork';
-import { collectVendors, filterShopProducts, PAGE_SIZE, paginateShopProducts } from '@/lib/shop-filters';
+import {
+  collectVendors,
+  filterShopProducts,
+  PAGE_SIZE,
+  paginateShopProducts,
+  sortShopProducts,
+  type ShopSortKey,
+} from '@/lib/shop-filters';
 import { track } from '@/lib/track';
 
 const VALID_CATEGORIES = new Set<string>(STOREFRONT_NAV_CATEGORIES.map((c) => c.value));
@@ -63,8 +70,6 @@ function writeShopQuery(updates: Record<string, string>) {
   window.history.replaceState(window.history.state, '', url);
 }
 
-type SortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
-
 export default function ShopContent() {
   const searchParams = useSearchParams();
   const { t } = useLanguage();
@@ -76,7 +81,7 @@ export default function ShopContent() {
   const [loading, setLoading] = useState(true);
   const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [search, setSearch] = useState(qFromUrl);
-  const [sort, setSort] = useState<SortKey>('featured');
+  const [sort, setSort] = useState<ShopSortKey>('featured');
   const [brand, setBrand] = useState('');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
@@ -187,11 +192,7 @@ export default function ShopContent() {
       search,
     });
 
-    const sorted = [...next];
-    if (sort === 'price-asc') sorted.sort((a, b) => Number(a.price) - Number(b.price));
-    if (sort === 'price-desc') sorted.sort((a, b) => Number(b.price) - Number(a.price));
-    if (sort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name));
-    return sorted;
+    return sortShopProducts(next, sort);
   }, [products, category, search, brand, minPrice, maxPrice, sort]);
 
   const { pageItems, currentPage, totalPages } = paginateShopProducts(filtered, page, PAGE_SIZE);
@@ -331,7 +332,7 @@ export default function ShopContent() {
             <span className="hidden sm:inline">{t.shop.sort}</span>
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
+              onChange={(e) => setSort(e.target.value as ShopSortKey)}
               className="rounded-full border border-white/15 bg-black/40 px-4 py-3 text-xs uppercase tracking-[0.12em] text-white focus:border-layali-pink/50 focus:outline-none"
               aria-label={t.shop.sort}
             >

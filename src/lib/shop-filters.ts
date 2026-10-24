@@ -68,6 +68,23 @@ export function filterShopProducts<T extends ShopListProduct>(
   });
 }
 
+export type ShopSortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
+
+/**
+ * Shop sort. `featured` keeps catalog order — the order Storefront pagination
+ * already returned. Other keys reorder a copy. The input array is not mutated.
+ */
+export function sortShopProducts<T extends { name: string; price: number | string }>(
+  products: readonly T[],
+  sort: ShopSortKey
+): T[] {
+  const sorted = [...products];
+  if (sort === 'price-asc') sorted.sort((a, b) => Number(a.price) - Number(b.price));
+  if (sort === 'price-desc') sorted.sort((a, b) => Number(b.price) - Number(a.price));
+  if (sort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name));
+  return sorted;
+}
+
 export function paginateShopProducts<T>(items: T[], page: number, pageSize = PAGE_SIZE) {
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, totalPages);

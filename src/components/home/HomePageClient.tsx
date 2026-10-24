@@ -12,8 +12,10 @@ import { NationalDayFeature } from '@/components/home/NationalDayFeature';
 import { PromoMerchSplit } from '@/components/home/PromoMerchSplit';
 import { HeroCampaignFeature } from '@/components/home/HeroCampaignFeature';
 import { CinematicVideo } from '@/components/cinematic/CinematicVideo';
+import { HomeProductGrid } from '@/components/home/HomeProductGrid';
 import { useLanguage } from '@/lib/i18n/LanguageProvider';
 import { STOREFRONT_NAV_CATEGORIES } from '@/lib/constants';
+import type { ShopProduct } from '@/lib/catalog';
 import type { CatalogProduct } from '@/lib/shopify/normalize';
 import type { BannerSlide } from '@/lib/banners';
 import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion';
@@ -75,10 +77,16 @@ export default function HomePageClient({
   heroProducts = [],
   categoryCovers = {},
   landingBanners = [],
+  trendingProducts = [],
+  makeupProducts = [],
+  skincareProducts = [],
 }: {
   heroProducts?: CatalogProduct[];
   categoryCovers?: Record<string, string>;
   landingBanners?: BannerSlide[];
+  trendingProducts?: ShopProduct[];
+  makeupProducts?: ShopProduct[];
+  skincareProducts?: ShopProduct[];
 }) {
   const { t } = useLanguage();
   const reduceMotion = usePrefersReducedMotion();
@@ -243,6 +251,29 @@ export default function HomePageClient({
         </div>
       </section>
 
+      {trendingProducts.length > 0 ? (
+        <section
+          className="relative pt-6 pb-10 sm:pt-8 sm:pb-14"
+          aria-labelledby="category-shelf-heading"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <FadeIn className="mb-6 sm:mb-8 flex items-end justify-between gap-6">
+              <h2 id="category-shelf-heading" className="font-serif text-heading-lg text-white">
+                {t.categoryShelf.title}
+              </h2>
+              <Link
+                href="/shop"
+                prefetch
+                className="hidden sm:inline-flex items-center gap-2 text-nav uppercase tracking-[0.12em] text-white/70 transition-colors hover:text-layali-pink-light"
+              >
+                {t.footer.allProducts} <ArrowRight className="w-4 h-4 rtl:rotate-180" />
+              </Link>
+            </FadeIn>
+            <HomeProductGrid products={trendingProducts} />
+          </div>
+        </section>
+      ) : null}
+
       {/* Image 4 — primary National Day campaign */}
       <NationalDayFeature priority />
 
@@ -261,6 +292,7 @@ export default function HomePageClient({
         shopAllLabel={t.footer.allProducts}
         products={heroProducts}
         category="makeup"
+        shelf={makeupProducts}
       />
 
       {/* Why Layali */}
@@ -342,7 +374,7 @@ export default function HomePageClient({
 
       <CinematicProductFilm />
 
-      <CinematicLookbook />
+      <CinematicLookbook products={skincareProducts} />
 
       {/* Enter the Store */}
       <section className="relative overflow-x-clip py-16 sm:py-20 text-center">

@@ -16,6 +16,7 @@
     "test:order-email-access": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/order-email-access-smoke.mts",
     "test:catalog-error": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/catalog-error-smoke.mts",
     "test:category": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/category-classification-smoke.mts",
+    "test:homepage-products": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/homepage-products-smoke.mts",
     "test:customer-account": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/customer-account-oauth-smoke.mts",
     "test:customer-address": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/customer-account-address-smoke.mts",
     "test:buyer-country": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/buyer-country-smoke.mts",
