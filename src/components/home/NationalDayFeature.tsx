@@ -4,14 +4,14 @@ import { FadeIn } from '@/components/ui/FadeIn';
 import { PromoArtwork } from '@/components/home/PromoArtwork';
 
 /**
- * Primary Saudi National Day campaign (Image 4).
- * Full-width within page container, natural aspect ratio, editorial breathing room.
+ * Wide campaign banner above the Makeup section.
+ * Full-width within the page container, at the artwork's own 1024×409 ratio.
  */
 export function NationalDayFeature({ priority = false }: { priority?: boolean }) {
   return (
     <section
       className="relative overflow-x-clip py-14 sm:py-16 lg:py-24"
-      aria-label="Saudi National Day campaign"
+      aria-label="Beauty for a Brighter Tomorrow"
     >
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-40 opacity-70"
@@ -24,11 +24,11 @@ export function NationalDayFeature({ priority = false }: { priority?: boolean })
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <FadeIn>
           <PromoArtwork
-            src="/ads/layali-promo-national-day-campaign.png"
-            alt="Layali Saudi National Day — Beauty for a Brighter Tomorrow, up to 50% off makeup and 30% off skincare"
+            src="/ads/layali-promo-national-day-campaign.jpg"
+            alt="Layali — Beauty for a Brighter Tomorrow, up to 50% off makeup and 30% off skincare"
             href="/shop"
-            width={991}
-            height={260}
+            width={1024}
+            height={409}
             priority={priority}
           />
         </FadeIn>

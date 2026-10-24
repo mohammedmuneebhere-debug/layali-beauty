@@ -4,8 +4,9 @@ import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
 /**
- * Right-side hero campaign feature — embeds the Saudi National Day artwork
+ * Right-side hero campaign feature — embeds the Beauty, Redefined artwork
  * as a native Layali UI panel (label + frame + soft blend + restrained hover).
+ * The poster is square, so the frame matches 1:1 and shows the full creative.
  * Artwork pixels are never modified.
  */
 export function HeroCampaignFeature() {
@@ -13,8 +14,8 @@ export function HeroCampaignFeature() {
     <Link
       href="/shop"
       prefetch
-      aria-label="Layali Saudi National Day campaign — up to 50% off makeup"
-      className="group relative z-10 block w-full max-w-[20.5rem] justify-self-center focus-ring sm:max-w-[22.5rem] lg:max-w-[24rem] lg:justify-self-end xl:max-w-[26rem]"
+      aria-label="Layali Beauty, Redefined campaign — shop beauty essentials"
+      className="group relative z-10 block w-full max-w-[min(100%,22rem)] justify-self-center focus-ring sm:max-w-[min(100%,24rem)] lg:max-w-[min(24rem,calc(100svh-15rem))] lg:justify-self-end xl:max-w-[min(26rem,calc(100svh-14rem))]"
     >
       {/* Ambient blend into the burgundy hero stage */}
       <span
@@ -31,29 +32,28 @@ export function HeroCampaignFeature() {
       >
         <div className="flex items-center justify-between gap-3 px-3.5 pt-2.5 pb-1.5">
           <p className="text-meta tracking-[0.16em] text-layali-gold-light/90 uppercase">
-            Saudi National Day · Campaign
+            Beauty, Redefined
           </p>
         </div>
 
         <div className="overflow-hidden px-2 pb-2 sm:px-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/ads/layali-promo-hero-national-day.jpg"
-            alt="Layali Saudi National Day campaign — up to 50% off makeup"
+            src="/ads/layali-promo-hero-beauty-redefined.jpg"
+            alt="Layali Beauty, Redefined — beauty essentials styled against the Riyadh skyline"
             width={1024}
-            height={706}
+            height={1024}
             decoding="async"
             loading="eager"
             fetchPriority="high"
             draggable={false}
-            className="block h-auto w-full max-w-full rounded-[2px] object-contain transition-transform duration-500 ease-out group-hover:scale-[1.015]"
-            style={{ aspectRatio: '1024 / 706' }}
+            className="block aspect-square h-auto w-full max-w-full rounded-[2px] object-contain object-center transition-transform duration-500 ease-out group-hover:scale-[1.015]"
           />
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3.5 py-2.5">
           <span className="text-meta tracking-[0.14em] uppercase text-white/40">
-            National Day Edit
+            The Layali Edit
           </span>
           <span className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.14em] uppercase text-white/70 transition-colors duration-300 group-hover:text-layali-pink-light sm:text-nav sm:tracking-[0.12em]">
             View Offer <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden />

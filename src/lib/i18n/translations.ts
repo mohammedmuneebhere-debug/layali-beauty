@@ -59,7 +59,7 @@ export const translations = {
       drag: 'Drag to explore',
     },
     categoryShelf: {
-      title: 'From Each Category',
+      title: 'Trending Products on Layali',
     },
     why: {
       title: 'Why Layali?',
@@ -565,7 +565,7 @@ export const translations = {
       drag: 'اسحبي للاستكشاف',
     },
     categoryShelf: {
-      title: 'من كل فئة',
+      title: 'المنتجات الرائجة على Layali',
     },
     why: {
       title: 'لماذا Layali؟',

@@ -287,7 +287,7 @@ export default function HomePageClient({
         alt="Layali makeup — up to 50% off favourite brands"
         href="/shop?category=makeup"
         width={1024}
-        height={523}
+        height={409}
         categoryLabel={makeupLabel}
         shopAllLabel={t.footer.allProducts}
         products={heroProducts}
@@ -338,14 +338,14 @@ export default function HomePageClient({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/ads/layali-promo-find-your-ritual.jpg"
-                alt="Celebrate Saudi National Day — special offers on makeup and skincare"
+                alt="Layali Beauty Store — Your Glow, Your Ritual, over the Riyadh skyline at twilight"
                 width={1024}
-                height={341}
+                height={544}
                 decoding="async"
                 loading="lazy"
                 draggable={false}
                 className="mx-auto block h-auto w-full max-w-full rounded-sm object-contain"
-                style={{ aspectRatio: '1024 / 341' }}
+                style={{ aspectRatio: '1024 / 544' }}
               />
             </div>
 

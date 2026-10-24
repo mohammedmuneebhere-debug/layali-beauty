@@ -35,22 +35,22 @@ const CATEGORY_PROMO: Record<
     src: '/ads/layali-promo-makeup-editorial.jpg',
     alt: 'Layali makeup — up to 50% off favourite brands',
     width: 1024,
-    height: 523,
+    height: 409,
   },
   skincare: {
     src: '/ads/layali-promo-skincare-editorial.jpg',
-    alt: 'Layali skincare that feels like you — up to 30% off',
+    alt: 'Layali skincare — Healthy Skin, Happy You',
     width: 1024,
-    height: 418,
+    height: 512,
   },
 };
 
-/** General shop Saudi National Day campaign — only when no category filter */
+/** General shop campaign — only when no category filter */
 const SHOP_CAMPAIGN_BANNER = {
-  src: '/ads/layali-promo-shop-national-day.jpg',
-  alt: 'Celebrate Saudi National Day — special offers on makeup and skincare',
+  src: '/ads/layali-promo-shop-redefine.jpg',
+  alt: 'Layali Beauty — 50% off makeup and 30% off skincare. Beauty for a brighter tomorrow',
   width: 1024,
-  height: 341,
+  height: 409,
 };
 
 function normalizeCategory(value: string | null | undefined) {
