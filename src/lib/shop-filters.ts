@@ -2,7 +2,7 @@
  * Shop brand filters — Shopify `vendor` is the authoritative brand field.
  * Brands are collected from the full loaded catalog (not a static list).
  */
-import { searchableCategory } from '@/lib/shopify/category';
+import { shopSearchScore } from '@/lib/shop-search';
 
 export const PAGE_SIZE = 12;
 
@@ -32,6 +32,7 @@ export type ShopListProduct = {
   category: string;
   vendor?: string | null;
   price: number | string;
+  tags?: string[] | null;
 };
 
 export type ShopListFilters = {
@@ -53,26 +54,30 @@ export function filterShopProducts<T extends ShopListProduct>(
   const min = filters.minPrice ? Number(filters.minPrice) : null;
   const max = filters.maxPrice ? Number(filters.maxPrice) : null;
 
-  return products.filter((product) => {
-    if (category && product.category !== category) return false;
-    if (brand && (product.vendor || '').trim() !== brand) return false;
+  const narrowed: { product: T; index: number }[] = [];
+  products.forEach((product, index) => {
+    if (category && product.category !== category) return;
+    if (brand && (product.vendor || '').trim() !== brand) return;
     const price = Number(product.price);
-    if (min != null && !Number.isNaN(min) && price < min) return false;
-    if (max != null && !Number.isNaN(max) && price > max) return false;
-    if (q) {
-      const hay =
-        `${product.name} ${product.description || ''} ${searchableCategory(product.category)} ${product.vendor || ''}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
+    if (min != null && !Number.isNaN(min) && price < min) return;
+    if (max != null && !Number.isNaN(max) && price > max) return;
+    narrowed.push({ product, index });
   });
+
+  if (!q) return narrowed.map((row) => row.product);
+
+  return narrowed
+    .map((row) => ({ ...row, score: shopSearchScore(row.product, q) }))
+    .filter((row) => row.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map((row) => row.product);
 }
 
 export type ShopSortKey = 'featured' | 'price-asc' | 'price-desc' | 'name';
 
 /**
- * Shop sort. `featured` keeps catalog order — the order Storefront pagination
- * already returned. Other keys reorder a copy. The input array is not mutated.
+ * Shop sort. `featured` keeps the incoming order. A search already ordered
+ * that list by relevance; other keys reorder a copy. The input array is not mutated.
  */
 export function sortShopProducts<T extends { name: string; price: number | string }>(
   products: readonly T[],

@@ -21,6 +21,9 @@ export const translations = {
       search: 'Search',
       searchPlaceholder: 'Search the collection',
       closeSearch: 'Close search',
+      searching: 'Searching',
+      noResults: 'No matching products',
+      viewAllResults: 'View all results',
     },
     lang: { en: 'EN', ar: 'عربي' },
     hero: {
@@ -527,6 +530,9 @@ export const translations = {
       search: 'بحث',
       searchPlaceholder: 'ابحثي في المجموعة',
       closeSearch: 'إغلاق البحث',
+      searching: 'جارٍ البحث',
+      noResults: 'لا توجد منتجات مطابقة',
+      viewAllResults: 'عرض كل النتائج',
     },
     lang: { en: 'EN', ar: 'عربي' },
     hero: {

@@ -59,7 +59,6 @@ export function ProductDetailClient({
   const [loading, setLoading] = useState(!initialProduct);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
-  const [showFullDescription, setShowFullDescription] = useState(false);
   const [similar, setSimilar] = useState<ShopProduct[]>([]);
   const [ritual, setRitual] = useState<ShopProduct[]>([]);
   const [similarLoading, setSimilarLoading] = useState(false);
@@ -277,12 +276,8 @@ export function ProductDetailClient({
     );
   }
 
-  const description = product.description || '';
-  const isLongDescription = description.length > 220;
-  const visibleDescription =
-    !showFullDescription && isLongDescription
-      ? `${description.slice(0, 220).trim()}...`
-      : description;
+  const descriptionHtml = product.descriptionHtml?.trim() || '';
+  const plainDescription = product.description?.trim() || '';
   const variants = selectableVariants(product);
   const inStock = selectedVariant ? selectedVariant.available : product.available || product.stock_quantity > 0;
   const displayPrice = selectedVariant?.price ?? Number(product.price);
@@ -336,21 +331,22 @@ export function ProductDetailClient({
                 ) : null}
               </div>
 
-              {description && (
+              {descriptionHtml || plainDescription ? (
                 <div className="mb-8">
-                  <h2 className="text-product-name text-white mb-2">{t.pdp.about}</h2>
-                  <p className="text-body text-white/55 whitespace-pre-line">{visibleDescription}</p>
-                  {isLongDescription && (
-                    <button
-                      type="button"
-                      onClick={() => setShowFullDescription((v) => !v)}
-                      className="mt-2 text-sm font-medium text-layali-pink hover:text-layali-pink-light transition-colors"
-                    >
-                      {showFullDescription ? t.pdp.showLess : t.pdp.readMore}
-                    </button>
+                  <h2 className="text-product-name text-white mb-3">{t.pdp.about}</h2>
+                  {descriptionHtml ? (
+                    <div
+                      className="product-description text-body text-white/60"
+                      dir="auto"
+                      dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+                    />
+                  ) : (
+                    <p className="text-body text-white/55 whitespace-pre-line" dir="auto">
+                      {plainDescription}
+                    </p>
                   )}
                 </div>
-              )}
+              ) : null}
 
               {product.benefits?.length > 0 && (
                 <div className="mb-8">

@@ -12,7 +12,9 @@ import {
   getCatalogProducts,
   isShopifyConfigured,
 } from '@/lib/shopify';
+import { productDescriptionFields } from '@/lib/shopify/description-html';
 import { toCatalogProduct } from '@/lib/shopify/normalize';
+import type { ShopifyProduct } from '@/lib/shopify/types';
 import { getRegionId } from '@/lib/regions';
 import type { RecommendationProduct } from '@/lib/recommendation';
 
@@ -53,6 +55,11 @@ export type ShopProduct = CatalogProduct & {
   is_featured: boolean;
   created_at: string;
   updated_at: string;
+  /**
+   * Sanitized Shopify `descriptionHtml` for the product detail page.
+   * Absent on catalog-list rows, which only carry the plain description.
+   */
+  descriptionHtml?: string | null;
 };
 
 function toShopProduct(p: CatalogProduct, extras?: { benefits?: string[]; is_featured?: boolean }): ShopProduct {
@@ -204,36 +211,36 @@ export async function loadRecommendationCatalog(options: {
   }
 }
 
-export async function loadShopProductByParam(
-  param: string
-): Promise<(ShopProduct & { shopifyVariants: ShopVariant[] }) | null> {
+export type ShopDetailProduct = ShopProduct & {
+  shopifyVariants: ShopVariant[];
+  descriptionHtml: string | null;
+};
+
+/** Product-page shape. Uses this product's Shopify descriptionHtml only. */
+export function toShopDetailProduct(product: ShopifyProduct): ShopDetailProduct {
+  const descriptions = productDescriptionFields(product);
+  return {
+    ...toShopProduct(toCatalogProduct(product)),
+    description: descriptions.description,
+    descriptionHtml: descriptions.descriptionHtml,
+    shopifyVariants: mapShopVariants(product.variants),
+  };
+}
+
+export async function loadShopProductByParam(param: string): Promise<ShopDetailProduct | null> {
   if (!isShopifyConfigured() || !param) return null;
 
   const byHandle = await getCatalogProductByHandle(param);
-  if (byHandle) {
-    return {
-      ...toShopProduct(byHandle),
-      shopifyVariants: mapShopVariants(byHandle.shopify.variants),
-    };
-  }
+  if (byHandle) return toShopDetailProduct(byHandle.shopify);
 
   if (param.startsWith('gid://')) {
     const product = (await fetchShopifyProductsByIds([param]))[0];
-    if (!product) {
-      const { fetchShopifyProductById } = await import('@/lib/shopify/products');
-      const byId = await fetchShopifyProductById(param);
-      if (!byId) return null;
-      const catalog = toCatalogProduct(byId);
-      return {
-        ...toShopProduct(catalog),
-        shopifyVariants: mapShopVariants(byId.variants),
-      };
-    }
-    const catalog = toCatalogProduct(product);
-    return {
-      ...toShopProduct(catalog),
-      shopifyVariants: mapShopVariants(product.variants),
-    };
+    if (product) return toShopDetailProduct(product);
+
+    const { fetchShopifyProductById } = await import('@/lib/shopify/products');
+    const byId = await fetchShopifyProductById(param);
+    if (!byId) return null;
+    return toShopDetailProduct(byId);
   }
 
   return null;

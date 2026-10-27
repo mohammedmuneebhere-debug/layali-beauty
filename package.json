@@ -16,6 +16,8 @@
     "test:order-email-access": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/order-email-access-smoke.mts",
     "test:catalog-error": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/catalog-error-smoke.mts",
     "test:category": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/category-classification-smoke.mts",
+    "test:product-description": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/product-description-smoke.mts",
+    "test:search": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/shop-search-smoke.mts",
     "test:homepage-products": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/homepage-products-smoke.mts",
     "test:customer-account": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/customer-account-oauth-smoke.mts",
     "test:customer-address": "node --import ./scripts/register-ts-paths.mjs --experimental-strip-types scripts/customer-account-address-smoke.mts",
@@ -42,6 +44,7 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.81.0",
     "react-leaflet": "^5.0.0",
+    "sanitize-html": "^2.18.1",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
