@@ -1,6 +1,6 @@
 export const SITE_URL = 'https://www.layalibeautystore.com';
 
-export const CONTACT_EMAIL = 'layalibeautystore@gmail.com';
+export const CONTACT_EMAIL = 'busines@layalibeautystore.com';
 
 /** Customer-facing Commercial Registration number. */
 export const CR_NUMBER = '1010955128';

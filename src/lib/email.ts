@@ -59,7 +59,7 @@ async function sendViaResend(to: string, subject: string, html: string) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false as const, reason: 'RESEND_API_KEY missing' };
 
-  const from = process.env.EMAIL_FROM || `Layali <${CONTACT_EMAIL}>`;
+  const from = process.env.EMAIL_FROM || 'Layali <layalibeautystore@gmail.com>';
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: {

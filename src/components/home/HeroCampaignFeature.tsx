@@ -51,10 +51,7 @@ export function HeroCampaignFeature() {
           />
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] px-3.5 py-2.5">
-          <span className="text-meta tracking-[0.14em] uppercase text-white/40">
-            The Layali Edit
-          </span>
+        <div className="flex items-center justify-end gap-3 border-t border-white/[0.08] px-3.5 py-2.5">
           <span className="inline-flex items-center gap-1.5 text-[0.65rem] tracking-[0.14em] uppercase text-white/70 transition-colors duration-300 group-hover:text-layali-pink-light sm:text-nav sm:tracking-[0.12em]">
             View Offer <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" aria-hidden />
           </span>
